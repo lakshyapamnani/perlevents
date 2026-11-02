@@ -1,0 +1,6 @@
+{
+  "name": "PerlEvents - Banquet & Event Management ERP",
+  "description": "Production-ready Banquet & Event Management ERP for PerlEvents, powered by Drona. Featuring multi-role access (Admin, Salesperson, Manager), mobile-first sales workflow, real-time availability with concurrency locks, lead conversion, invoice generation, and vendor WhatsApp coordination.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

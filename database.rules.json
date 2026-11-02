@@ -1,0 +1,98 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.uid === $uid)",
+        ".indexOn": ["email", "role", "organizationId"]
+      }
+    },
+    "organizations": {
+      "$orgId": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('organizationId').val() === $orgId",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('organizationId').val() === $orgId && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      }
+    },
+    "banquets": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$banquetId": {
+        ".indexOn": ["isActive", "name"]
+      }
+    },
+    "clients": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$clientId": {
+        ".indexOn": ["primaryPhone", "fullName", "createdAt"]
+      }
+    },
+    "leads": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$leadId": {
+        ".indexOn": ["salespersonId", "followUpDate", "status", "createdAt"]
+      }
+    },
+    "leadFollowUps": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')"
+    },
+    "events": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson' || (root.child('users').child(auth.uid).child('role').val() === 'manager' && data.child('managerId').val() === auth.uid))",
+      "$eventId": {
+        ".indexOn": ["date", "banquetId", "salespersonId", "managerId", "status", "createdAt"]
+      }
+    },
+    "bookingSlots": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$banquetId": {
+        "$date": {
+          ".indexOn": ["startTime", "status"]
+        }
+      }
+    },
+    "vendors": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "checklistItems": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'manager')"
+    },
+    "sales": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$saleId": {
+        ".indexOn": ["salespersonId", "saleDate", "banquetId", "clientId", "status"]
+      }
+    },
+    "invoices": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$invoiceId": {
+        ".indexOn": ["invoiceNumber", "clientId", "eventId", "status", "invoiceDate"]
+      }
+    },
+    "payments": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
+      "$paymentId": {
+        ".indexOn": ["invoiceId", "saleId", "clientId", "paymentDate"]
+      }
+    },
+    "activityLogs": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null",
+      "$logId": {
+        ".indexOn": ["timestamp", "module", "actorId"]
+      }
+    },
+    "settings": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    }
+  }
+}

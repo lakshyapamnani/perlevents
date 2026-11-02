@@ -1,0 +1,1827 @@
+# PERLEVENTS
+
+## Production-Ready Banquet & Event Management ERP
+
+### Powered by Drona
+
+## 1. PROJECT OBJECTIVE
+
+Build a complete, production-ready Banquet & Event Management ERP for **PerlEvents**, developed and branded by Drona.
+
+The application must manage the entire banquet booking lifecycle, from lead generation and direct sales to event planning, vendor coordination, invoice generation, payment tracking, banquet availability, and event-day execution.
+
+This must be a functional business application, not a static UI prototype.
+
+All dashboards, forms, calendars, tables, buttons, filters, checkboxes, workflows, and reports must work correctly and use a shared database.
+
+The application must support three primary roles:
+
+1. Admin
+2. Salesperson
+3. Manager
+
+Vendors do not need separate login accounts in the initial version. Their details and communication status will be managed through the ERP.
+
+### Core priorities
+
+* Mobile-first, premium Salesperson interface.
+* Persistent bottom navigation for Salesperson on mobile.
+* Complete Admin control over the business.
+* Real-time banquet availability and booking conflict prevention.
+* Lead and direct-sale workflows.
+* Centralized client and event records.
+* Admin and Salesperson invoice creation.
+* Vendor management and WhatsApp coordination.
+* Manager checklists linked to event requirements.
+* Accurate sales, payment, and outstanding-balance reports.
+* Secure authentication and strict role-based access control.
+* Responsive layouts across mobile, tablet, and desktop.
+
+---
+
+# 2. TECHNOLOGY STACK
+
+Use the existing project's framework if it is already established and functional. Otherwise, use the following stack.
+
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* React Router
+* Lucide React icons
+* A reliable form library with schema validation
+* A reusable component architecture
+
+### Backend and database
+
+* Firebase Authentication for login and account management.
+* Cloud Firestore for structured business records and real-time updates.
+* Firebase Storage for event reference photos, attachments, and optional checklist evidence.
+* Firebase Cloud Functions for trusted server-side operations.
+* Firebase App Check where appropriate.
+
+### Deployment
+
+* Vercel for frontend hosting.
+* Firebase for authentication, database, storage, and backend functions.
+* Environment variables for all configuration and secrets.
+
+Use the current stable, mutually compatible package versions.
+
+Do not place Firebase Admin SDK credentials, privileged keys, or other secrets in frontend code.
+
+Do not simulate a backend with local arrays or hardcoded dashboard values.
+
+If Firebase credentials are not available during development, create a documented setup process and a clearly separated development preview mode. Do not silently present mock data as real business data.
+
+---
+
+# 3. BRAND IDENTITY AND UI DESIGN
+
+Brand: PerlEvents
+
+Developer/technology brand: Drona
+
+The application should feel like a premium hospitality and event operations platform.
+
+### Visual direction
+
+Create a clean, modern, professional interface inspired by premium hospitality management software.
+
+Use:
+
+* Warm white and neutral backgrounds.
+* Deep charcoal typography.
+* A refined dark green, champagne, or muted gold accent palette.
+* Subtle borders.
+* Carefully controlled shadows.
+* Rounded cards and form controls.
+* Clear typography and visual hierarchy.
+* Consistent spacing.
+* Restrained animations and transitions.
+* Professional empty states, loading states, and error messages.
+
+Avoid:
+
+* Excessive gradients.
+* Oversized decorative elements.
+* Excessive emojis.
+* Too many colors.
+* Unnecessary glassmorphism.
+* Crowded dashboards.
+* Generic template-like layouts.
+* Desktop tables squeezed onto mobile screens.
+
+Use a consistent design system with reusable buttons, inputs, dialogs, dropdowns, cards, status badges, date pickers, tables, and navigation components.
+
+### Responsive behavior
+
+Desktop:
+
+* Sidebar navigation for Admin and Manager.
+* Data tables where appropriate.
+* Multi-column dashboards.
+* Full-width calendar and event details.
+
+Mobile:
+
+* Compact headers.
+* Touch-friendly controls.
+* Card-based lists instead of horizontally overflowing tables.
+* Bottom sheets for quick actions.
+* Full-screen forms when necessary.
+* Sticky primary action buttons where appropriate.
+
+The Salesperson experience must be designed for phones first, not created by shrinking the desktop dashboard.
+
+---
+
+# 4. AUTHENTICATION AND ROLE-BASED ACCESS
+
+Create a secure login system.
+
+Each user must have:
+
+* Full name.
+* Email address or configured login identifier.
+* Role.
+* Account status.
+* Creation timestamp.
+* Last login timestamp where available.
+
+Roles:
+
+* Admin
+* Salesperson
+* Manager
+
+### Admin
+
+Has full authorized access to the organization's records and configuration.
+
+### Salesperson
+
+Can manage leads, create direct sales, manage permitted client records, view banquet availability, create event bookings, create invoices, and coordinate vendors according to permissions.
+
+### Manager
+
+Can view assigned events, update operational checklists, record completion notes, and upload permitted evidence.
+
+### Security requirements
+
+* Never rely on frontend role checks alone.
+* Enforce permissions through Firestore Security Rules and trusted backend functions.
+* Users must not be able to elevate their own roles.
+* Only Admin can create, deactivate, or change user roles.
+* Prevent unauthorized access to other users' restricted records.
+* Validate all financial and booking operations server-side.
+* Record important changes in an audit log.
+* Protect uploaded files with appropriate access controls.
+* Do not expose private client data through publicly accessible storage URLs.
+
+Create a secure account provisioning flow. Admin-created accounts must be associated with the correct role and organization.
+
+Support password reset and session handling.
+
+Do not allow public registration to create an Admin account.
+
+---
+
+# 5. ADMIN DASHBOARD
+
+Create a comprehensive Admin dashboard with a persistent desktop sidebar and a responsive mobile navigation alternative.
+
+### Sidebar
+
+1. Dashboard
+2. Banquets
+3. Availability
+4. Salespersons
+5. Managers
+6. Vendors
+7. Events
+8. Calendar
+9. Leads
+10. Clients
+11. Sales
+12. Invoices
+13. Sales Dashboard
+14. Settings
+
+Use clear labels and icons.
+
+### Dashboard summary cards
+
+Show actual database-backed values:
+
+* Total banquets.
+* Today's events.
+* Upcoming events.
+* New and active leads.
+* Confirmed bookings.
+* Total sales.
+* Payments received.
+* Outstanding balances.
+* Events awaiting vendor confirmation.
+* Events with incomplete checklists.
+
+Clicking a card should open the corresponding module with relevant filters applied.
+
+### Dashboard sections
+
+Include:
+
+* Upcoming event schedule.
+* Recent leads.
+* Recent bookings.
+* Recent invoices.
+* Pending vendor confirmations.
+* Outstanding payments.
+* Manager checklist progress.
+* Recent activity.
+
+Provide useful loading, empty, and error states.
+
+Never display fabricated statistics.
+
+---
+
+# 6. BANQUET MANAGEMENT
+
+Admin must be able to create, view, edit, activate, and deactivate banquet halls.
+
+### Banquet fields
+
+* Unique banquet ID.
+* Banquet name.
+* Address.
+* Description.
+* Capacity.
+* Facilities.
+* Base pricing.
+* Pricing notes.
+* Banquet owner/contact person.
+* Owner's phone number.
+* Owner's WhatsApp number.
+* Assigned salesperson, if applicable.
+* Assigned manager, if applicable.
+* Operational notes.
+* Active/inactive status.
+* Creation and modification timestamps.
+
+Allow multiple banquet halls to exist independently.
+
+The banquet owner contact must be available for event reminders.
+
+Do not assume every banquet has the same owner or contact person.
+
+### Banquet detail page
+
+Display:
+
+* Banquet information.
+* Availability calendar.
+* Upcoming bookings.
+* Historical events.
+* Assigned personnel.
+* Pricing details.
+* Owner contact information.
+
+Only authorized users may modify banquet configuration.
+
+---
+
+# 7. BANQUET AVAILABILITY
+
+Create a dedicated Availability module for both Admin and Salesperson.
+
+Availability must be calculated separately for every banquet hall.
+
+### Calendar views
+
+Support:
+
+* Month view.
+* Week view.
+* Day view.
+* Individual banquet view.
+* Consolidated Admin view.
+
+On mobile, prioritize an easy-to-use monthly calendar with a clear list of bookings for the selected date.
+
+### Booking statuses
+
+Support:
+
+* Lead/Enquiry.
+* Tentative Hold.
+* Confirmed.
+* Completed.
+* Cancelled.
+
+A lead without a reserved time slot must not automatically block a banquet.
+
+Tentative holds may block a slot according to a configurable hold policy.
+
+Confirmed bookings must block overlapping time slots.
+
+Completed historical events should remain visible in historical calendars but must not block future availability.
+
+Cancelled bookings must not block availability unless a separate active hold exists.
+
+### Availability workflow
+
+1. Salesperson opens Availability.
+2. Selects a banquet hall.
+3. Selects a date.
+4. Reviews existing bookings and available time slots.
+5. Starts a direct-sale booking.
+6. Enters event details.
+7. The system validates availability.
+8. The booking is saved only after a successful final validation.
+
+### Critical concurrency requirement
+
+Prevent two users from confirming overlapping bookings for the same banquet.
+
+Do not depend solely on frontend availability checks.
+
+Use a trusted backend transaction or another concurrency-safe reservation mechanism to validate and create the booking atomically.
+
+If two users attempt to book the same slot, only a valid booking may succeed. The other user must receive a clear conflict message and be asked to choose another slot.
+
+Check overlapping time ranges, not just identical calendar dates.
+
+For example, an event from 10:00 to 14:00 may coexist with a separate event from 17:00 to 21:00 if the venue permits this.
+
+Support configurable setup and cleanup buffer times where required.
+
+The same booking validation must apply to Admin and Salesperson actions.
+
+### Admin permissions
+
+Admin can:
+
+* View every banquet's availability.
+* View all booking details.
+* Create bookings.
+* Modify bookings.
+* Cancel bookings.
+* Manage tentative holds.
+* Resolve conflicts through an explicit, audited administrative workflow.
+
+Never silently overwrite an existing confirmed booking.
+
+---
+
+# 8. SALESPERSON DASHBOARD — MOBILE-FIRST
+
+This is one of the most important parts of the application.
+
+Design the Salesperson interface primarily for mobile devices, with a fixed bottom navigation bar.
+
+Do not simply reuse the Admin sidebar.
+
+### Mobile header
+
+Include:
+
+* PerlEvents branding.
+* User greeting.
+* Current date.
+* Notification indicator.
+* Profile menu.
+
+Keep the header compact.
+
+### Fixed bottom navigation
+
+Create a persistent bottom navigation bar with five primary destinations:
+
+1. Home
+2. Leads
+3. Availability
+4. Events
+5. More
+
+Requirements:
+
+* Fixed to the bottom of the mobile viewport.
+* Respect device safe-area insets.
+* Remain visible during normal navigation.
+* Highlight the active destination.
+* Use Lucide icons with short labels.
+* Provide comfortable touch targets.
+* Avoid covering content or action buttons.
+* Support scrolling pages with appropriate bottom padding.
+* Preserve navigation state when appropriate.
+
+The More screen should provide access to:
+
+* Clients.
+* Sales.
+* Invoices.
+* Vendor coordination.
+* Calendar.
+* Profile and settings.
+
+On desktop, the same modules may use a compact sidebar or wider navigation layout.
+
+### Salesperson home screen
+
+Show:
+
+* Today's events.
+* Upcoming events.
+* Active leads.
+* Follow-ups due today.
+* Recent direct sales.
+* Pending vendor confirmations.
+* Quick actions.
+
+Primary quick-action buttons:
+
+* Add Lead.
+* Create Direct Sale.
+* Check Availability.
+* Create Invoice.
+* Add Client.
+
+Use a mobile-friendly card layout.
+
+Forms should be simple, readable, and broken into logical sections rather than long, overwhelming pages.
+
+---
+
+# 9. LEAD MANAGEMENT
+
+The Salesperson workflow must distinguish clearly between a Lead and a Direct Sale.
+
+A lead is an enquiry, not a confirmed event booking.
+
+### Create Lead form
+
+Fields:
+
+* Client name.
+* Phone number.
+* WhatsApp number.
+* Email, optional.
+* Event type.
+* Expected event date.
+* Preferred time, if known.
+* Preferred banquet, optional.
+* Expected guest count.
+* Requirements.
+* Lead source.
+* Reference photos, optional.
+* Follow-up date.
+* Follow-up notes.
+
+Lead sources should be configurable and may include:
+
+* Referral.
+* Instagram.
+* Telephone.
+* Walk-in.
+* Website.
+* Existing client.
+* Other.
+
+### Lead actions
+
+For an active lead, the available primary actions must be:
+
+1. Follow-up.
+2. Delete.
+
+Do not add unrelated status-changing actions that contradict this workflow.
+
+Follow-up should allow the salesperson to record a note and schedule another follow-up date.
+
+Maintain a history of follow-up notes and timestamps.
+
+Deleting a lead should require confirmation and follow the application's audit and data-retention policy.
+
+### Admin Leads module
+
+Admin can:
+
+* View all leads.
+* Search by name or phone.
+* Filter by salesperson, source, banquet, date, and follow-up date.
+* Review lead details and follow-up history.
+* See overdue follow-ups.
+* Delete leads according to permissions.
+
+### Lead-to-sale conversion
+
+Provide a deliberate way to create a direct sale from an existing lead without re-entering all client details.
+
+Preserve the original lead and its history for reporting.
+
+The conversion must create the event and booking through the same availability-validation process used by direct sales.
+
+A lead itself must never be treated as a confirmed booking.
+
+---
+
+# 10. CLIENT MANAGEMENT
+
+Create a centralized Clients module.
+
+Each client should have a reusable profile.
+
+### Client fields
+
+* Client ID.
+* Full name.
+* Primary phone.
+* WhatsApp number.
+* Email.
+* Address, optional.
+* Notes.
+* Created date.
+* Created by.
+* Linked events.
+* Linked invoices.
+* Payment history.
+
+### Client detail page
+
+Display:
+
+* Contact information.
+* Event history.
+* Current and upcoming bookings.
+* Previous events.
+* Invoices.
+* Payments.
+* Outstanding balance.
+* Reference photos.
+* Requirements and notes.
+
+Prevent unnecessary duplicate client records. Where possible, warn authorized users when a matching phone number already exists.
+
+Do not automatically merge records without review.
+
+### Reference photos
+
+Allow Salesperson and authorized Admin users to upload client-provided inspiration images.
+
+Examples:
+
+* Stage decoration.
+* Entrance decoration.
+* Lighting.
+* Seating arrangement.
+* Floral arrangements.
+* Event theme.
+
+Each attachment should include:
+
+* File.
+* Caption.
+* Category, optional.
+* Related client.
+* Related event, if applicable.
+* Uploaded by.
+* Upload timestamp.
+
+Store images in protected Firebase Storage paths.
+
+Generate authorized previews rather than exposing all uploads publicly.
+
+---
+
+# 11. DIRECT SALES AND EVENT CREATION
+
+The Salesperson and Admin must both be able to create a direct sale.
+
+A direct sale creates or links a client and creates an event booking.
+
+### Direct-sale form
+
+Organize the form into clear sections.
+
+#### Section A: Client
+
+* Select existing client.
+* Create a new client.
+* Client name.
+* Phone and WhatsApp.
+* Email.
+* Address, optional.
+
+#### Section B: Event
+
+* Event name.
+* Event type.
+* Banquet.
+* Event date.
+* Start time.
+* End time.
+* Guest count.
+* Event requirements.
+* Special instructions.
+
+Event types should be configurable by Admin.
+
+Examples:
+
+* Wedding.
+* Reception.
+* Birthday.
+* Engagement.
+* Anniversary.
+* Corporate event.
+* Conference.
+* Other.
+
+#### Section C: Reference material
+
+* Upload multiple images.
+* Add captions.
+* Associate images with particular requirements.
+* Preview and remove images before saving.
+
+#### Section D: Vendors
+
+Allow authorized users to select vendors by service category.
+
+For each assignment, capture:
+
+* Vendor.
+* Service category.
+* Requirements.
+* Quoted amount, if applicable.
+* Notes.
+* Confirmation status.
+
+#### Section E: Financial details
+
+* Total quoted amount.
+* Discount.
+* Advance payment required.
+* Advance amount or percentage.
+* Payment terms.
+* Internal notes.
+
+Validate all financial values.
+
+#### Section F: Assignment
+
+* Salesperson.
+* Manager.
+* Event status.
+
+### Save workflow
+
+1. Validate form fields.
+2. Validate banquet and time-slot availability.
+3. Create or link the client.
+4. Create the event.
+5. Create the booking through a concurrency-safe backend operation.
+6. Save vendor assignments.
+7. Save financial details.
+8. Create an invoice if requested.
+9. Display a success screen with the event details.
+
+Avoid partially completed bookings if a critical operation fails.
+
+Use appropriate transactions, idempotency, and compensating actions where required.
+
+The event must appear in the appropriate Admin and Salesperson views immediately after successful creation.
+
+---
+
+# 12. EVENT MANAGEMENT
+
+Create a dedicated Events module for Admin.
+
+Every event should have a detailed page.
+
+### Event details
+
+* Event ID.
+* Event name.
+* Event type.
+* Client.
+* Banquet.
+* Date.
+* Start and end times.
+* Guest count.
+* Requirements.
+* Reference photos.
+* Assigned salesperson.
+* Assigned manager.
+* Vendor assignments.
+* Invoice details.
+* Payments.
+* Checklist.
+* Reminder status.
+* Creation and modification history.
+
+### Event status
+
+Support:
+
+* Tentative.
+* Confirmed.
+* In Progress.
+* Completed.
+* Cancelled.
+
+Use explicit rules for transitions between statuses.
+
+For example, cancelling an event must release its booking slot only after the cancellation is successfully recorded.
+
+### Event page tabs
+
+Create the following tabs:
+
+1. Overview
+2. Client
+3. Vendors
+4. Reminders
+5. Checklist
+6. Financials
+7. Documents
+8. Activity
+
+On mobile, use horizontally scrollable tabs or an appropriate compact navigation pattern.
+
+### Admin controls
+
+Admin can:
+
+* View all events.
+* Edit event details.
+* Assign or reassign personnel.
+* Add or remove vendor assignments.
+* View reference images.
+* Update booking status.
+* View invoices and payment history.
+* Monitor checklist progress.
+* Review reminders.
+* Cancel bookings.
+* Inspect the event activity log.
+
+Changes must be validated and reflected in relevant views in real time.
+
+---
+
+# 13. VENDOR MANAGEMENT
+
+Create a central vendor directory managed by Admin.
+
+Vendors do not require login accounts in the initial version.
+
+### Vendor fields
+
+* Vendor ID.
+* Business name.
+* Contact person.
+* Phone.
+* WhatsApp number.
+* Email, optional.
+* One or more service categories.
+* Service area.
+* Pricing notes.
+* Internal notes.
+* Active/inactive status.
+
+### Suggested categories
+
+* Decoration.
+* Lighting.
+* Sound and DJ.
+* Catering.
+* Photography.
+* Videography.
+* Floral arrangements.
+* Stage setup.
+* Furniture and seating.
+* Entertainment.
+* Transport.
+* Security.
+* Other.
+
+Admin must be able to add, edit, deactivate, and manage categories.
+
+A vendor may belong to multiple categories.
+
+### Event vendor assignments
+
+For every event, maintain a separate assignment record.
+
+Fields:
+
+* Event.
+* Vendor.
+* Service category.
+* Service requirements.
+* Agreed or quoted amount.
+* Contact status.
+* Availability confirmation.
+* Work status.
+* Notes.
+* Assigned by.
+* Timestamps.
+
+Replacing a vendor must preserve the old assignment in the activity history.
+
+Do not delete financial or communication history when a vendor is replaced.
+
+### Vendor assignment permissions
+
+Admin has full control.
+
+Salespersons may assign vendors within the permissions configured for them.
+
+Managers may view relevant assignments and update operational completion information but must not change financial agreements unless explicitly authorized.
+
+---
+
+# 14. WHATSAPP REMINDERS AND VENDOR COORDINATION
+
+Create a Reminders tab inside every event.
+
+The tab should list the banquet owner and every vendor assigned to that event.
+
+### Example layout
+
+| Recipient       | Responsibility   | Status        | Action        |
+| --------------- | ---------------- | ------------- | ------------- |
+| Banquet Owner   | Hall preparation | Not Contacted | Open WhatsApp |
+| Royal Decor     | Decoration       | Not Contacted | Open WhatsApp |
+| Bright Lights   | Lighting         | Not Contacted | Open WhatsApp |
+| Catering Vendor | Catering setup   | Not Contacted | Open WhatsApp |
+
+This must be a functional interface, not a static sample table.
+
+### WhatsApp message generation
+
+Generate a prefilled, event-specific WhatsApp message for each recipient.
+
+Example:
+
+Hello [Recipient Name],
+
+This is a reminder regarding the upcoming event at [Banquet Name].
+
+Event: [Event Name]
+Date: [Event Date]
+Time: [Event Start–End Time]
+Venue: [Venue Name]
+
+Requirements:
+[Relevant requirements for this recipient]
+
+Please confirm your availability and readiness for the event.
+
+Thank you,
+PerlEvents
+
+For the banquet owner, include venue preparation requirements.
+
+For vendors, include only the relevant vendor's service requirements.
+
+### Message templates
+
+Admin can configure and edit message templates.
+
+Support placeholders such as:
+
+* Recipient name.
+* Event name.
+* Event date.
+* Start and end time.
+* Banquet name.
+* Relevant requirements.
+* Salesperson contact.
+
+Validate that the phone number is suitable for WhatsApp links.
+
+Normalize numbers appropriately and support international country codes.
+
+### Click-to-chat implementation
+
+For the initial version, use WhatsApp click-to-chat with a prefilled message.
+
+The user must review and manually send the message in WhatsApp.
+
+Do not claim that messages are automatically sent, delivered, or read.
+
+Opening WhatsApp must not automatically mark a message as sent or a vendor as confirmed.
+
+### Reminder status
+
+Support:
+
+* Not Contacted.
+* Contacted.
+* Confirmed.
+* Follow-up Required.
+* Not Required.
+
+Track these separately where appropriate:
+
+1. Communication status.
+2. Availability confirmation.
+3. Operational work completion.
+
+Provide an explicit status control and a checkbox or quick action for updating reminder progress.
+
+Store:
+
+* Updated by.
+* Last updated timestamp.
+* Last follow-up date.
+* Notes.
+
+Admin must be able to identify uncontacted recipients and outstanding confirmations.
+
+---
+
+# 15. MANAGER DASHBOARD AND EVENT CHECKLIST
+
+Create a dedicated Manager dashboard.
+
+Managers should only access authorized events assigned to them unless Admin grants broader access.
+
+### Manager home
+
+Show:
+
+* Today's assigned events.
+* Upcoming events.
+* Events in progress.
+* Pending checklist items.
+* Completed checklists.
+
+### Event checklist generation
+
+Generate checklist items from:
+
+1. Vendor requirements entered during event creation.
+2. Standard operational tasks configured by Admin.
+3. Event-specific tasks added by authorized users.
+
+Examples:
+
+* Stage decoration completed.
+* Floral entrance completed.
+* Lighting installed and tested.
+* Sound system tested.
+* Catering setup completed.
+* Seating arrangement completed.
+* Venue cleaned.
+* Final venue inspection completed.
+
+### Checklist fields
+
+Each item must include:
+
+* Task title.
+* Description.
+* Category.
+* Related vendor, if applicable.
+* Assigned manager.
+* Status.
+* Notes.
+* Completion timestamp.
+* Completed by.
+* Optional photo evidence.
+
+### Checklist interface
+
+Use large touch-friendly checkboxes and clear completion states.
+
+Managers should be able to:
+
+* Mark tasks complete.
+* Reopen a task when authorized.
+* Add notes.
+* Upload optional evidence.
+* View related vendor requirements.
+
+Do not mark a vendor's work complete merely because the vendor was contacted or confirmed availability.
+
+### Real-time Admin visibility
+
+Checklist changes must update the Admin Events page without requiring a manual refresh.
+
+Show:
+
+* Completed tasks.
+* Pending tasks.
+* Overdue tasks, where deadlines are configured.
+* Completion percentage.
+* Last updated timestamp.
+
+Store every important checklist change in the activity log.
+
+---
+
+# 16. CALENDAR MODULE
+
+Create a dedicated event calendar for Admin.
+
+Support:
+
+* Month view.
+* Week view.
+* Day view.
+* Filters by banquet.
+* Filters by salesperson.
+* Filters by manager.
+* Filters by event status.
+
+Use visually distinct styles for:
+
+* Tentative bookings.
+* Confirmed events.
+* Events in progress.
+* Completed events.
+* Cancelled events.
+
+Do not rely on color alone; use labels or icons for accessibility.
+
+Clicking an event must open its detailed event page or a well-designed detail panel.
+
+The event details should include:
+
+* Client.
+* Banquet.
+* Date and time.
+* Salesperson.
+* Manager.
+* Vendor confirmations.
+* Checklist progress.
+* Invoice and payment status.
+
+Calendar updates must reflect booking changes.
+
+Do not display a lead as a confirmed event.
+
+---
+
+# 17. INVOICE MANAGEMENT
+
+Both Admin and Salesperson must be able to create invoices.
+
+Admin can create invoices for any authorized client or event and can review and manage all invoices.
+
+Salesperson can create invoices for their own authorized sales and events.
+
+### Invoice creation
+
+Allow users to:
+
+* Select an existing client.
+* Create a new client if permitted.
+* Link the invoice to an existing event.
+* Create an invoice during direct-sale creation.
+* Add or edit line items.
+* Add discounts.
+* Configure advance-payment requirements.
+* Record payment information.
+* Preview the invoice.
+* Save a draft.
+* Issue the invoice.
+* Download or print a PDF.
+
+### Invoice fields
+
+* Unique invoice number.
+* Invoice date.
+* Client details.
+* Event name.
+* Event type.
+* Banquet.
+* Event date and time.
+* Line-item description.
+* Quantity.
+* Unit price.
+* Line-item total.
+* Discount.
+* Final invoice total.
+* Advance payment required: Yes/No.
+* Advance requested.
+* Actual advance received.
+* Payment terms.
+* Notes.
+* Created by.
+* Invoice status.
+
+### Calculations
+
+Calculate all monetary totals using reliable decimal-safe arithmetic.
+
+For each line item:
+
+Line Total = Quantity × Unit Price
+
+Subtotal = Sum of Line Totals
+
+Final Total = Subtotal − Discount
+
+Remaining Balance = Final Total − Total Payments Received
+
+Validate:
+
+* No negative quantities.
+* No invalid monetary values.
+* Discount does not exceed the permitted total.
+* Advance requested does not exceed the invoice total.
+* Payments cannot exceed the outstanding balance unless an explicit, audited credit/refund workflow supports it.
+
+Display advance requested and advance received as separate fields.
+
+### Invoice status
+
+Support:
+
+* Draft.
+* Issued.
+* Partially Paid.
+* Paid.
+* Cancelled.
+
+Do not mark an invoice paid solely because an advance was requested.
+
+### PDF generation
+
+Generate a clean, professional PDF with:
+
+* PerlEvents branding.
+* Business contact details configured by Admin.
+* Invoice number.
+* Invoice date.
+* Client information.
+* Event information.
+* Itemized charges.
+* Discount.
+* Total.
+* Advance requested.
+* Amount received.
+* Balance due.
+* Payment terms.
+* Authorized notes.
+
+The PDF must have proper pagination and must remain readable on standard paper sizes.
+
+### Reference photos in PDF
+
+Provide an optional checkbox:
+
+"Include reference photos in PDF"
+
+When enabled, allow users to select relevant client/event photos.
+
+Append the selected photos on additional pages with optional captions.
+
+This option should be disabled by default.
+
+### Invoice editing and audit
+
+Draft invoices may be edited by authorized users.
+
+Issued invoices must not be silently overwritten.
+
+Maintain revision history or an explicit amendment/cancellation process.
+
+Use server-side invoice-number allocation to prevent duplicate invoice numbers.
+
+---
+
+# 18. SALES MANAGEMENT
+
+Create a dedicated Sales module for Admin and authorized Salespersons.
+
+A sale must be a structured database record, not merely an invoice.
+
+### Sale fields
+
+* Sale ID.
+* Client.
+* Event.
+* Banquet.
+* Assigned salesperson.
+* Sale date.
+* Gross amount.
+* Discount.
+* Final sale amount.
+* Advance requested.
+* Payments received.
+* Outstanding balance.
+* Sale status.
+* Notes.
+* Created by.
+
+### Admin capabilities
+
+Admin can:
+
+* Create a sale manually.
+* Create a sale and link it to an event.
+* Record a sale made outside the application.
+* Assign or reassign a salesperson.
+* Link a client.
+* Create an invoice from the sale.
+* Record payments.
+* View sales history.
+* Correct permitted data through audited changes.
+
+Prevent duplicate counting when an invoice is generated from an existing sale.
+
+### Salesperson capabilities
+
+Salespersons can:
+
+* Create their own authorized sales.
+* Link sales to events.
+* Create invoices.
+* Review their own sales.
+* View payment and outstanding-balance information according to permissions.
+
+### Sales and invoice relationship
+
+Maintain separate Sale and Invoice entities.
+
+A sale may have one or more invoices if the business workflow supports it.
+
+Do not count an invoice as an additional sale.
+
+Keep sale value, invoiced value, and received payments as distinct financial measures.
+
+---
+
+# 19. SALES DASHBOARD AND REPORTS
+
+Create a dedicated Sales Dashboard for Admin.
+
+Display real data with configurable date filters.
+
+### Key metrics
+
+* Total sales.
+* Total invoiced.
+* Total payments received.
+* Total outstanding.
+* Average sale value.
+* Confirmed bookings.
+* Sales by salesperson.
+* Sales by banquet.
+* Sales by event type.
+* Sales by month.
+* Invoice payment status distribution.
+
+### Filters
+
+* Today.
+* This week.
+* This month.
+* Previous month.
+* Custom date range.
+* Banquet.
+* Salesperson.
+* Event type.
+* Sale status.
+
+### Reporting requirements
+
+Clearly distinguish:
+
+* Booking value.
+* Sale value.
+* Invoice value.
+* Advance requested.
+* Actual payment received.
+* Outstanding receivables.
+
+Do not report requested advances as money received.
+
+Use accurate aggregation rules that avoid counting the same sale multiple times.
+
+Provide CSV export for authorized reports.
+
+Where suitable, provide printable summaries.
+
+---
+
+# 20. PAYMENTS AND FINANCIAL TRACKING
+
+Create a structured payment ledger.
+
+### Payment fields
+
+* Payment ID.
+* Client.
+* Sale.
+* Invoice.
+* Event.
+* Amount.
+* Payment date.
+* Payment method.
+* Reference number, optional.
+* Notes.
+* Recorded by.
+* Creation timestamp.
+
+Payment methods may include:
+
+* Cash.
+* UPI.
+* Bank transfer.
+* Card.
+* Other.
+
+Admin must be able to record and review payments.
+
+Authorized Salespersons may record payments according to configured permissions.
+
+Do not integrate a payment gateway unless separately configured.
+
+Recording a payment means the business has recorded receipt; it does not mean the ERP has independently verified the bank transaction.
+
+Update invoice balances and relevant sales reports consistently.
+
+Do not allow unauthorized users to delete or silently alter payment records.
+
+Use reversal or adjustment records for corrections.
+
+---
+
+# 21. SETTINGS
+
+Create an Admin Settings module.
+
+Include:
+
+### Business profile
+
+* Business name.
+* Logo.
+* Address.
+* Contact number.
+* Email.
+* Invoice footer.
+* Payment instructions.
+
+### Users and permissions
+
+* Create users.
+* Assign roles.
+* Deactivate accounts.
+* Configure salesperson permissions.
+* Configure manager access.
+
+### Event configuration
+
+* Event types.
+* Booking statuses.
+* Default setup and cleanup buffers.
+* Tentative-hold rules.
+* Standard checklist templates.
+
+### Vendor configuration
+
+* Vendor categories.
+* Reminder templates.
+
+### Financial configuration
+
+* Invoice numbering format.
+* Default payment terms.
+* Currency.
+* Tax configuration, if required.
+
+Use INR as the initial currency.
+
+Do not invent GST registration details or tax rates. Tax configuration must be explicitly provided by Admin and applied only when appropriate.
+
+---
+
+# 22. DATABASE STRUCTURE
+
+Design a normalized, well-indexed Firestore data model.
+
+Suggested collections:
+
+* organizations
+* users
+* banquets
+* clients
+* leads
+* leadFollowUps
+* events
+* bookingSlots or bookingLocks
+* vendors
+* vendorCategories
+* vendorAssignments
+* eventReminders
+* checklistTemplates
+* checklistItems
+* sales
+* invoices
+* invoiceItems
+* payments
+* attachments
+* activityLogs
+* settings
+
+Use organization-scoped records so the application can support multiple business accounts if required in the future.
+
+Every important record should include:
+
+* ID.
+* Organization ID.
+* Created timestamp.
+* Updated timestamp.
+* Created by.
+* Updated by, where applicable.
+
+Use references or IDs to connect related records instead of duplicating large nested objects unnecessarily.
+
+Store monetary amounts using integer paise or another reliable decimal-safe representation.
+
+Use server timestamps for trusted audit fields.
+
+Create the required Firestore indexes.
+
+Document the schema and access rules.
+
+Do not rely on an undocumented database structure.
+
+---
+
+# 23. REAL-TIME UPDATES
+
+Use Firestore listeners selectively where real-time updates provide meaningful value.
+
+Examples:
+
+* Admin dashboard counts.
+* New leads.
+* Event updates.
+* Booking changes.
+* Vendor confirmation status.
+* Checklist progress.
+* Payment updates.
+
+Ensure listeners are cleaned up when components unmount.
+
+Avoid attaching unrestricted listeners to every collection.
+
+Paginate large tables and load additional records as needed.
+
+Display connection, loading, and error states.
+
+When offline, do not falsely report a booking, payment, or invoice operation as successfully committed when the server has not confirmed it.
+
+---
+
+# 24. ACTIVITY LOGS AND AUDITABILITY
+
+Record important business actions.
+
+Examples:
+
+* Lead created or deleted.
+* Lead follow-up recorded.
+* Event created.
+* Booking modified.
+* Booking cancelled.
+* Vendor assigned or replaced.
+* Invoice issued or cancelled.
+* Payment recorded or reversed.
+* Checklist item completed.
+* User role changed.
+
+Each activity record should include:
+
+* Actor.
+* Action.
+* Relevant record.
+* Timestamp.
+* Relevant before/after information where appropriate.
+
+Do not allow normal users to modify audit records.
+
+Do not expose sensitive credentials, authentication tokens, or unnecessary personal information in logs.
+
+---
+
+# 25. VALIDATION AND ERROR HANDLING
+
+All forms must include:
+
+* Required-field validation.
+* Clear inline error messages.
+* Appropriate phone-number validation.
+* Date and time validation.
+* Financial validation.
+* File type and size restrictions.
+* Duplicate-submission protection.
+* Loading states.
+* Success feedback.
+* Error feedback.
+
+Prevent:
+
+* Confirmed overlapping bookings.
+* Duplicate invoice numbers.
+* Negative balances caused by invalid data.
+* Unauthorized financial edits.
+* Checklist changes on events the manager cannot access.
+* Accidental cancellation without confirmation.
+* Duplicate records caused by repeated button clicks.
+
+Use server-side validation for sensitive operations.
+
+Never show a success message before the operation has actually succeeded.
+
+---
+
+# 26. FILE AND PHOTO MANAGEMENT
+
+Support uploads for:
+
+* Client reference images.
+* Event documents.
+* Optional checklist evidence.
+* Business logo.
+
+Requirements:
+
+* Validate file types and sizes.
+* Use meaningful storage paths.
+* Restrict read and write access.
+* Preserve metadata.
+* Display upload progress.
+* Handle failed uploads.
+* Allow authorized users to remove or replace attachments.
+* Prevent unauthorized access to files from other events or clients.
+
+Do not store large image files directly inside Firestore documents.
+
+---
+
+# 27. PERFORMANCE AND ACCESSIBILITY
+
+Optimize the application for real business usage.
+
+Requirements:
+
+* Lazy-load routes where appropriate.
+* Paginate large lists.
+* Optimize image previews.
+* Avoid unnecessary component re-renders.
+* Use indexes for common queries.
+* Keep mobile interactions fast.
+* Support keyboard navigation.
+* Use semantic HTML.
+* Provide accessible labels.
+* Maintain sufficient text contrast.
+* Do not use color as the only status indicator.
+* Provide readable error and validation messages.
+
+The Salesperson interface must remain usable on smaller Android phones.
+
+---
+
+# 28. TESTING REQUIREMENTS
+
+Write meaningful tests for critical workflows.
+
+### Authentication
+
+* Correct role assignment.
+* Unauthorized access blocked.
+* Inactive users denied access.
+
+### Availability
+
+* Available booking succeeds.
+* Overlapping booking fails.
+* Two concurrent booking attempts cannot both confirm the same slot.
+* Separate banquet halls remain independent.
+* Cancelled bookings release slots appropriately.
+* Tentative holds follow the configured policy.
+
+### Leads
+
+* Lead creation.
+* Follow-up history.
+* Lead deletion.
+* Lead-to-sale conversion without losing history.
+
+### Invoices
+
+* Correct totals.
+* Correct discount calculations.
+* Correct advance and balance calculations.
+* Unique invoice numbers.
+* Draft versus issued behavior.
+* Payment updates.
+* Invoice PDF generation.
+
+### Permissions
+
+* Salesperson cannot perform unauthorized Admin operations.
+* Manager cannot modify financial data without permission.
+* Users cannot access unauthorized events or files.
+
+### Checklist
+
+* Checklist updates appear for Admin.
+* Completion timestamps and actors are recorded.
+* Vendor confirmation does not automatically complete a task.
+
+### WhatsApp
+
+* Correct recipient number.
+* Correct URL encoding.
+* Correct message placeholders.
+* Opening WhatsApp does not falsely mark a message sent.
+
+---
+
+# 29. ACCEPTANCE CRITERIA
+
+The application is not considered complete until the following end-to-end scenarios work.
+
+### Scenario A: New lead
+
+1. Salesperson creates a lead from a mobile phone.
+2. Lead appears in Admin Leads.
+3. Salesperson records a follow-up.
+4. Admin can review the lead and its follow-up history.
+
+### Scenario B: Direct sale
+
+1. Salesperson checks banquet availability.
+2. Selects an available slot.
+3. Creates a client or selects an existing client.
+4. Enters event requirements.
+5. Uploads reference images.
+6. Assigns vendors and a manager.
+7. Saves the booking.
+8. The booking appears in Admin Events and Calendar.
+9. The same time slot cannot be confirmed by another user.
+
+### Scenario C: Admin creates a sale
+
+1. Admin creates a sale manually or from an event.
+2. Links the correct client and salesperson.
+3. Creates an invoice.
+4. Invoice appears in Admin Invoices.
+5. The sale is counted only once in reports.
+
+### Scenario D: Invoice and payment
+
+1. Authorized user generates an invoice.
+2. Invoice PDF contains the correct financial details.
+3. Admin records an advance payment.
+4. Invoice balance updates.
+5. Sales reports reflect the payment correctly.
+
+### Scenario E: Vendor coordination
+
+1. An event has a banquet owner and assigned vendors.
+2. Admin opens the Reminders tab.
+3. Each recipient has the correct prefilled WhatsApp message.
+4. The user opens WhatsApp and sends the message manually.
+5. The user updates communication or confirmation status explicitly.
+6. Admin can identify outstanding confirmations.
+
+### Scenario F: Manager checklist
+
+1. Manager opens an assigned event.
+2. Sees vendor requirements and standard operational tasks.
+3. Marks a task completed.
+4. Admin sees the updated checklist progress without refreshing.
+5. The system records who completed the task and when.
+
+### Scenario G: Availability
+
+1. Admin views all banquet calendars.
+2. Salesperson views availability on mobile.
+3. A confirmed booking blocks its occupied time range.
+4. A booking at another available banquet can proceed.
+5. A cancelled booking no longer blocks its slot unless an active hold remains.
+
+### Scenario H: Mobile usability
+
+1. Salesperson logs in on an Android phone.
+2. Bottom navigation remains visible.
+3. Navigation does not cover form fields or buttons.
+4. Salesperson can create a lead, check availability, create a sale, and access invoices without using a desktop.
+
+---
+
+# 30. DEVELOPMENT INSTRUCTIONS
+
+Build this application systematically.
+
+### Phase 1: Foundation
+
+* Inspect the existing repository.
+* Preserve useful existing components.
+* Configure the design system.
+* Configure authentication.
+* Implement roles and access rules.
+* Create the database schema.
+* Build reusable layouts and navigation.
+
+### Phase 2: Core operations
+
+* Banquets.
+* Availability.
+* Clients.
+* Leads.
+* Direct sales.
+* Events.
+* Salesperson mobile experience.
+
+### Phase 3: Business operations
+
+* Vendors.
+* Vendor assignments.
+* WhatsApp reminders.
+* Manager dashboard.
+* Event checklists.
+* Admin calendar.
+
+### Phase 4: Finance
+
+* Sales management.
+* Invoices.
+* PDF generation.
+* Payment ledger.
+* Sales Dashboard.
+* CSV exports.
+
+### Phase 5: Production readiness
+
+* Security-rule testing.
+* Backend validation.
+* Concurrency testing.
+* Responsive testing.
+* Error handling.
+* Performance optimization.
+* Deployment configuration.
+* Backup and recovery documentation.
+
+Build incrementally and verify each phase before proceeding.
+
+Do not generate the entire application as one oversized component.
+
+Use modular folders for:
+
+* Components.
+* Pages.
+* Layouts.
+* Hooks.
+* Services.
+* Types.
+* Validation schemas.
+* Firebase configuration.
+* Backend functions.
+* Tests.
+
+Create a clear README with setup instructions, required environment variables, Firebase configuration, deployment steps, and administrator account provisioning.
+
+Do not hardcode credentials.
+
+Do not leave nonfunctional placeholder buttons.
+
+Do not claim that an integration is complete if it is only a visual mockup.
+
+If an external service requires credentials, document the configuration and show an appropriate setup state.
+
+Do not remove working features while adding new modules.
+
+---
+
+# FINAL PRODUCT REQUIREMENT
+
+Deliver a fully functional, secure, responsive PerlEvents Banquet & Event Management ERP.
+
+The Admin must have complete authorized control over banquets, availability, leads, clients, events, vendors, sales, invoices, payments, managers, and reports.
+
+The Salesperson experience must be genuinely mobile-first, with a persistent and properly implemented bottom navigation bar.
+
+The Manager must have a focused event execution dashboard with real-time checklist updates.
+
+All modules must share consistent data and permissions.
+
+Booking availability must be concurrency-safe, financial calculations must be accurate, and all critical operations must be validated and auditable.
+
+Prioritize operational reliability, mobile usability, clean architecture, and production readiness over decorative UI.
+
+The final application must be deployable and maintainable, not merely visually convincing.
