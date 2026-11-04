@@ -29,6 +29,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
   const [initialPassword, setInitialPassword] = useState('');
   const [selectedBanquets, setSelectedBanquets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [successResult, setSuccessResult] = useState<{
     email: string;
     role: string;
@@ -78,7 +79,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim()) {
       setError('Full name and email are required.');
@@ -102,23 +103,31 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
       return;
     }
 
-    const res = provisionEmployee({
-      fullName: fullName.trim(),
-      email: email.trim(),
-      phone: phone.trim() || undefined,
-      role,
-      initialPassword: initialPassword || undefined,
-      assignedBanquetIds: selectedBanquets,
-    });
-
-    if (res.success && res.user) {
-      setSuccessResult({
-        email: res.user.email,
-        role: res.user.role,
-        password: initialPassword || 'PE@Welcome!2026',
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const res = await provisionEmployee({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        role,
+        initialPassword: initialPassword || undefined,
+        assignedBanquetIds: selectedBanquets,
       });
-    } else {
-      setError(res.error || 'Failed to provision account.');
+
+      if (res.success && res.user) {
+        setSuccessResult({
+          email: res.user.email,
+          role: res.user.role,
+          password: initialPassword || (res.user.role === 'salesperson' ? 'sales123' : 'manager123'),
+        });
+      } else {
+        setError(res.error || 'Failed to provision account.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Unexpected error occurred while creating employee.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -351,9 +360,15 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-sm flex items-center gap-1.5"
+                disabled={isSubmitting}
+                className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 rounded-lg shadow-sm flex items-center gap-1.5"
               >
-                {isEditing ? (
+                {isSubmitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Provisioning...</span>
+                  </>
+                ) : isEditing ? (
                   <>
                     <Save className="w-4 h-4" />
                     <span>Save Banquet & Profile Changes</span>

@@ -2,7 +2,12 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../types';
 import { realtimeEngine } from '../services/realtimeEngine';
 import { DEFAULT_USER_CREDENTIALS } from '../services/seedData';
-import { authenticateWithFirebase, signOutFromFirebase, isFirebaseConfigured } from '../services/firebase';
+import {
+  authenticateWithFirebase,
+  signOutFromFirebase,
+  isFirebaseConfigured,
+  createEmployeeInFirebaseAuth,
+} from '../services/firebase';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -20,7 +25,7 @@ interface AuthContextType {
     role: 'salesperson' | 'manager';
     initialPassword?: string;
     assignedBanquetIds?: string[];
-  }) => { success: boolean; user?: UserProfile; error?: string };
+  }) => Promise<{ success: boolean; user?: UserProfile; error?: string }>;
   updateEmployee: (
     uid: string,
     data: {
@@ -176,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const provisionEmployee = (data: {
+  const provisionEmployee = async (data: {
     fullName: string;
     email: string;
     phone?: string;
@@ -187,7 +192,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser || currentUser.role !== 'admin') {
       return { success: false, error: 'Unauthorized: Only an Administrator can create accounts.' };
     }
-    return realtimeEngine.createEmployeeAccount(currentUser, data);
+
+    const defaultPwd = data.role === 'salesperson' ? 'sales123' : 'manager123';
+    const passwordToUse = data.initialPassword || defaultPwd;
+
+    // Create user in live Firebase Auth
+    let customUid: string | undefined;
+    if (isFirebaseConfigured()) {
+      try {
+        const fbRes = await createEmployeeInFirebaseAuth(data.email, passwordToUse);
+        if (fbRes.success && fbRes.uid) {
+          customUid = fbRes.uid;
+        } else if (fbRes.error) {
+          // If already exists or error, log for diagnostics
+          console.warn('Firebase Auth creation notice:', fbRes.error);
+        }
+      } catch (fbErr) {
+        console.warn('Firebase Auth user creation error:', fbErr);
+      }
+    }
+
+    return realtimeEngine.createEmployeeAccount(currentUser, {
+      ...data,
+      customUid,
+    });
   };
 
   const updateEmployee = (

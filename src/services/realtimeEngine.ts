@@ -127,17 +127,48 @@ class RealtimeDatabaseEngine {
       this.isLiveFirebase = true;
       listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
         if (remoteState && typeof remoteState === 'object') {
+          // If remote database has no entries yet, seed it with the current local state
+          const hasRemoteData = Boolean(
+            (remoteState.events && Object.keys(remoteState.events).length > 0) ||
+            (remoteState.users && Object.keys(remoteState.users).length > 0) ||
+            (remoteState.sales && Object.keys(remoteState.sales).length > 0) ||
+            (remoteState.banquets && Object.keys(remoteState.banquets).length > 0)
+          );
+
+          if (!hasRemoteData) {
+            this.saveState(this.state);
+            return;
+          }
+
           this.state = {
             ...this.state,
-            ...remoteState,
             settings: { ...this.state.settings, ...(remoteState.settings || {}) },
             users: { ...this.state.users, ...(remoteState.users || {}) },
             banquets: { ...this.state.banquets, ...(remoteState.banquets || {}) },
+            clients: { ...this.state.clients, ...(remoteState.clients || {}) },
+            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
+            leadFollowUps: { ...this.state.leadFollowUps, ...(remoteState.leadFollowUps || {}) },
             events: { ...this.state.events, ...(remoteState.events || {}) },
             bookingSlots: { ...this.state.bookingSlots, ...(remoteState.bookingSlots || {}) },
-            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
+            vendors: { ...this.state.vendors, ...(remoteState.vendors || {}) },
+            vendorCategories: Array.isArray(remoteState.vendorCategories) && remoteState.vendorCategories.length > 0
+              ? remoteState.vendorCategories
+              : this.state.vendorCategories,
+            checklistTemplates: { ...this.state.checklistTemplates, ...(remoteState.checklistTemplates || {}) },
+            checklistItems: { ...this.state.checklistItems, ...(remoteState.checklistItems || {}) },
+            sales: { ...this.state.sales, ...(remoteState.sales || {}) },
+            invoices: { ...this.state.invoices, ...(remoteState.invoices || {}) },
+            payments: { ...this.state.payments, ...(remoteState.payments || {}) },
+            activityLogs: Array.isArray(remoteState.activityLogs) && remoteState.activityLogs.length > 0
+              ? remoteState.activityLogs
+              : this.state.activityLogs,
             targets: { ...this.state.targets, ...(remoteState.targets || {}) },
           };
+
+          try {
+            localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(this.state));
+          } catch (_) {}
+
           this.notify();
         }
       });
@@ -304,6 +335,7 @@ class RealtimeDatabaseEngine {
       phone?: string;
       role: 'salesperson' | 'manager';
       initialPassword?: string;
+      customUid?: string;
       assignedBanquetIds?: string[];
     }
   ): { success: boolean; user?: UserProfile; error?: string } {
@@ -319,7 +351,7 @@ class RealtimeDatabaseEngine {
       return { success: false, error: `Account with email ${emailNormalized} already exists.` };
     }
 
-    const newUid = `usr_${data.role}_${Date.now()}`;
+    const newUid = data.customUid || `usr_${data.role}_${Date.now()}`;
     const newUser: UserProfile = {
       uid: newUid,
       fullName: data.fullName.trim(),

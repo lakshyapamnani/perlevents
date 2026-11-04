@@ -4,7 +4,7 @@
  * Realtime Database & Firebase Authentication active.
  */
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, deleteApp, FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -130,13 +130,60 @@ export async function signOutFromFirebase(): Promise<void> {
 }
 
 /**
- * Pushes data node to Firebase Realtime Database if connected
+ * Creates an employee / user account directly in Firebase Authentication
+ * using an auxiliary isolated FirebaseApp instance. This guarantees that the currently
+ * logged-in administrator is NOT signed out or replaced in the primary Auth session.
+ */
+export async function createEmployeeInFirebaseAuth(
+  email: string,
+  password: string
+): Promise<{ success: boolean; uid?: string; error?: string }> {
+  if (!isFirebaseConfigured()) {
+    return { success: false, error: 'Firebase is not configured.' };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const secondaryAppName = `EmployeeProvision_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  let secondaryApp: FirebaseApp | null = null;
+
+  try {
+    secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password);
+    const uid = cred.user.uid;
+    try {
+      await firebaseSignOut(secondaryAuth);
+    } catch (_) {}
+    return { success: true, uid };
+  } catch (err: any) {
+    console.warn('Firebase Auth employee creation notice:', err?.code, err?.message);
+    if (err?.code === 'auth/email-already-in-use') {
+      return { success: false, error: 'An account with this email address already exists in Firebase Auth.' };
+    }
+    if (err?.code === 'auth/weak-password') {
+      return { success: false, error: 'The password is too weak. Please use at least 6 characters.' };
+    }
+    return { success: false, error: err?.message || 'Failed to create user in Firebase Auth.' };
+  } finally {
+    if (secondaryApp) {
+      try {
+        await deleteApp(secondaryApp);
+      } catch (_) {}
+    }
+  }
+}
+
+/**
+ * Pushes data node to Firebase Realtime Database if connected.
+ * Sanitizes state through JSON serialization to eliminate any undefined values,
+ * which are rejected with a fatal error by the Firebase Realtime Database SDK.
  */
 export async function writeRealtimeNode(nodePath: string, data: any): Promise<boolean> {
   if (!database || !isFirebaseConfigured()) return false;
   try {
     const nodeRef = ref(database, nodePath);
-    await set(nodeRef, data);
+    const sanitizedData = data === null || data === undefined ? null : JSON.parse(JSON.stringify(data));
+    await set(nodeRef, sanitizedData);
     return true;
   } catch (err) {
     console.warn(`Failed writing to Realtime Database at /${nodePath}:`, err);
