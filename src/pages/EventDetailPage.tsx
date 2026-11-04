@@ -28,6 +28,8 @@ import {
   Check,
   Trash2,
   X,
+  Pencil,
+  Save,
 } from 'lucide-react';
 import { EventRecord, ReminderStatus, Attachment } from '../types';
 import {
@@ -78,12 +80,19 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     removeVendorFromEvent,
     toggleChecklistItem,
     addEventPhoto,
+    updateEventDetails,
   } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, allUsersList: users } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Edit Venue & Personnel Reassignment State
+  const [isEditAssignmentModalOpen, setIsEditAssignmentModalOpen] = useState(false);
+  const [editBanquetId, setEditBanquetId] = useState('');
+  const [editSalespersonId, setEditSalespersonId] = useState('');
+  const [editManagerId, setEditManagerId] = useState('');
 
   // Vendor Assignment State
   const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
@@ -146,6 +155,28 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     freshlyAdded.forEach((photo) => {
       addEventPhoto(event.id, photo);
     });
+  };
+
+  const handleOpenEditAssignment = () => {
+    setEditBanquetId(event.banquetId);
+    setEditSalespersonId(event.salespersonId || '');
+    setEditManagerId(event.managerId || '');
+    setIsEditAssignmentModalOpen(true);
+  };
+
+  const handleSaveAssignment = () => {
+    const res = updateEventDetails(event.id, {
+      banquetId: editBanquetId,
+      salespersonId: editSalespersonId,
+      managerId: editManagerId,
+    });
+    if (res.success) {
+      setIsEditAssignmentModalOpen(false);
+      setSaveSuccessMsg('Banquet venue and personnel assignments updated successfully!');
+      setTimeout(() => setSaveSuccessMsg(null), 3000);
+    } else {
+      alert(res.error || 'Failed to update assignment.');
+    }
   };
 
   const handleStatusChange = (newStatus: any) => {
@@ -221,6 +252,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>Create Invoice</span>
+            </button>
+          )}
+
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={handleOpenEditAssignment}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-semibold"
+              title="Change banquet venue or assigned personnel"
+            >
+              <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+              <span>Change Venue / Salesperson</span>
             </button>
           )}
 
@@ -587,9 +629,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
             {/* Personnel Assigned */}
             <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                Staff & Operations Assignment
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Staff & Operations Assignment
+                </h3>
+                {currentUser?.role === 'admin' && (
+                  <button
+                    onClick={handleOpenEditAssignment}
+                    className="p-1 rounded-md text-stone-400 hover:text-emerald-700 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                    title="Change venue or salesperson"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <div className="space-y-2 text-xs">
                 <div>
                   <span className="text-[11px] text-stone-500 block">Lead Salesperson:</span>
@@ -1293,6 +1346,108 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Banquet & Personnel Modal */}
+      {isEditAssignmentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                  Change Banquet Venue & Salesperson
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditAssignmentModalOpen(false)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Banquet Venue *
+                </label>
+                <select
+                  value={editBanquetId}
+                  onChange={(e) => setEditBanquetId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-bold"
+                >
+                  {banquets.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.capacity} Pax)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Reassigning the venue updates the booking schedule, linked sales cards, and invoices.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Lead Salesperson *
+                </label>
+                <select
+                  value={editSalespersonId}
+                  onChange={(e) => setEditSalespersonId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                >
+                  <option value="">-- Select Salesperson --</option>
+                  {users
+                    .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin'))
+                    .map((u) => (
+                      <option key={u.uid} value={u.uid}>
+                        {u.fullName} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Operations Manager (Optional)
+                </label>
+                <select
+                  value={editManagerId}
+                  onChange={(e) => setEditManagerId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                >
+                  <option value="">-- Unassigned (Admin Supervising) --</option>
+                  {users
+                    .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
+                    .map((u) => (
+                      <option key={u.uid} value={u.uid}>
+                        {u.fullName} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setIsEditAssignmentModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAssignment}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Reassignment</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

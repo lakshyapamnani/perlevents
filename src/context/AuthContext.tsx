@@ -21,6 +21,16 @@ interface AuthContextType {
     initialPassword?: string;
     assignedBanquetIds?: string[];
   }) => { success: boolean; user?: UserProfile; error?: string };
+  updateEmployee: (
+    uid: string,
+    data: {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      role?: 'salesperson' | 'manager';
+      assignedBanquetIds?: string[];
+    }
+  ) => { success: boolean; user?: UserProfile; error?: string };
   toggleUserStatus: (uid: string) => { success: boolean; error?: string };
 }
 
@@ -180,6 +190,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.createEmployeeAccount(currentUser, data);
   };
 
+  const updateEmployee = (
+    uid: string,
+    data: {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      role?: 'salesperson' | 'manager';
+      assignedBanquetIds?: string[];
+    }
+  ) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only an Administrator can edit employee accounts.' };
+    }
+    return realtimeEngine.updateEmployeeAccount(currentUser, uid, data);
+  };
+
   const toggleUserStatus = (uid: string) => {
     if (!currentUser || currentUser.role !== 'admin') {
       return { success: false, error: 'Unauthorized.' };
@@ -199,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchRole,
         logout,
         provisionEmployee,
+        updateEmployee,
         toggleUserStatus,
       }}
     >

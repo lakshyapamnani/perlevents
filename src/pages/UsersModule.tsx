@@ -11,6 +11,7 @@ import {
   XCircle,
   Building2,
   Calendar,
+  Pencil,
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { formatDate } from '../utils/formatters';
@@ -25,6 +26,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
   const { banquets } = useData();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<UserProfile | null>(null);
 
   const displayUsers = allUsersList.filter(
     (u) => !filterRole || u.role === filterRole
@@ -65,7 +67,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
 
         {currentUser?.role === 'admin' && (
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setSelectedUserForEdit(null);
+              setIsCreateModalOpen(true);
+            }}
             className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5"
           >
             <UserPlus className="w-4 h-4" />
@@ -123,27 +128,58 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
                     </span>
                   </div>
 
-                  {u.assignedBanquetIds && u.assignedBanquetIds.length > 0 && (
-                    <div className="pt-1 text-[11px] text-stone-500">
-                      Assigned to {u.assignedBanquetIds.length} venue halls
-                    </div>
-                  )}
+                  <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block mb-1">
+                      Assigned Banquets ({(u.assignedBanquetIds || []).length}):
+                    </span>
+                    {(u.assignedBanquetIds || []).length === 0 ? (
+                      <span className="text-[11px] text-stone-400 italic">No venue halls assigned</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {banquets
+                          .filter((b) => (u.assignedBanquetIds || []).includes(b.id))
+                          .map((b) => (
+                            <span
+                              key={b.id}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 flex items-center gap-1 border border-stone-200/60 dark:border-stone-700"
+                            >
+                              <Building2 className="w-3 h-3 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                              <span className="truncate max-w-[140px]">{b.name}</span>
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Status Toggle Button (Admin only) */}
-              {currentUser?.role === 'admin' && !isMe && (
-                <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-end">
+              {/* Admin Actions: Edit Profile & Banquets / Status Toggle */}
+              {currentUser?.role === 'admin' && (
+                <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
                   <button
-                    onClick={() => handleToggle(u.uid)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                      u.isActive
-                        ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/40'
-                        : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/40'
-                    }`}
+                    onClick={() => {
+                      setSelectedUserForEdit(u);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 flex items-center gap-1 transition-colors"
+                    title="Edit name, phone, role, and assigned banquets"
                   >
-                    {u.isActive ? 'Deactivate Account' : 'Activate Account'}
+                    <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                    <span>Edit Banquets</span>
                   </button>
+
+                  {!isMe && (
+                    <button
+                      onClick={() => handleToggle(u.uid)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                        u.isActive
+                          ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/40'
+                          : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/40'
+                      }`}
+                    >
+                      {u.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -154,8 +190,12 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
       {isCreateModalOpen && (
         <CreateEmployeeModal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setSelectedUserForEdit(null);
+          }}
           defaultRole={filterRole || 'salesperson'}
+          employeeToEdit={selectedUserForEdit}
         />
       )}
     </div>

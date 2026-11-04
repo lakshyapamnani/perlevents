@@ -1,22 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { X, UserPlus, Shield, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
-import { UserRole } from '../../types';
+import { X, UserPlus, Shield, AlertCircle, CheckCircle2, KeyRound, Pencil, Building2, Save } from 'lucide-react';
+import { UserProfile, UserRole } from '../../types';
 
 interface CreateEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultRole?: 'salesperson' | 'manager';
+  employeeToEdit?: UserProfile | null;
 }
 
 export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
   isOpen,
   onClose,
   defaultRole = 'salesperson',
+  employeeToEdit = null,
 }) => {
-  const { provisionEmployee } = useAuth();
+  const { provisionEmployee, updateEmployee } = useAuth();
   const { banquets } = useData();
+
+  const isEditing = Boolean(employeeToEdit);
 
   const [role, setRole] = useState<'salesperson' | 'manager'>(defaultRole);
   const [fullName, setFullName] = useState('');
@@ -30,6 +34,26 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
     role: string;
     password?: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (employeeToEdit) {
+      setRole((employeeToEdit.role as 'salesperson' | 'manager') || defaultRole);
+      setFullName(employeeToEdit.fullName);
+      setEmail(employeeToEdit.email);
+      setPhone(employeeToEdit.phone || '');
+      setSelectedBanquets(employeeToEdit.assignedBanquetIds || []);
+      setInitialPassword('');
+    } else {
+      setRole(defaultRole);
+      setFullName('');
+      setEmail('');
+      setPhone('');
+      setSelectedBanquets([]);
+      setInitialPassword('');
+    }
+    setError(null);
+    setSuccessResult(null);
+  }, [employeeToEdit, defaultRole, isOpen]);
 
   if (!isOpen) return null;
 
@@ -46,10 +70,35 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
     }
   };
 
+  const handleSelectAllBanquets = () => {
+    if (selectedBanquets.length === banquets.length) {
+      setSelectedBanquets([]);
+    } else {
+      setSelectedBanquets(banquets.map((b) => b.id));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim()) {
       setError('Full name and email are required.');
+      return;
+    }
+
+    if (isEditing && employeeToEdit) {
+      const res = updateEmployee(employeeToEdit.uid, {
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        role,
+        assignedBanquetIds: selectedBanquets,
+      });
+
+      if (res.success) {
+        onClose();
+      } else {
+        setError(res.error || 'Failed to update employee account.');
+      }
       return;
     }
 
@@ -79,9 +128,15 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50">
           <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+            {isEditing ? (
+              <Pencil className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+            ) : (
+              <UserPlus className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+            )}
             <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100">
-              Provision Employee Account (Admin Only)
+              {isEditing
+                ? `Edit ${role === 'salesperson' ? 'Salesperson' : 'Employee'} Profile & Assigned Venues`
+                : 'Provision Employee Account (Admin Only)'}
             </h2>
           </div>
           <button
@@ -214,45 +269,75 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               </div>
             </div>
 
+            {!isEditing && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+                    Initial Passcode / Secret
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGeneratePassword}
+                    className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
+                  >
+                    <KeyRound className="w-3 h-3" />
+                    Generate
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={initialPassword}
+                  onChange={(e) => setInitialPassword(e.target.value)}
+                  placeholder="Click Generate or enter secure password"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-mono"
+                />
+              </div>
+            )}
+
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-                  Initial Passcode / Secret
+                  Assigned Banquet Venues ({selectedBanquets.length} of {banquets.length})
                 </label>
                 <button
                   type="button"
-                  onClick={handleGeneratePassword}
-                  className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
+                  onClick={handleSelectAllBanquets}
+                  className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline"
                 >
-                  <KeyRound className="w-3 h-3" />
-                  Generate
+                  {selectedBanquets.length === banquets.length ? 'Deselect All' : 'Select All'}
                 </button>
               </div>
-              <input
-                type="text"
-                value={initialPassword}
-                onChange={(e) => setInitialPassword(e.target.value)}
-                placeholder="Click Generate or enter secure password"
-                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1.5">
-                Assigned Banquets (Optional)
-              </label>
-              <div className="space-y-1.5 max-h-32 overflow-y-auto p-2 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/20 text-xs">
-                {banquets.map((b) => (
-                  <label key={b.id} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedBanquets.includes(b.id)}
-                      onChange={() => handleToggleBanquet(b.id)}
-                      className="rounded text-emerald-800 focus:ring-emerald-700"
-                    />
-                    <span className="text-stone-800 dark:text-stone-200 font-medium">{b.name}</span>
-                  </label>
-                ))}
+              <p className="text-[11px] text-stone-500 mb-2">
+                Check the banquets this salesperson is authorized to manage, view availability for, and sell.
+              </p>
+              <div className="space-y-1.5 max-h-44 overflow-y-auto p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/20 text-xs">
+                {banquets.map((b) => {
+                  const isChecked = selectedBanquets.includes(b.id);
+                  return (
+                    <label
+                      key={b.id}
+                      className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors ${
+                        isChecked
+                          ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/30'
+                          : 'border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className={`w-4 h-4 ${isChecked ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-400'}`} />
+                        <div>
+                          <span className="text-stone-800 dark:text-stone-200 font-bold block">{b.name}</span>
+                          <span className="text-[10px] text-stone-500">{b.address} · {b.capacity} Pax</span>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleBanquet(b.id)}
+                        className="rounded text-emerald-800 focus:ring-emerald-700 w-4 h-4"
+                      />
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
@@ -266,9 +351,19 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-sm"
+                className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-sm flex items-center gap-1.5"
               >
-                Create Account
+                {isEditing ? (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Banquet & Profile Changes</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Create Account</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

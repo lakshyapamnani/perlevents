@@ -90,6 +90,7 @@ interface DataContextType {
       requirements: string;
       specialInstructions?: string;
       managerId?: string;
+      salespersonId?: string;
       referencePhotos?: Attachment[];
     };
     financials: {
@@ -126,6 +127,19 @@ interface DataContextType {
     eventId: string,
     newStatus: 'tentative' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   ) => { success: boolean; error?: string };
+  updateEventDetails: (
+    eventId: string,
+    data: {
+      banquetId?: string;
+      salespersonId?: string;
+      managerId?: string;
+      name?: string;
+      guestCount?: number;
+      date?: string;
+      startTime?: string;
+      endTime?: string;
+    }
+  ) => { success: boolean; event?: EventRecord; error?: string };
 
   // Vendor actions
   saveVendor: (
@@ -314,6 +328,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.updateEventStatus(currentUser, eventId, newStatus);
   };
 
+  const updateEventDetails = (
+    eventId: string,
+    data: {
+      banquetId?: string;
+      salespersonId?: string;
+      managerId?: string;
+      name?: string;
+      guestCount?: number;
+      date?: string;
+      startTime?: string;
+      endTime?: string;
+    }
+  ) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.updateEventDetails(currentUser, eventId, data);
+  };
+
   const saveVendor = (vendorData: Omit<Vendor, 'id' | 'createdAt'> & { id?: string }) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
     return realtimeEngine.saveVendor(currentUser, vendorData);
@@ -451,6 +482,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteLead,
         saveClient,
         updateEventStatus,
+        updateEventDetails,
         saveVendor,
         deleteVendor,
         addVendorCategory,
