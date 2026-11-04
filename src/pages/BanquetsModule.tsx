@@ -64,8 +64,28 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
       </div>
 
       {/* Banquet Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {banquets.map((b) => {
+      {banquets.length === 0 ? (
+        <div className="p-12 text-center bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 flex items-center justify-center">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <div className="font-bold text-sm text-stone-900 dark:text-stone-100">No Banquet Halls Configured</div>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            Get started by adding your first luxury hall, grand lawn, or ballroom with its guest capacity and pricing tariff.
+          </p>
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={handleOpenAdd}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 rounded-lg shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Banquet Hall</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {banquets.map((b) => {
           const assignedManager = users.find((u) => u.uid === b.assignedManagerId);
 
           return (
@@ -97,7 +117,7 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
                 </p>
 
                 {/* Specs Box */}
-                <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl grid grid-cols-3 gap-2 text-xs">
                   <div>
                     <span className="text-[10px] text-stone-400 uppercase font-bold block">
                       Capacity
@@ -108,10 +128,18 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
                   </div>
                   <div>
                     <span className="text-[10px] text-stone-400 uppercase font-bold block">
+                      Daily Limit
+                    </span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400 tabular-nums">
+                      Max {b.maxBookingsPerDay || 2} / day
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-stone-400 uppercase font-bold block">
                       Base Tariff
                     </span>
                     <span className="font-bold text-emerald-800 dark:text-emerald-400 tabular-nums">
-                      {formatCurrency(b.basePrice)}
+                      {b.basePrice ? formatCurrency(b.basePrice) : 'On Request'}
                     </span>
                   </div>
                 </div>
@@ -171,6 +199,7 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
           );
         })}
       </div>
+      )}
 
       {isModalOpen && (
         <BanquetModal

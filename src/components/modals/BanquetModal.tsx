@@ -23,6 +23,7 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
   const [address, setAddress] = useState(banquetToEdit?.address || '');
   const [description, setDescription] = useState(banquetToEdit?.description || '');
   const [capacity, setCapacity] = useState<number>(banquetToEdit?.capacity || 400);
+  const [maxBookingsPerDay, setMaxBookingsPerDay] = useState<number>(banquetToEdit?.maxBookingsPerDay || 2);
   const [basePrice, setBasePrice] = useState<number>(banquetToEdit?.basePrice || 200000);
   const [pricingNotes, setPricingNotes] = useState(
     banquetToEdit?.pricingNotes || 'Includes 8-hour venue access.'
@@ -66,6 +67,7 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
       capacity,
       facilities: facList,
       basePrice,
+      maxBookingsPerDay: Number(maxBookingsPerDay) || 2,
       pricingNotes: pricingNotes.trim(),
       ownerName: ownerName.trim(),
       ownerPhone: ownerPhone.trim(),
@@ -159,15 +161,33 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Base Tariff (₹) *
+                Max Bookings Per Day *
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                required
+                value={maxBookingsPerDay}
+                onChange={(e) => setMaxBookingsPerDay(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums font-semibold"
+              />
+              <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
+                Times venue can be booked per day (e.g. 2 times)
+              </span>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                Base Tariff (₹) <span className="text-stone-400 font-normal">(Optional)</span>
               </label>
               <input
                 type="number"
                 min="0"
-                required
-                value={basePrice}
-                onChange={(e) => setBasePrice(Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums font-bold"
+                value={basePrice || ''}
+                placeholder="Optional tariff (₹)"
+                onChange={(e) => setBasePrice(e.target.value === '' ? 0 : Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums"
               />
             </div>
 

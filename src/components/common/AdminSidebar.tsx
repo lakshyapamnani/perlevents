@@ -20,17 +20,19 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  Target,
 } from 'lucide-react';
 
 export type AdminTab =
+  | 'calendar'
   | 'dashboard'
+  | 'targets'
   | 'banquets'
   | 'availability'
   | 'salespersons'
   | 'managers'
   | 'vendors'
   | 'events'
-  | 'calendar'
   | 'leads'
   | 'clients'
   | 'sales'
@@ -84,16 +86,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     icon: React.ReactNode;
     category?: string;
   }> = [
+    { id: 'calendar', label: 'Calendar (Occupied)', icon: <Calendar className="w-4 h-4" /> },
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'banquets', label: 'Banquets', icon: <Building2 className="w-4 h-4" />, category: 'Operations' },
     { id: 'availability', label: 'Availability', icon: <CalendarDays className="w-4 h-4" /> },
     { id: 'events', label: 'Events', icon: <CalendarCheck2 className="w-4 h-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'leads', label: 'Leads', icon: <Inbox className="w-4 h-4" />, category: 'Sales & Clients' },
+    { id: 'targets', label: 'Sales Targets', icon: <Target className="w-4 h-4" />, category: 'Sales & Targets' },
+    { id: 'leads', label: 'Leads', icon: <Inbox className="w-4 h-4" /> },
     { id: 'clients', label: 'Clients', icon: <Contact2 className="w-4 h-4" /> },
     { id: 'sales', label: 'Sales', icon: <BadgeDollarSign className="w-4 h-4" /> },
     { id: 'invoices', label: 'Invoices', icon: <Receipt className="w-4 h-4" /> },
-    { id: 'sales-reports', label: 'Sales Dashboard', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'sales-reports', label: 'Sales Analytics', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'salespersons', label: 'Salespersons', icon: <Users className="w-4 h-4" />, category: 'People & Vendors' },
     { id: 'managers', label: 'Managers', icon: <UserCheck className="w-4 h-4" /> },
     { id: 'vendors', label: 'Vendors', icon: <Truck className="w-4 h-4" /> },
@@ -133,7 +136,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <div
                 onClick={toggleCollapse}
                 className="w-10 h-10 rounded-xl bg-emerald-800 dark:bg-emerald-700 text-white flex items-center justify-center font-bold text-base shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
-                title="PerlEvents ERP - Click to expand"
+                title="Pearlexperiences - Click to expand"
               >
                 P
               </div>
@@ -157,10 +160,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </div>
                 <div className="overflow-hidden min-w-0">
                   <div className="font-bold text-sm tracking-tight text-stone-900 dark:text-stone-100 truncate">
-                    PerlEvents ERP
+                    Pearlexperiences
                   </div>
                   <div className="text-[11px] text-stone-600 dark:text-stone-400 font-medium truncate">
-                    Hospitality Operations
+                    Luxury Event Management
                   </div>
                 </div>
               </div>
@@ -272,17 +275,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {isCollapsed ? (
             <div
               className="text-[10px] font-mono text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded bg-stone-200/50 dark:bg-stone-800 text-center"
-              title="PerlEvents Enterprise Suite v2.4"
+              title="Pearlexperiences ERP Suite v2.4"
             >
               v2.4
             </div>
           ) : (
             <div className="text-[11px] text-stone-600 dark:text-stone-400">
               <div className="font-medium text-stone-700 dark:text-stone-300">
-                PerlEvents · Powered by Drona
+                Pearlexperiences Pvt. Ltd.
               </div>
-              <div className="text-[10px] text-stone-500 dark:text-stone-400">
-                Enterprise Suite v2.4
+              <div className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+                Pearlexperiencespvt.ltd@gmail.com
               </div>
             </div>
           )}

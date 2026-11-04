@@ -10,19 +10,27 @@ import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
-  Upload,
   Plus,
   Trash2,
   Receipt,
   ShieldAlert,
+  Send,
+  Printer,
+  Sparkles,
+  Phone,
+  MessageCircle,
+  ExternalLink,
+  Tag,
+  ArrowRight,
 } from 'lucide-react';
-import { formatCurrency } from '../../utils/formatters';
-import { Attachment } from '../../types';
+import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
+import { Attachment, EventRecord } from '../../types';
 import { ImageUploadArea } from '../common/ImageUploadArea';
 
 interface DirectSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSelectEvent?: (eventId: string) => void;
   preselectedDate?: string;
   preselectedBanquetId?: string;
   preselectedLead?: {
@@ -46,12 +54,25 @@ const EVENT_TYPES = [
   'Anniversary',
   'Corporate event',
   'Conference',
+  'Cocktail & Sangeet',
   'Other',
 ];
+
+interface VendorAssignmentRow {
+  vendorId?: string;
+  vendorName: string;
+  vendorPhone: string;
+  vendorWhatsApp: string;
+  category: string;
+  requirements: string;
+  quotedAmount: number;
+  isCustom: boolean;
+}
 
 export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
   isOpen,
   onClose,
+  onSelectEvent,
   preselectedDate,
   preselectedBanquetId,
   preselectedLead,
@@ -91,27 +112,27 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
   const [managerId, setManagerId] = useState('');
   const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([]);
 
-  // Financials
-  const [quotedAmount, setQuotedAmount] = useState<number>(350000);
-  const [discount, setDiscount] = useState<number>(0);
-  const [advanceRequested, setAdvanceRequested] = useState<number>(150000);
-  const [advanceReceived, setAdvanceReceived] = useState<number>(150000);
+  // Financials - STRICTLY OPTIONAL
+  const [quotedAmount, setQuotedAmount] = useState<number | ''>('');
+  const [discount, setDiscount] = useState<number | ''>('');
+  const [advanceRequested, setAdvanceRequested] = useState<number | ''>('');
+  const [advanceReceived, setAdvanceReceived] = useState<number | ''>('');
   const [paymentTerms, setPaymentTerms] = useState(
-    '50% advance on booking, balance payable 48 hours prior to event.'
+    'Advance on booking, balance payable prior to event.'
   );
   const [createInvoice, setCreateInvoice] = useState(true);
 
   // Vendor Assignments state
-  const [assignedVendors, setAssignedVendors] = useState<
-    Array<{ vendorId: string; category: string; requirements: string; quotedAmount: number }>
-  >([]);
+  const [assignedVendors, setAssignedVendors] = useState<VendorAssignmentRow[]>([]);
 
-  // Validation feedback
+  // Validation & status
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
-  const [successEventId, setSuccessEventId] = useState<string | null>(null);
+
+  // Check-in Voucher Popup state
+  const [confirmedEvent, setConfirmedEvent] = useState<EventRecord | null>(null);
 
   // Auto populate client if existing is picked
   useEffect(() => {
@@ -127,17 +148,15 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
     }
   }, [selectedClientId, clientMode, clients]);
 
-  // When banquet changes, update base price
+  // When banquet changes, if banquet has base price, optionally suggest it
   useEffect(() => {
     const b = banquets.find((item) => item.id === banquetId);
-    if (b) {
+    if (b && b.basePrice > 0 && (quotedAmount === '' || quotedAmount === 0)) {
       setQuotedAmount(b.basePrice);
-      setAdvanceRequested(Math.round(b.basePrice * 0.5));
-      setAdvanceReceived(Math.round(b.basePrice * 0.5));
     }
   }, [banquetId, banquets]);
 
-  // Realtime Availability check whenever banquet, date, start/end time changes
+  // Realtime Availability check
   useEffect(() => {
     if (!banquetId || !date || !startTime || !endTime) return;
 
@@ -159,16 +178,37 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Add Vendor Row - Works smoothly whether existing vendors exist or not!
   const handleAddVendorRow = () => {
-    const firstVendor = vendors[0];
-    if (firstVendor) {
+    const defaultCat = vendorCategories[0] || 'Decoration';
+    const firstV = vendors[0];
+
+    if (firstV) {
       setAssignedVendors([
         ...assignedVendors,
         {
-          vendorId: firstVendor.id,
-          category: firstVendor.categories[0] || 'General',
+          vendorId: firstV.id,
+          vendorName: firstV.businessName,
+          vendorPhone: firstV.phone,
+          vendorWhatsApp: firstV.whatsApp || firstV.phone,
+          category: firstV.categories[0] || defaultCat,
           requirements: '',
           quotedAmount: 0,
+          isCustom: false,
+        },
+      ]);
+    } else {
+      setAssignedVendors([
+        ...assignedVendors,
+        {
+          vendorId: '',
+          vendorName: '',
+          vendorPhone: '',
+          vendorWhatsApp: '',
+          category: defaultCat,
+          requirements: '',
+          quotedAmount: 0,
+          isCustom: true,
         },
       ]);
     }
@@ -178,21 +218,44 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
     setAssignedVendors(assignedVendors.filter((_, i) => i !== index));
   };
 
-  const handleVendorFieldChange = (index: number, field: string, value: any) => {
+  const handleVendorFieldChange = (index: number, field: keyof VendorAssignmentRow, value: any) => {
     const copy = [...assignedVendors];
     copy[index] = { ...copy[index], [field]: value };
+
     if (field === 'vendorId') {
-      const match = vendors.find((v) => v.id === value);
-      if (match) copy[index].category = match.categories[0] || 'General';
+      if (value === '__custom__') {
+        copy[index].isCustom = true;
+        copy[index].vendorId = '';
+        copy[index].vendorName = '';
+        copy[index].vendorPhone = '';
+        copy[index].vendorWhatsApp = '';
+      } else {
+        const match = vendors.find((v) => v.id === value);
+        if (match) {
+          copy[index].isCustom = false;
+          copy[index].vendorName = match.businessName;
+          copy[index].vendorPhone = match.phone;
+          copy[index].vendorWhatsApp = match.whatsApp || match.phone;
+          copy[index].category = match.categories[0] || copy[index].category;
+        }
+      }
     }
+
     setAssignedVendors(copy);
   };
+
+  const numQuoted = Number(quotedAmount) || 0;
+  const numDiscount = Number(discount) || 0;
+  const numAdvanceRec = Number(advanceReceived) || 0;
+  const numAdvanceReq = Number(advanceRequested) || numAdvanceRec;
+  const finalAmount = Math.max(0, numQuoted - numDiscount);
+  const remainingBalance = Math.max(0, finalAmount - numAdvanceRec);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
 
-    // Form validation
+    // Basic validation
     if (!eventName.trim()) {
       setGeneralError('Please enter an event name.');
       return;
@@ -205,47 +268,50 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
       setGeneralError('Cannot book conflicting slot. Please adjust date or time.');
       return;
     }
-    if (quotedAmount < 0 || discount < 0 || advanceReceived < 0) {
-      setGeneralError('Financial amounts cannot be negative.');
-      return;
-    }
-    if (discount > quotedAmount) {
-      setGeneralError('Discount cannot exceed the total quoted amount.');
-      return;
-    }
+
+    // Prepare vendor assignments
+    const formattedVendors = assignedVendors.map((av, idx) => ({
+      vendorId: av.vendorId || undefined,
+      vendorName: av.vendorName.trim() || `Vendor ${idx + 1}`,
+      vendorPhone: av.vendorPhone.trim(),
+      vendorWhatsApp: av.vendorWhatsApp.trim() || av.vendorPhone.trim(),
+      category: av.category || 'General',
+      requirements: av.requirements.trim(),
+      quotedAmount: Number(av.quotedAmount) || 0,
+    }));
 
     setSubmitting(true);
 
     const result = createDirectSale({
       client: {
         id: clientMode === 'existing' ? selectedClientId : undefined,
-        fullName: clientName,
-        primaryPhone: clientPhone,
-        whatsApp: clientWhatsApp || clientPhone,
-        email: clientEmail,
-        address: clientAddress,
+        fullName: clientName.trim(),
+        primaryPhone: clientPhone.trim(),
+        whatsApp: (clientWhatsApp.trim() || clientPhone.trim()),
+        email: clientEmail.trim(),
+        address: clientAddress.trim(),
       },
       event: {
-        name: eventName,
+        name: eventName.trim(),
         eventType,
         banquetId,
         date,
         startTime,
         endTime,
-        guestCount,
+        guestCount: Number(guestCount) || 100,
         requirements,
         specialInstructions,
         managerId: managerId || undefined,
         referencePhotos,
       },
       financials: {
-        quotedAmount,
-        discount,
-        advanceRequested,
-        advanceReceived,
+        quotedAmount: numQuoted,
+        discount: numDiscount,
+        advanceRequested: numAdvanceReq,
+        advanceReceived: numAdvanceRec,
         paymentTerms,
       },
-      vendorAssignments: assignedVendors,
+      vendorAssignments: formattedVendors,
       createInvoice,
       convertedFromLeadId: preselectedLead?.id,
     });
@@ -253,585 +319,773 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
     setSubmitting(false);
 
     if (result.success && result.event) {
-      setSuccessEventId(result.event.id);
+      setConfirmedEvent(result.event);
     } else {
       setGeneralError(result.error || 'Failed to create booking.');
     }
   };
 
-  const finalAmount = Math.max(0, quotedAmount - discount);
-  const remainingBalance = Math.max(0, finalAmount - advanceReceived);
+  const selectedBanquetObj = banquets.find((b) => b.id === (confirmedEvent ? confirmedEvent.banquetId : banquetId));
+
+  // Pre-fill WhatsApp Check-in Pass Message
+  const getWhatsAppCheckinMessage = () => {
+    if (!confirmedEvent) return '';
+    const bName = selectedBanquetObj?.name || confirmedEvent.banquetName;
+    return `*Pearlexperiences - Official Booking Pass & Check-In Voucher*\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `Pass ID: PX-PASS-${confirmedEvent.id.slice(-6).toUpperCase()}\n` +
+      `Event: ${confirmedEvent.name} (${confirmedEvent.eventType})\n` +
+      `Venue: ${bName}\n` +
+      `Date: ${formatDate(confirmedEvent.date)}\n` +
+      `Timing: ${confirmedEvent.startTime} to ${confirmedEvent.endTime}\n` +
+      `Guest Count: ${confirmedEvent.guestCount} Pax\n` +
+      `Guest Name: ${confirmedEvent.clientName}\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      (confirmedEvent.finalAmount > 0
+        ? `Tariff: ₹${confirmedEvent.finalAmount.toLocaleString()}\n` +
+          `Advance Paid: ₹${confirmedEvent.advanceReceived.toLocaleString()}\n` +
+          `Balance Due: ₹${confirmedEvent.remainingBalance.toLocaleString()}\n`
+        : `Status: Confirmed & Reserved\n`) +
+      `Pearlexperiences Pvt Ltd\n` +
+      `Support: Pearlexperiencespvt.ltd@gmail.com`;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 my-8 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50">
-          <div>
-            <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
-              <span>Create Direct Sale & Banquet Booking</span>
-            </h2>
-            <p className="text-xs text-stone-600 dark:text-stone-400">
-              Validated against real-time banquet availability with setup/cleanup buffer prevention.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-stone-600 hover:text-stone-900 dark:hover:text-stone-100 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        
+        {/* CHECK-IN POPUP OVERLAY */}
+        {confirmedEvent ? (
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Header Badge */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shadow-inner">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                      Pearlexperiences
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                      ✓ Confirmed & Check-in Ready
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
+                    Booking & Guest Check-In Voucher
+                  </h2>
+                  <div className="text-xs text-stone-500">
+                    Pass Reference: <strong className="text-stone-800 dark:text-stone-200">PX-PASS-{confirmedEvent.id.slice(-6).toUpperCase()}</strong> · Pearlexperiencespvt.ltd@gmail.com
+                  </div>
+                </div>
+              </div>
 
-        {/* Success Banner */}
-        {successEventId ? (
-          <div className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold text-stone-900 dark:text-stone-100">
-              Booking & Direct Sale Confirmed!
-            </h3>
-            <p className="text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto">
-              Event <strong>{eventName}</strong> has been successfully booked at{' '}
-              <strong>{banquets.find((b) => b.id === banquetId)?.name}</strong> for{' '}
-              <strong>{date}</strong>. Time slot is locked and confirmed.
-            </p>
-            <div className="flex justify-center gap-3 pt-4">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold rounded-lg shadow-sm"
+                className="self-start sm:self-center p-2 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Check-in Pass Card Layout */}
+            <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-700/60 space-y-5">
+              {/* Event & Venue Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-stone-400 font-medium block text-[11px]">Event Name</span>
+                  <span className="font-bold text-stone-900 dark:text-stone-100 text-sm">{confirmedEvent.name}</span>
+                  <span className="block text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">{confirmedEvent.eventType}</span>
+                </div>
+
+                <div>
+                  <span className="text-stone-400 font-medium block text-[11px]">Reserved Venue</span>
+                  <span className="font-bold text-stone-900 dark:text-stone-100 text-sm">{confirmedEvent.banquetName}</span>
+                  <span className="block text-[11px] text-stone-500">{confirmedEvent.guestCount} Guests Expected</span>
+                </div>
+
+                <div>
+                  <span className="text-stone-400 font-medium block text-[11px]">Booking Schedule</span>
+                  <span className="font-bold text-stone-900 dark:text-stone-100 text-sm">{formatDate(confirmedEvent.date)}</span>
+                  <span className="block text-[11px] text-stone-600 dark:text-stone-300">{confirmedEvent.startTime} to {confirmedEvent.endTime}</span>
+                </div>
+
+                <div>
+                  <span className="text-stone-400 font-medium block text-[11px]">Primary Guest</span>
+                  <span className="font-bold text-stone-900 dark:text-stone-100 text-sm">{confirmedEvent.clientName}</span>
+                  <span className="block text-[11px] text-stone-500">{confirmedEvent.clientPhone}</span>
+                </div>
+              </div>
+
+              {/* Assigned Vendors Summary */}
+              {confirmedEvent.vendorAssignments && confirmedEvent.vendorAssignments.length > 0 && (
+                <div className="pt-3 border-t border-stone-200 dark:border-stone-700/60">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-2">
+                    Assigned Vendors & Coordination ({confirmedEvent.vendorAssignments.length})
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {confirmedEvent.vendorAssignments.map((va) => (
+                      <div
+                        key={va.id}
+                        className="p-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <div className="font-bold text-stone-900 dark:text-stone-100">{va.vendorName}</div>
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">{va.category}</div>
+                          {va.vendorPhone && (
+                            <div className="text-[10px] text-stone-500">{va.vendorPhone}</div>
+                          )}
+                        </div>
+                        {va.quotedAmount > 0 && (
+                          <div className="text-right font-semibold text-stone-700 dark:text-stone-300 tabular-nums">
+                            ₹{va.quotedAmount.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Financial Snapshot */}
+              <div className="pt-3 border-t border-stone-200 dark:border-stone-700/60 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="text-stone-400 block text-[10px]">Quoted Tariff</span>
+                    <span className="font-bold text-stone-900 dark:text-stone-100">
+                      {confirmedEvent.finalAmount > 0 ? `₹${confirmedEvent.finalAmount.toLocaleString()}` : 'Optional / Not set'}
+                    </span>
+                  </div>
+                  {confirmedEvent.advanceReceived > 0 && (
+                    <div>
+                      <span className="text-stone-400 block text-[10px]">Advance Received</span>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                        ₹{confirmedEvent.advanceReceived.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {confirmedEvent.remainingBalance > 0 && (
+                    <div>
+                      <span className="text-stone-400 block text-[10px]">Balance Due</span>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                        ₹{confirmedEvent.remainingBalance.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-stone-500 italic">
+                  Slot locked in real-time calendar with 60m buffers.
+                </div>
+              </div>
+            </div>
+
+            {/* Check-in Popup Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 1. Open Event Details & Reminders */}
+                {onSelectEvent && (
+                  <button
+                    onClick={() => {
+                      onSelectEvent(confirmedEvent.id);
+                      onClose();
+                    }}
+                    className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 min-h-[42px] transition-transform active:scale-95"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    <span>Open Event Details & Reminders</span>
+                  </button>
+                )}
+
+                {/* 2. Share WhatsApp Check-in Pass */}
+                {confirmedEvent.clientWhatsApp && (
+                  <a
+                    href={generateWhatsAppUrl(confirmedEvent.clientWhatsApp, getWhatsAppCheckinMessage())}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 min-h-[42px]"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>WhatsApp Pass</span>
+                  </a>
+                )}
+
+                {/* 3. Print Check-in Slip */}
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-2.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 min-h-[42px]"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Pass</span>
+                </button>
+              </div>
+
+              {/* 4. Done */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 bg-stone-900 hover:bg-black dark:bg-stone-100 dark:text-stone-900 text-white rounded-xl text-xs font-bold min-h-[42px]"
               >
                 Done
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-            {generalError && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{generalError}</span>
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50">
+              <div>
+                <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+                  <span>Direct Sale & Banquet Reservation</span>
+                </h2>
+                <p className="text-xs text-stone-600 dark:text-stone-400">
+                  Pearlexperiences luxury reservation desk. All pricing fields are optional.
+                </p>
               </div>
-            )}
+              <button
+                onClick={onClose}
+                className="p-2 text-stone-600 hover:text-stone-900 dark:hover:text-stone-100 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            {/* SECTION A: CLIENT INFORMATION */}
-            <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                  Section A: Client Information
-                </h3>
-                <div className="flex items-center gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setClientMode('existing')}
-                    className={`px-3 py-1 rounded-md font-medium ${
-                      clientMode === 'existing'
-                        ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900'
-                        : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
-                    }`}
-                  >
-                    Existing Client
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setClientMode('new');
-                      setSelectedClientId('');
-                    }}
-                    className={`px-3 py-1 rounded-md font-medium ${
-                      clientMode === 'new'
-                        ? 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900'
-                        : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
-                    }`}
-                  >
-                    + New Client
-                  </button>
-                </div>
-              </div>
-
-              {clientMode === 'existing' && (
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Select Client
-                  </label>
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  >
-                    <option value="">-- Choose registered client --</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.fullName} ({c.primaryPhone})
-                      </option>
-                    ))}
-                  </select>
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              {generalError && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{generalError}</span>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* SECTION A: CLIENT INFORMATION */}
+              <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                    Section A: Client Information
+                  </h3>
+                  <div className="flex rounded-lg border border-stone-200 dark:border-stone-700 p-0.5 text-xs bg-stone-50 dark:bg-stone-800">
+                    <button
+                      type="button"
+                      onClick={() => setClientMode('new')}
+                      className={`px-2.5 py-1 rounded-md font-semibold ${
+                        clientMode === 'new'
+                          ? 'bg-emerald-800 text-white shadow-xs'
+                          : 'text-stone-600 dark:text-stone-400'
+                      }`}
+                    >
+                      New Client
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClientMode('existing')}
+                      className={`px-2.5 py-1 rounded-md font-semibold ${
+                        clientMode === 'existing'
+                          ? 'bg-emerald-800 text-white shadow-xs'
+                          : 'text-stone-600 dark:text-stone-400'
+                      }`}
+                    >
+                      Existing Directory ({clients.length})
+                    </button>
+                  </div>
+                </div>
+
+                {clientMode === 'existing' && (
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Select Client from Directory
+                    </label>
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    >
+                      <option value="">-- Choose registered client --</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.fullName} ({c.primaryPhone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Client Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="e.g. Vikram Malhotra"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Primary Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={clientPhone}
+                      onChange={(e) => {
+                        setClientPhone(e.target.value);
+                        if (!clientWhatsApp) setClientWhatsApp(e.target.value);
+                      }}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      WhatsApp Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={clientWhatsApp}
+                      onChange={(e) => setClientWhatsApp(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={clientEmail}
+                      onChange={(e) => setClientEmail(e.target.value)}
+                      placeholder="client@gmail.com"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Client Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="e.g. Ananya & Kabir Malhotra"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Primary Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    WhatsApp Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientWhatsApp}
-                    onChange={(e) => setClientWhatsApp(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
-                    placeholder="client@gmail.com"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Address
+                    Client Residential / Billing Address
                   </label>
                   <input
                     type="text"
                     value={clientAddress}
                     onChange={(e) => setClientAddress(e.target.value)}
-                    placeholder="City, Area, House number"
+                    placeholder="Sector, City, State"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* SECTION B: EVENT & REAL-TIME AVAILABILITY */}
-            <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                Section B: Event Schedule & Banquet Availability
-              </h3>
+              {/* SECTION B: EVENT & SCHEDULE */}
+              <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                  Section B: Event Specifics & Venue Slot
+                </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Event Title / Occasion *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    placeholder="e.g. Malhotra & Kapoor Grand Wedding Reception"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Event Title / Occasion *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={eventName}
+                      onChange={(e) => setEventName(e.target.value)}
+                      placeholder="e.g. Malhotra Grand Wedding Reception"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Event Type *
-                  </label>
-                  <select
-                    value={eventType}
-                    onChange={(e) => setEventType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  >
-                    {EVENT_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Banquet Hall *
-                  </label>
-                  <select
-                    value={banquetId}
-                    onChange={(e) => setBanquetId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
-                  >
-                    {banquets.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} (Cap: {b.capacity} | Base: {formatCurrency(b.basePrice)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Event Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Expected Guest Count *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={guestCount}
-                    onChange={(e) => setGuestCount(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Start Time *
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    End Time *
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Assigned Operations Manager
-                  </label>
-                  <select
-                    value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                  >
-                    <option value="">-- Assign Manager (Optional) --</option>
-                    {users
-                      .filter((u) => u.role === 'manager')
-                      .map((m) => (
-                        <option key={m.uid} value={m.uid}>
-                          {m.fullName}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Event Category *
+                    </label>
+                    <select
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
+                    >
+                      {EVENT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
                         </option>
                       ))}
-                  </select>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Banquet Venue *
+                    </label>
+                    <select
+                      required
+                      value={banquetId}
+                      onChange={(e) => setBanquetId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                    >
+                      {banquets.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.capacity} Pax)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Event Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Expected Guest Count (Pax)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={guestCount}
+                      onChange={(e) => setGuestCount(Number(e.target.value))}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Start & End Time *
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="time"
+                        required
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full px-2 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                      />
+                      <input
+                        type="time"
+                        required
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full px-2 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Concurrency Conflict Status */}
+                <div className="pt-2">
+                  {conflictError ? (
+                    <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg text-xs text-red-800 dark:text-red-200 flex items-start gap-2">
+                      <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Booking Conflict Detected:</span> {conflictError}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>
+                        Slot is <strong>AVAILABLE</strong> with required 60m setup/cleanup buffer prevention.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Event Requirements & Setup Specifications
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={requirements}
+                    onChange={(e) => setRequirements(e.target.value)}
+                    placeholder="Detail decor themes, floral arches, stage dimensions, catering requirements..."
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                  />
                 </div>
               </div>
 
-              {/* Concurrency Conflict Status Callout */}
-              <div className="pt-2">
-                {conflictError ? (
-                  <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg text-xs text-red-800 dark:text-red-200 flex items-start gap-2">
-                    <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold">Booking Conflict Detected:</span> {conflictError}
-                    </div>
+              {/* SECTION C: VENDOR COORDINATION (Option for Vendors to Add) */}
+              <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                      <Tag className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      <span>Section C: Vendor Assignments</span>
+                    </h3>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                      Add vendors for catering, sound, decor, or photography. Prices are completely optional.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddVendorRow}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 rounded-lg shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Vendor</span>
+                  </button>
+                </div>
+
+                {assignedVendors.length === 0 ? (
+                  <div className="p-4 text-xs text-stone-500 bg-stone-50 dark:bg-stone-800/40 rounded-xl text-center border border-dashed border-stone-200 dark:border-stone-700">
+                    No vendors assigned to this direct sale yet. Click <strong>&quot;+ Add Vendor&quot;</strong> to add decorators, sound/DJ, catering, or security.
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>
-                      Slot is <strong>AVAILABLE</strong> with required 60 min setup/cleanup buffers.
-                    </span>
+                  <div className="space-y-3">
+                    {assignedVendors.map((av, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/40 space-y-2.5"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {/* Vendor Selector or Custom Name */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-stone-600 dark:text-stone-400 mb-0.5">
+                              Vendor / Supplier *
+                            </label>
+                            {vendors.length > 0 ? (
+                              <div className="space-y-1">
+                                <select
+                                  value={av.isCustom ? '__custom__' : (av.vendorId || '__custom__')}
+                                  onChange={(e) => handleVendorFieldChange(idx, 'vendorId', e.target.value)}
+                                  className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                                >
+                                  <option value="__custom__">+ Enter New / Custom Vendor</option>
+                                  {vendors.map((v) => (
+                                    <option key={v.id} value={v.id}>
+                                      {v.businessName} ({v.categories.join(', ')})
+                                    </option>
+                                  ))}
+                                </select>
+                                {av.isCustom && (
+                                  <input
+                                    type="text"
+                                    placeholder="Enter Vendor Business Name"
+                                    value={av.vendorName}
+                                    onChange={(e) => handleVendorFieldChange(idx, 'vendorName', e.target.value)}
+                                    className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type="text"
+                                placeholder="e.g. Royal Decorators / DJ Aryan"
+                                value={av.vendorName}
+                                onChange={(e) => handleVendorFieldChange(idx, 'vendorName', e.target.value)}
+                                className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                              />
+                            )}
+                          </div>
+
+                          {/* Vendor Category */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-stone-600 dark:text-stone-400 mb-0.5">
+                              Service Category *
+                            </label>
+                            <input
+                              type="text"
+                              list="vendor-category-presets"
+                              value={av.category}
+                              placeholder="Decoration, Sound, Catering..."
+                              onChange={(e) => handleVendorFieldChange(idx, 'category', e.target.value)}
+                              className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                            />
+                            <datalist id="vendor-category-presets">
+                              {vendorCategories.map((c) => (
+                                <option key={c} value={c} />
+                              ))}
+                              <option value="Decoration" />
+                              <option value="Sound and DJ" />
+                              <option value="Lighting & Trussing" />
+                              <option value="Catering & Buffet" />
+                              <option value="Photography & Video" />
+                              <option value="Valet Parking & Security" />
+                              <option value="Florist" />
+                              <option value="Bridal Makeup" />
+                            </datalist>
+                          </div>
+
+                          {/* Contact Phone / WhatsApp */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-stone-600 dark:text-stone-400 mb-0.5">
+                              Contact Phone / WhatsApp
+                            </label>
+                            <input
+                              type="tel"
+                              value={av.vendorPhone}
+                              placeholder="+91 98765 00000"
+                              onChange={(e) => {
+                                handleVendorFieldChange(idx, 'vendorPhone', e.target.value);
+                                if (!av.vendorWhatsApp) handleVendorFieldChange(idx, 'vendorWhatsApp', e.target.value);
+                              }}
+                              className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-semibold text-stone-600 dark:text-stone-400 mb-0.5">
+                              Requirements / Deliverables Scope
+                            </label>
+                            <input
+                              type="text"
+                              value={av.requirements}
+                              onChange={(e) => handleVendorFieldChange(idx, 'requirements', e.target.value)}
+                              placeholder="e.g. Floral stage setup, 2 wireless microphones, 10 buffet warmers"
+                              className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <label className="block text-[10px] font-semibold text-stone-600 dark:text-stone-400 mb-0.5">
+                                Quoted Price (₹) <span className="font-normal text-stone-400">(Optional)</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={av.quotedAmount === 0 ? '' : av.quotedAmount}
+                                placeholder="0 (Optional)"
+                                onChange={(e) => handleVendorFieldChange(idx, 'quotedAmount', Number(e.target.value) || 0)}
+                                className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 tabular-nums"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVendorRow(idx)}
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg mt-3"
+                              title="Remove vendor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                  Event Requirements & Setup Specifications
-                </label>
-                <textarea
-                  rows={2}
-                  value={requirements}
-                  onChange={(e) => setRequirements(e.target.value)}
-                  placeholder="Detail decor themes, floral arches, stage dimensions, catering requirements..."
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-                />
-              </div>
-
-              {/* Event Reference Photos Upload */}
-              <div className="pt-2 border-t border-stone-200 dark:border-stone-800">
-                <ImageUploadArea
-                  label="Stage & Decor Reference Photos (Moodboard)"
-                  description="Upload client reference photos, floral designs, stage dimensions, or floor plans."
-                  attachments={referencePhotos}
-                  onChange={setReferencePhotos}
-                  compact={true}
-                />
-              </div>
-            </div>
-
-            {/* SECTION D: VENDOR COORDINATION */}
-            <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
-              <div className="flex items-center justify-between">
-                <div>
+              {/* SECTION D: FINANCIALS (ALL OPTIONAL) */}
+              <div className="space-y-3 pb-2">
+                <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                    Section D: Vendor Assignments
+                    Section D: Financials & Payments
                   </h3>
-                  <p className="text-[11px] text-stone-600 dark:text-stone-400">
-                    Pre-assign vendors for direct WhatsApp coordination and operational checklists.
-                  </p>
+                  <span className="text-[11px] text-stone-500 font-medium">
+                    (All financial fields are optional)
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddVendorRow}
-                  className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Assign Vendor</span>
-                </button>
-              </div>
 
-              {assignedVendors.length === 0 ? (
-                <div className="p-3 text-xs text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800/40 rounded-lg text-center">
-                  No vendors assigned yet. Click "Assign Vendor" to coordinate decorators, catering, sound, etc.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {assignedVendors.map((av, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center"
-                    >
-                      <div>
-                        <label className="block text-[10px] text-stone-600 dark:text-stone-400">Vendor</label>
-                        <select
-                          value={av.vendorId}
-                          onChange={(e) => handleVendorFieldChange(idx, 'vendorId', e.target.value)}
-                          className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
-                        >
-                          {vendors.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.businessName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Total Quoted Tariff (₹) <span className="text-stone-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={quotedAmount}
+                      onChange={(e) => setQuotedAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0 (Optional)"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums"
+                    />
+                  </div>
 
-                      <div>
-                        <label className="block text-[10px] text-stone-600 dark:text-stone-400">Category</label>
-                        <input
-                          type="text"
-                          list="direct-sale-vendor-categories"
-                          value={av.category}
-                          onChange={(e) => handleVendorFieldChange(idx, 'category', e.target.value)}
-                          className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
-                        />
-                        <datalist id="direct-sale-vendor-categories">
-                          {vendorCategories.map((c) => (
-                            <option key={c} value={c} />
-                          ))}
-                        </datalist>
-                      </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Discount Applied (₹) <span className="text-stone-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums"
+                    />
+                  </div>
 
-                      <div>
-                        <label className="block text-[10px] text-stone-600 dark:text-stone-400">Requirements</label>
-                        <input
-                          type="text"
-                          value={av.requirements}
-                          onChange={(e) => handleVendorFieldChange(idx, 'requirements', e.target.value)}
-                          placeholder="Specific deliverables"
-                          className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
-                        />
-                      </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Advance Received (₹) <span className="text-stone-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={advanceReceived}
+                      onChange={(e) => setAdvanceReceived(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-emerald-800 dark:text-emerald-300 tabular-nums font-semibold"
+                    />
+                  </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <label className="block text-[10px] text-stone-600 dark:text-stone-400">Quoted (₹)</label>
-                          <input
-                            type="number"
-                            value={av.quotedAmount}
-                            onChange={(e) => handleVendorFieldChange(idx, 'quotedAmount', Number(e.target.value))}
-                            className="w-full p-1.5 text-xs rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 tabular-nums"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveVendorRow(idx)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded mt-3"
-                          title="Remove vendor"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Remaining Balance Due
+                    </label>
+                    <div className="w-full px-3 py-2 text-xs rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-800/60 text-stone-900 dark:text-stone-100 font-bold tabular-nums">
+                      {formatCurrency(remainingBalance)}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* SECTION E: FINANCIALS & INVOICE GENERATION */}
-            <div className="space-y-3 pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                Section E: Financials & Advance Payment
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Total Quoted Tariff (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={quotedAmount}
-                    onChange={(e) => setQuotedAmount(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-bold tabular-nums"
-                  />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Approved Discount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={discount}
-                    onChange={(e) => setDiscount(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Advance Requested (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={advanceRequested}
-                    onChange={(e) => setAdvanceRequested(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 tabular-nums"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Actual Advance Received (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={advanceReceived}
-                    onChange={(e) => setAdvanceReceived(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold tabular-nums text-emerald-700 dark:text-emerald-400"
-                  />
-                </div>
-              </div>
-
-              {/* Financial Calculation Summary Box */}
-              <div className="p-3 bg-stone-100 dark:bg-stone-800/60 rounded-xl grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <span className="text-stone-600 dark:text-stone-400 block text-[10px]">Net Quoted</span>
-                  <span className="font-bold text-stone-900 dark:text-stone-100 tabular-nums">
-                    {formatCurrency(quotedAmount)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-stone-600 dark:text-stone-400 block text-[10px]">Final Sale Total</span>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-300 tabular-nums">
-                    {formatCurrency(finalAmount)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-stone-600 dark:text-stone-400 block text-[10px]">Advance Recorded</span>
-                  <span className="font-bold text-stone-900 dark:text-stone-100 tabular-nums">
-                    {formatCurrency(advanceReceived)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-stone-600 dark:text-stone-400 block text-[10px]">Remaining Balance</span>
-                  <span className="font-bold text-amber-700 dark:text-amber-400 tabular-nums">
-                    {formatCurrency(remainingBalance)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-stone-800 dark:text-stone-200">
+                <div className="flex items-center gap-2 pt-2">
                   <input
                     type="checkbox"
+                    id="create-invoice-toggle"
                     checked={createInvoice}
                     onChange={(e) => setCreateInvoice(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600"
+                    className="w-4 h-4 rounded text-emerald-800 focus:ring-emerald-700"
                   />
-                  <span>Generate official client invoice immediately</span>
-                </label>
+                  <label htmlFor="create-invoice-toggle" className="text-xs text-stone-700 dark:text-stone-300 cursor-pointer">
+                    Automatically generate official Pearlexperiences booking invoice
+                  </label>
+                </div>
               </div>
-            </div>
 
-            {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || Boolean(conflictError)}
-                className={`px-6 py-2.5 text-xs font-semibold text-white rounded-lg transition-all shadow-sm ${
-                  conflictError
-                    ? 'bg-stone-400 cursor-not-allowed'
-                    : 'bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600'
-                }`}
-              >
-                {submitting ? 'Verifying & Reserving...' : 'Confirm Booking & Save Direct Sale'}
-              </button>
-            </div>
-          </form>
+              {/* Form Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 border border-stone-300 dark:border-stone-700 rounded-lg text-xs font-semibold text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || Boolean(conflictError)}
+                  className="px-6 py-2 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5"
+                >
+                  {submitting ? 'Confirming...' : 'Confirm Direct Sale & View Check-In'}
+                </button>
+              </div>
+            </form>
+          </>
         )}
       </div>
     </div>

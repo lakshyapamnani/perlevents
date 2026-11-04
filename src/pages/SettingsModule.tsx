@@ -12,6 +12,10 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
+  Image,
+  PenTool,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
 import { OrganizationSettings } from '../types';
 
@@ -23,6 +27,28 @@ export const SettingsModule: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'operations' | 'rules' | 'sync'>('profile');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((prev) => ({ ...prev, logoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((prev) => ({ ...prev, signatureUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const securityRulesSnippet = `{
   "rules": {
@@ -155,28 +181,231 @@ export const SettingsModule: React.FC = () => {
         </div>
       )}
 
-      {/* SUBTAB 1: BUSINESS PROFILE */}
+      {/* SUBTAB 1: BUSINESS PROFILE & INVOICE */}
       {activeSubTab === 'profile' && (
-        <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm space-y-6">
+          {/* 1. Official Logo Configuration */}
+          <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50/60 dark:bg-stone-800/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                  <Image className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <span>Company / Brand Logo</span>
+                </h3>
+                <p className="text-[11px] text-stone-500">
+                  This logo is automatically fetched and rendered on all client invoices, vouchers, and PDF printouts.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+              <div className="sm:col-span-2 space-y-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                    Logo Image URL or Upload File
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://example.com/logo.png or choose file below"
+                    value={formData.logoUrl || ''}
+                    onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-xs font-semibold cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                    <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Upload Logo File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {formData.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, logoUrl: '' })}
+                      className="px-2.5 py-1 text-xs text-red-600 hover:underline"
+                    >
+                      Clear Logo
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Logo Preview */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 min-h-[90px] text-center">
+                {formData.logoUrl ? (
+                  <img
+                    src={formData.logoUrl}
+                    alt="Brand Logo Preview"
+                    className="max-h-16 max-w-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center text-stone-400">
+                    <span className="text-[10px] uppercase font-bold tracking-widest block text-emerald-800 dark:text-emerald-400 font-serif">
+                      Pearlexperiences
+                    </span>
+                    <span className="text-[9px] text-stone-400 block mt-0.5">
+                      Default Text Logo Active
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Official Signature & Stamp Configuration */}
+          <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50/60 dark:bg-stone-800/30 space-y-3">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                <PenTool className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span>Authorized Signatory & Signature</span>
+              </h3>
+              <p className="text-[11px] text-stone-500">
+                Printed on formal invoices, payment vouchers, and agreements above the authorized signatory line.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Authorized Signatory Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.authorizedSignatoryName || ''}
+                  placeholder="e.g. Lakshya Pamnani"
+                  onChange={(e) =>
+                    setFormData({ ...formData, authorizedSignatoryName: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Signatory Title / Designation *
+                </label>
+                <input
+                  type="text"
+                  value={formData.authorizedSignatoryTitle || ''}
+                  placeholder="e.g. Managing Director / Finance Officer"
+                  onChange={(e) =>
+                    setFormData({ ...formData, authorizedSignatoryTitle: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Signature Image (PNG / Transparent recommended)
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Signature URL or choose an image file"
+                    value={formData.signatureUrl || ''}
+                    onChange={(e) => setFormData({ ...formData, signatureUrl: e.target.value })}
+                    className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                  />
+                  <label className="px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-2xs">
+                    <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Upload Signature</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {formData.signatureUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, signatureUrl: '' })}
+                      className="px-2 py-1 text-xs text-red-600 hover:underline shrink-0"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Signature Live Preview Box */}
+              <div className="sm:col-span-2 p-3 bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-left text-xs">
+                  <span className="text-[10px] text-stone-400 uppercase font-bold block">
+                    Invoice Signature Preview:
+                  </span>
+                  <span className="text-[11px] text-stone-600 dark:text-stone-300">
+                    For {formData.name || 'Pearlexperiences'} Pvt. Ltd.
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center min-w-[180px] text-center pt-2 border-t sm:border-t-0 sm:border-l border-stone-200 dark:border-stone-700 pl-4">
+                  {formData.signatureUrl ? (
+                    <img
+                      src={formData.signatureUrl}
+                      alt="Signature Preview"
+                      className="h-10 max-w-[160px] object-contain mb-1"
+                    />
+                  ) : (
+                    <div className="font-serif italic text-lg text-stone-800 dark:text-stone-200 tracking-wide select-none">
+                      {formData.authorizedSignatoryName || 'Lakshya Pamnani'}
+                    </div>
+                  )}
+                  <div className="w-36 border-t border-stone-400 dark:border-stone-500 mt-1" />
+                  <span className="text-[11px] font-bold text-stone-800 dark:text-stone-200 mt-0.5">
+                    {formData.authorizedSignatoryName || 'Authorized Signatory'}
+                  </span>
+                  <span className="text-[9px] text-stone-500">
+                    {formData.authorizedSignatoryTitle || 'Pearlexperiences Accounts'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Company & Tax Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Organization / Brand Name
+                Organization / Brand Name *
               </label>
               <input
                 type="text"
+                required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
               />
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Corporate Address (Prints on invoices)
+                GSTIN / Corporate Tax ID
               </label>
               <input
                 type="text"
+                placeholder="07AAAAA0000A1Z5"
+                value={formData.taxNumber || ''}
+                onChange={(e) => setFormData({ ...formData, taxNumber: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 font-mono"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                Corporate Address (Prints on invoices) *
+              </label>
+              <input
+                type="text"
+                required
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
@@ -185,10 +414,11 @@ export const SettingsModule: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Official Phone
+                Official Phone *
               </label>
               <input
                 type="text"
+                required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
@@ -197,10 +427,11 @@ export const SettingsModule: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Official Email
+                Official Email (Pearlexperiences) *
               </label>
               <input
                 type="email"
+                required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
@@ -265,7 +496,7 @@ export const SettingsModule: React.FC = () => {
           <div className="flex justify-end pt-3">
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-sm"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl shadow-sm transition-colors"
             >
               Save Profile Changes
             </button>

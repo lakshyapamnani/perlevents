@@ -13,9 +13,12 @@ import {
   Payment,
   Sale,
   Vendor,
+  VendorAssignment,
   ActivityLog,
   ReminderStatus,
   Attachment,
+  SalesTarget,
+  TargetPeriodType,
 } from '../types';
 import { realtimeEngine } from '../services/realtimeEngine';
 import { useAuth } from './AuthContext';
@@ -49,6 +52,7 @@ interface DataContextType {
   invoices: Invoice[];
   payments: Payment[];
   activityLogs: ActivityLog[];
+  targets: SalesTarget[];
   metrics: MetricsSummary;
 
   // Actions
@@ -59,7 +63,13 @@ interface DataContextType {
     startTime: string;
     endTime: string;
     excludeEventId?: string;
-  }) => { isAvailable: boolean; conflictReason?: string; conflictingBooking?: BookingSlot };
+  }) => {
+    isAvailable: boolean;
+    conflictReason?: string;
+    conflictingBooking?: BookingSlot;
+    remainingSlotsToday?: number;
+    maxBookingsPerDay?: number;
+  };
   createDirectSale: (data: {
     client: {
       id?: string;
@@ -83,17 +93,20 @@ interface DataContextType {
       referencePhotos?: Attachment[];
     };
     financials: {
-      quotedAmount: number;
-      discount: number;
-      advanceRequested: number;
-      advanceReceived: number;
-      paymentTerms: string;
+      quotedAmount?: number;
+      discount?: number;
+      advanceRequested?: number;
+      advanceReceived?: number;
+      paymentTerms?: string;
     };
     vendorAssignments?: Array<{
-      vendorId: string;
+      vendorId?: string;
+      vendorName?: string;
+      vendorPhone?: string;
+      vendorWhatsApp?: string;
       category: string;
-      requirements: string;
-      quotedAmount: number;
+      requirements?: string;
+      quotedAmount?: number;
     }>;
     createInvoice?: boolean;
     convertedFromLeadId?: string;
@@ -126,6 +139,19 @@ interface DataContextType {
     assignmentId: string,
     status: ReminderStatus
   ) => { success: boolean; error?: string };
+  addVendorToEvent: (
+    eventId: string,
+    vendorData: {
+      vendorId?: string;
+      vendorName: string;
+      vendorPhone: string;
+      vendorWhatsApp?: string;
+      category: string;
+      requirements?: string;
+      quotedAmount?: number;
+    }
+  ) => { success: boolean; assignment?: VendorAssignment; error?: string };
+  removeVendorFromEvent: (eventId: string, assignmentId: string) => { success: boolean; error?: string };
 
   toggleChecklistItem: (
     eventId: string,
@@ -145,6 +171,18 @@ interface DataContextType {
   ) => { success: boolean; payment?: Payment; error?: string };
 
   updateSettings: (settings: OrganizationSettings) => { success: boolean; error?: string };
+  saveTarget: (targetData: {
+    id?: string;
+    salespersonId: string;
+    salespersonName: string;
+    salespersonEmail: string;
+    periodType: TargetPeriodType;
+    targetBookings: number;
+    periodValue: string;
+    year?: number;
+    notes?: string;
+  }) => { success: boolean; target?: SalesTarget; error?: string };
+  deleteTarget: (targetId: string) => { success: boolean; error?: string };
   resetDatabase: () => void;
 }
 
@@ -172,6 +210,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const sales = useMemo(() => Object.values(dbState.sales), [dbState.sales]);
   const invoices = useMemo(() => Object.values(dbState.invoices), [dbState.invoices]);
   const payments = useMemo(() => Object.values(dbState.payments), [dbState.payments]);
+  const targets = useMemo(() => Object.values(dbState.targets || {}), [dbState.targets]);
 
   // Real database-backed summary calculation
   const metrics: MetricsSummary = useMemo(() => {
@@ -300,6 +339,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.updateVendorAssignmentStatus(currentUser, eventId, assignmentId, status);
   };
 
+  const addVendorToEvent = (
+    eventId: string,
+    vendorData: {
+      vendorId?: string;
+      vendorName: string;
+      vendorPhone: string;
+      vendorWhatsApp?: string;
+      category: string;
+      requirements?: string;
+      quotedAmount?: number;
+    }
+  ) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.addVendorToEvent(currentUser, eventId, vendorData);
+  };
+
+  const removeVendorFromEvent = (eventId: string, assignmentId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.removeVendorFromEvent(currentUser, eventId, assignmentId);
+  };
+
   const toggleChecklistItem = (
     eventId: string,
     itemId: string,
@@ -334,6 +394,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     realtimeEngine.resetToSeedData();
   };
 
+  const saveTarget = (targetData: {
+    id?: string;
+    salespersonId: string;
+    salespersonName: string;
+    salespersonEmail: string;
+    periodType: TargetPeriodType;
+    targetBookings: number;
+    periodValue: string;
+    year?: number;
+    notes?: string;
+  }) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.saveTarget(currentUser, targetData);
+  };
+
+  const deleteTarget = (targetId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.deleteTarget(currentUser, targetId);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -352,6 +432,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         invoices,
         payments,
         activityLogs: dbState.activityLogs,
+        targets,
         metrics,
         saveBanquet,
         validateAvailability,
@@ -366,11 +447,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addVendorCategory,
         deleteVendorCategory,
         updateVendorAssignmentStatus,
+        addVendorToEvent,
+        removeVendorFromEvent,
         toggleChecklistItem,
         addEventPhoto,
         saveInvoice,
         recordPayment,
         updateSettings,
+        saveTarget,
+        deleteTarget,
         resetDatabase,
       }}
     >

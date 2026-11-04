@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  DollarSign,
+  Sparkles,
 } from 'lucide-react';
 import { Invoice, InvoiceItem, Attachment } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -20,6 +22,7 @@ interface InvoiceModalProps {
   onClose: () => void;
   invoiceToView?: Invoice | null;
   preselectedEventId?: string;
+  onOpenRecordPayment?: (eventId: string, clientId: string, balance: number) => void;
 }
 
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({
@@ -27,6 +30,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   onClose,
   invoiceToView,
   preselectedEventId,
+  onOpenRecordPayment,
 }) => {
   const { events, clients, banquets, settings, saveInvoice } = useData();
   const { currentUser } = useAuth();
@@ -202,6 +206,23 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {remainingBalance > 0 && onOpenRecordPayment && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenRecordPayment(
+                    currentEvent?.id || invoiceToView?.eventId || '',
+                    currentClient?.id || invoiceToView?.clientId || '',
+                    remainingBalance
+                  );
+                  onClose();
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white flex items-center gap-1.5 shadow-sm transition-colors"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>Record Payment</span>
+              </button>
+            )}
             <button
               onClick={() => setPrintMode(!printMode)}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center gap-1.5"
@@ -240,16 +261,34 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               {/* Invoice Brand Header */}
               <div className="flex justify-between items-start border-b border-stone-200 pb-6">
                 <div>
-                  <div className="text-2xl font-extrabold text-stone-900 tracking-tight font-sans">
-                    PerlEvents
-                  </div>
-                  <div className="text-xs text-stone-600 font-medium mt-0.5">
-                    Banquets & Luxury Hospitality ERP · Powered by Drona
+                  {settings.logoUrl ? (
+                    <img
+                      src={settings.logoUrl}
+                      alt={settings.name || 'Pearlexperiences'}
+                      className="max-h-16 max-w-[240px] object-contain mb-2"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-950 text-amber-300 font-serif font-black flex items-center justify-center text-lg shadow-sm">
+                        P
+                      </div>
+                      <div className="text-2xl font-black text-stone-900 tracking-tight font-serif uppercase">
+                        {settings.name || 'Pearlexperiences'}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-xs text-stone-600 font-medium">
+                    {settings.brandTagline || 'Luxury Banquets, Palatial Venues & Event Management'}
                   </div>
                   <div className="text-xs text-stone-600 mt-2 max-w-sm leading-relaxed">
                     {settings.address}
                     <br />
                     Phone: {settings.phone} | Email: {settings.email}
+                    {settings.taxNumber && (
+                      <div className="font-mono text-[11px] font-bold text-stone-900 mt-1">
+                        GSTIN: {settings.taxNumber}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -362,20 +401,54 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 </div>
               </div>
 
-              {/* Terms & Payment Instructions */}
-              <div className="pt-6 border-t border-stone-200 grid grid-cols-2 gap-6 text-[11px] text-stone-600">
-                <div>
-                  <div className="font-bold uppercase text-stone-800 mb-1">Payment Instructions:</div>
-                  <p className="leading-relaxed">{settings.paymentInstructions}</p>
+              {/* Terms, Payment Instructions & Official Signatory */}
+              <div className="pt-6 border-t border-stone-200 grid grid-cols-12 gap-6 text-[11px] text-stone-600">
+                <div className="col-span-12 sm:col-span-7 space-y-3">
+                  <div>
+                    <div className="font-bold uppercase text-stone-800 mb-1">Bank & Payment Instructions:</div>
+                    <p className="leading-relaxed bg-stone-50 p-2.5 rounded-lg border border-stone-200 font-mono text-[10px] text-stone-700">
+                      {settings.paymentInstructions}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="font-bold uppercase text-stone-800 mb-0.5">Payment Terms & Policy:</div>
+                    <p className="leading-relaxed">{paymentTerms}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold uppercase text-stone-800 mb-1">Payment Terms & Policy:</div>
-                  <p className="leading-relaxed">{paymentTerms}</p>
+
+                {/* Official Signatory Box */}
+                <div className="col-span-12 sm:col-span-5 flex flex-col justify-end items-center text-center p-3.5 rounded-xl border border-stone-200 bg-stone-50/60">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 mb-1">
+                    For {settings.name || 'Pearlexperiences'} Pvt. Ltd.
+                  </span>
+                  <div className="h-14 flex items-center justify-center my-1">
+                    {settings.signatureUrl ? (
+                      <img
+                        src={settings.signatureUrl}
+                        alt="Authorized Signature"
+                        className="max-h-12 max-w-[150px] object-contain"
+                      />
+                    ) : (
+                      <span className="font-serif italic text-lg text-stone-800 tracking-wide select-none">
+                        {settings.authorizedSignatoryName || 'Lakshya Pamnani'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-36 border-t border-stone-800 my-1" />
+                  <span className="font-bold text-stone-900 text-[11px]">
+                    {settings.authorizedSignatoryName || 'Authorized Signatory'}
+                  </span>
+                  <span className="text-[9px] text-stone-500">
+                    {settings.authorizedSignatoryTitle || 'Pearlexperiences Accounts'}
+                  </span>
+                  <span className="text-[8px] text-emerald-800 font-bold uppercase tracking-wider mt-0.5">
+                    (Official Stamp & Signature)
+                  </span>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="pt-6 border-t border-stone-200 text-center text-[10px] text-stone-500">
+              <div className="pt-4 border-t border-stone-200 text-center text-[10px] text-stone-500">
                 {settings.invoiceFooter}
               </div>
 

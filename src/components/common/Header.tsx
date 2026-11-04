@@ -13,6 +13,7 @@ import {
   UserCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -33,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   isSidebarCollapsed,
   onToggleSidebar,
 }) => {
-  const { currentUser, allUsersList, loginAs, switchRole } = useAuth();
+  const { currentUser, allUsersList, loginAs, switchRole, logout } = useAuth();
   const { settings } = useData();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
@@ -103,10 +104,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100 font-sans">
-              PerlEvents
+              Pearlexperiences
             </span>
-            <span className="text-[11px] font-medium text-stone-600 dark:text-stone-400">
-              by Drona
+            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              Luxury Venues
             </span>
           </div>
         </div>
@@ -197,9 +198,32 @@ export const Header: React.FC<HeaderProps> = ({
                     );
                   })}
                 </div>
+
+                <div className="pt-2 mt-1 border-t border-stone-100 dark:border-stone-800">
+                  <button
+                    onClick={() => {
+                      logout();
+                      setShowRoleDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out of Pearlexperiences</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
+
+          {/* Quick Sign Out Icon Button */}
+          <button
+            onClick={logout}
+            className="p-2 text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 hover:bg-stone-200/50 dark:hover:bg-stone-800 rounded-lg transition-colors"
+            title="Sign Out"
+            aria-label="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

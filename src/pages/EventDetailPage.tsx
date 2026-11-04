@@ -26,6 +26,8 @@ import {
   User,
   ShieldCheck,
   Check,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { EventRecord, ReminderStatus, Attachment } from '../types';
 import {
@@ -68,8 +70,12 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     activityLogs,
     invoices,
     payments,
+    vendors,
+    vendorCategories,
     updateEventStatus,
     updateVendorAssignmentStatus,
+    addVendorToEvent,
+    removeVendorFromEvent,
     toggleChecklistItem,
     addEventPhoto,
   } = useData();
@@ -78,6 +84,15 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Vendor Assignment State
+  const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
+  const [newVendorId, setNewVendorId] = useState('');
+  const [newVendorName, setNewVendorName] = useState('');
+  const [newVendorCategory, setNewVendorCategory] = useState('Decoration');
+  const [newVendorPhone, setNewVendorPhone] = useState('');
+  const [newVendorRequirements, setNewVendorRequirements] = useState('');
+  const [newVendorQuoted, setNewVendorQuoted] = useState<number | ''>('');
 
   const event = events.find((e) => e.id === eventId);
 
@@ -147,9 +162,13 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     tentative: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800',
   };
 
+  const isSalesperson = currentUser?.role === 'salesperson';
+
   const tabs: Array<{ id: TabType; label: string; count?: number | string }> = [
     { id: 'overview', label: 'Overview' },
-    { id: 'checklist', label: 'Ops Checklist', count: `${completedCount}/${tasks.length}` },
+    ...(!isSalesperson
+      ? [{ id: 'checklist' as TabType, label: 'Ops Checklist', count: `${completedCount}/${tasks.length}` }]
+      : []),
     { id: 'vendors', label: 'Vendors & Reminders', count: event.vendorAssignments.length },
     { id: 'financials', label: 'Financials & Invoices', count: eventInvoices.length },
     { id: 'photos', label: 'Photos & Moodboard', count: event.referencePhotos?.length || 0 },
@@ -354,66 +373,171 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               )}
             </div>
 
-            {/* Checklist Preview Box */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                    Operational Checklist Progress
-                  </h3>
-                  <p className="text-xs text-stone-500">
-                    {completedCount} of {tasks.length} inspection tasks verified
-                  </p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('checklist')}
-                  className="text-xs font-bold text-emerald-800 dark:text-emerald-400 hover:underline"
-                >
-                  Manage Checklist →
-                </button>
-              </div>
-
-              <div className="w-full h-2 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-
-              <div className="space-y-2 pt-2">
-                {tasks.slice(0, 4).map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => handleToggle(t.id)}
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40 cursor-pointer"
+            {/* Salesperson: Vendor Reminders Dispatch Box; Others: Operational Checklist */}
+            {isSalesperson ? (
+              <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-emerald-800 dark:text-emerald-400" />
+                      <span>Vendor Reminders & WhatsApp Dispatch</span>
+                    </h3>
+                    <p className="text-xs text-stone-500">
+                      {event.vendorAssignments.length} vendors assigned · Send 1-click WhatsApp reminders & mark status
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('vendors')}
+                    className="text-xs font-bold text-emerald-800 dark:text-emerald-400 hover:underline"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${
-                          t.status === 'completed'
-                            ? 'bg-emerald-700 text-white'
-                            : 'border border-stone-400 dark:border-stone-600'
-                        }`}
-                      >
-                        {t.status === 'completed' && <Check className="w-3.5 h-3.5" />}
+                    Manage All Vendors →
+                  </button>
+                </div>
+
+                {event.vendorAssignments.length === 0 ? (
+                  <div className="p-4 rounded-xl border border-dashed border-stone-200 dark:border-stone-800 text-center text-xs text-stone-500">
+                    <span>No vendors assigned yet. </span>
+                    <button
+                      onClick={() => setIsAddVendorModalOpen(true)}
+                      className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      + Assign Vendor
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    {event.vendorAssignments.slice(0, 4).map((va) => {
+                      const msg = createVendorReminderMessage({
+                        vendorContactPerson: va.vendorName,
+                        vendorBusinessName: va.vendorName,
+                        category: va.category,
+                        banquetName: event.banquetName,
+                        eventName: event.name,
+                        date: event.date,
+                        startTime: event.startTime,
+                        endTime: event.endTime,
+                        requirements: va.notes || event.requirements,
+                      });
+                      const waUrl = generateWhatsAppUrl(va.vendorPhone, msg);
+                      const isReminderSent = va.contactStatus === 'contacted' || va.contactStatus === 'confirmed';
+
+                      return (
+                        <div
+                          key={va.vendorId}
+                          className="flex items-center justify-between p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={isReminderSent}
+                              onChange={(e) => {
+                                updateVendorAssignmentStatus(
+                                  event.id,
+                                  va.vendorId,
+                                  e.target.checked ? 'contacted' : 'not_contacted'
+                                );
+                              }}
+                              className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-500 cursor-pointer"
+                              title="Mark reminder sent"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                                <span>{va.vendorName}</span>
+                                <span className="text-[10px] font-semibold text-stone-500 uppercase px-1.5 py-0.2 rounded bg-stone-100 dark:bg-stone-800">
+                                  {va.category}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-stone-500">
+                                {isReminderSent ? (
+                                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Reminder Contacted</span>
+                                ) : (
+                                  <span className="text-amber-700 dark:text-amber-400">Pending Reminder</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
+                              if (!isReminderSent) {
+                                updateVendorAssignmentStatus(event.id, va.vendorId, 'contacted');
+                              }
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1 shadow-xs"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            <span>WhatsApp</span>
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                      Operational Checklist Progress
+                    </h3>
+                    <p className="text-xs text-stone-500">
+                      {completedCount} of {tasks.length} inspection tasks verified
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('checklist')}
+                    className="text-xs font-bold text-emerald-800 dark:text-emerald-400 hover:underline"
+                  >
+                    Manage Checklist →
+                  </button>
+                </div>
+
+                <div className="w-full h-2 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  {tasks.slice(0, 4).map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => handleToggle(t.id)}
+                      className="flex items-center justify-between p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${
+                            t.status === 'completed'
+                              ? 'bg-emerald-700 text-white'
+                              : 'border border-stone-400 dark:border-stone-600'
+                          }`}
+                        >
+                          {t.status === 'completed' && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <span
+                          className={`text-xs ${
+                            t.status === 'completed'
+                              ? 'line-through text-stone-400'
+                              : 'font-medium text-stone-800 dark:text-stone-200'
+                          }`}
+                        >
+                          {t.title}
+                        </span>
                       </div>
-                      <span
-                        className={`text-xs ${
-                          t.status === 'completed'
-                            ? 'line-through text-stone-400'
-                            : 'font-medium text-stone-800 dark:text-stone-200'
-                        }`}
-                      >
-                        {t.title}
+                      <span className="text-[10px] font-semibold text-stone-500 uppercase px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800">
+                        {t.category}
                       </span>
                     </div>
-                    <span className="text-[10px] font-semibold text-stone-500 uppercase px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800">
-                      {t.category}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column: Client & Personnel */}
@@ -502,8 +626,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         </div>
       )}
 
-      {/* 2. OPS CHECKLIST TAB */}
-      {activeTab === 'checklist' && (
+      {/* 2. OPS CHECKLIST TAB (Hidden for Salesperson - replaced by Vendor Reminders) */}
+      {activeTab === 'checklist' && !isSalesperson && (
         <div className="space-y-6">
           <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -615,84 +739,371 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       {/* 3. VENDORS & REMINDERS TAB */}
       {activeTab === 'vendors' && (
         <div className="space-y-6">
-          <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs">
-            <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">
-              Vendor Coordination & WhatsApp Reminders
-            </h2>
-            <p className="text-xs text-stone-500 mt-0.5">
-              Send pre-formatted WhatsApp reminders with hall timings, setup requirements, and contact statuses.
-            </p>
+          <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+                <span>Vendor Coordination & Operational Reminders</span>
+              </h2>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Send 1-click WhatsApp reminders. Check the reminder checkbox once contacted; status updates in real time for Admin & Sales.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsAddVendorModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold shadow-xs self-start sm:self-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Assign Vendor</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {event.vendorAssignments.map((va) => {
-              const msg = createVendorReminderMessage({
-                vendorContactPerson: va.vendorName,
-                vendorBusinessName: va.vendorName,
-                category: va.category,
-                banquetName: event.banquetName,
-                eventName: event.name,
-                date: formatDate(event.date),
-                startTime: event.startTime,
-                endTime: event.endTime,
-                requirements: va.requirements,
-              });
+          {event.vendorAssignments.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                <Users className="w-6 h-6" />
+              </div>
+              <div className="font-bold text-sm text-stone-900 dark:text-stone-100">No Vendors Assigned to this Event</div>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                Assign decorators, sound & DJ, catering, or photography. You can send WhatsApp reminders with event timings and check them off.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAddVendorModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Assign First Vendor</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {event.vendorAssignments.map((va) => {
+                const msg = createVendorReminderMessage({
+                  vendorContactPerson: va.vendorName,
+                  vendorBusinessName: va.vendorName,
+                  category: va.category,
+                  banquetName: event.banquetName,
+                  eventName: event.name,
+                  date: formatDate(event.date),
+                  startTime: event.startTime,
+                  endTime: event.endTime,
+                  requirements: va.requirements,
+                });
 
-              return (
-                <div
-                  key={va.id}
-                  className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3 flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        {va.category}
-                      </span>
-                      <span className="text-xs font-bold text-stone-900 dark:text-stone-100">
-                        {formatCurrency(va.quotedAmount)}
-                      </span>
+                const isContacted = va.contactStatus === 'contacted' || va.contactStatus === 'confirmed';
+
+                return (
+                  <div
+                    key={va.id}
+                    className={`p-5 rounded-2xl border shadow-xs space-y-3.5 flex flex-col justify-between transition-all ${
+                      isContacted
+                        ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                        : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          {va.category}
+                        </span>
+                        <div className="text-xs font-semibold text-stone-500">
+                          {va.quotedAmount > 0 ? (
+                            <span className="font-bold text-stone-900 dark:text-stone-100 tabular-nums">
+                              {formatCurrency(va.quotedAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-stone-400 italic">Price: Optional</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-stone-900 dark:text-stone-100">
+                            {va.vendorName}
+                          </h4>
+                          {va.vendorPhone && (
+                            <div className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-stone-400" />
+                              <span>{va.vendorPhone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Status pill */}
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                            va.contactStatus === 'confirmed'
+                              ? 'bg-emerald-700 text-white'
+                              : va.contactStatus === 'contacted'
+                              ? 'bg-sky-600 text-white'
+                              : va.contactStatus === 'followup_required'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
+                          }`}
+                        >
+                          {va.contactStatus.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800/40 p-2.5 rounded-xl border border-stone-200/50 dark:border-stone-800">
+                        <strong>Requirements:</strong> {va.requirements || 'Standard event scope and schedule'}
+                      </p>
                     </div>
 
-                    <h4 className="font-bold text-sm text-stone-900 dark:text-stone-100">
-                      {va.vendorName}
-                    </h4>
-                    <p className="text-xs text-stone-600 dark:text-stone-400">
-                      <strong>Requirements:</strong> {va.requirements || 'Standard event specs'}
-                    </p>
-                  </div>
+                    {/* Interactive Reminder Checkbox & WhatsApp Action */}
+                    <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2">
+                      {/* Reminder Checkbox - Syncs across Admin & Salesperson */}
+                      <label className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border bg-white dark:bg-stone-800/90 border-stone-300 dark:border-stone-700 hover:border-emerald-600 cursor-pointer select-none transition-colors shadow-xs">
+                        <input
+                          type="checkbox"
+                          checked={isContacted}
+                          onChange={(e) => {
+                            const newStatus: ReminderStatus = e.target.checked ? 'contacted' : 'not_contacted';
+                            updateVendorAssignmentStatus(event.id, va.id, newStatus);
+                          }}
+                          className="w-4 h-4 rounded text-emerald-800 focus:ring-emerald-700 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">
+                          {va.contactStatus === 'confirmed'
+                            ? '✓ Confirmed'
+                            : va.contactStatus === 'contacted'
+                            ? '✓ Reminder Sent'
+                            : 'Mark Reminder Sent'}
+                        </span>
+                      </label>
 
-                  <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between gap-2">
-                    <select
-                      value={va.contactStatus}
-                      onChange={(e) =>
-                        updateVendorAssignmentStatus(
-                          event.id,
-                          va.id,
-                          e.target.value as ReminderStatus
-                        )
-                      }
-                      className="text-xs font-semibold rounded-lg px-2 py-1.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200"
-                    >
-                      <option value="not_contacted">Not Contacted</option>
-                      <option value="contacted">Contacted</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="followup_required">Follow-up Req</option>
-                    </select>
+                      <div className="flex items-center gap-2">
+                        {/* WhatsApp Button */}
+                        <a
+                          href={generateWhatsAppUrl(va.vendorWhatsApp || va.vendorPhone, msg)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => {
+                            if (va.contactStatus === 'not_contacted') {
+                              updateVendorAssignmentStatus(event.id, va.id, 'contacted');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors"
+                          title="Open WhatsApp with prefilled reminder text"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>WhatsApp</span>
+                        </a>
 
-                    <a
-                      href={generateWhatsAppUrl(va.vendorWhatsApp || va.vendorPhone, msg)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>WhatsApp</span>
-                    </a>
+                        {/* Status Select */}
+                        <select
+                          value={va.contactStatus}
+                          onChange={(e) =>
+                            updateVendorAssignmentStatus(
+                              event.id,
+                              va.id,
+                              e.target.value as ReminderStatus
+                            )
+                          }
+                          className="text-xs font-semibold rounded-xl px-2 py-1.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200"
+                        >
+                          <option value="not_contacted">Not Contacted</option>
+                          <option value="contacted">Contacted</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="followup_required">Follow-up Req</option>
+                        </select>
+
+                        {/* Remove */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remove vendor ${va.vendorName} from this event?`)) {
+                              removeVendorFromEvent(event.id, va.id);
+                            }
+                          }}
+                          className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg"
+                          title="Remove vendor from event"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quick Assign Vendor Modal */}
+          {isAddVendorModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+              <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+                  <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-emerald-800 dark:text-emerald-400" />
+                    <span>Assign Vendor to {event.name}</span>
+                  </h3>
+                  <button
+                    onClick={() => setIsAddVendorModalOpen(false)}
+                    className="p-1 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newVendorName.trim()) return;
+
+                    addVendorToEvent(event.id, {
+                      vendorId: newVendorId || undefined,
+                      vendorName: newVendorName.trim(),
+                      category: newVendorCategory || 'General',
+                      vendorPhone: newVendorPhone.trim(),
+                      vendorWhatsApp: newVendorPhone.trim(),
+                      requirements: newVendorRequirements.trim(),
+                      quotedAmount: Number(newVendorQuoted) || 0,
+                    });
+
+                    setIsAddVendorModalOpen(false);
+                    setNewVendorName('');
+                    setNewVendorPhone('');
+                    setNewVendorRequirements('');
+                    setNewVendorQuoted('');
+                    setSaveSuccessMsg('Vendor assigned and added to operational reminder schedule.');
+                    setTimeout(() => setSaveSuccessMsg(null), 3000);
+                  }}
+                  className="space-y-3.5 text-xs"
+                >
+                  {vendors.length > 0 && (
+                    <div>
+                      <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                        Select Existing Vendor (Optional)
+                      </label>
+                      <select
+                        value={newVendorId}
+                        onChange={(e) => {
+                          const vId = e.target.value;
+                          setNewVendorId(vId);
+                          const match = vendors.find((v) => v.id === vId);
+                          if (match) {
+                            setNewVendorName(match.businessName);
+                            setNewVendorPhone(match.phone);
+                            setNewVendorCategory(match.categories[0] || 'Decoration');
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                      >
+                        <option value="">-- Or enter custom vendor below --</option>
+                        {vendors.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.businessName} ({v.categories.join(', ')})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                      Vendor / Business Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newVendorName}
+                      onChange={(e) => setNewVendorName(e.target.value)}
+                      placeholder="e.g. Royal Decorators / DJ Aryan"
+                      className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                        Category *
+                      </label>
+                      <input
+                        type="text"
+                        list="modal-vendor-categories"
+                        required
+                        value={newVendorCategory}
+                        onChange={(e) => setNewVendorCategory(e.target.value)}
+                        placeholder="Decoration, Sound, etc."
+                        className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                      />
+                      <datalist id="modal-vendor-categories">
+                        {vendorCategories.map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                        <option value="Decoration" />
+                        <option value="Sound and DJ" />
+                        <option value="Lighting" />
+                        <option value="Catering" />
+                        <option value="Photography" />
+                      </datalist>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                        Phone / WhatsApp
+                      </label>
+                      <input
+                        type="tel"
+                        value={newVendorPhone}
+                        onChange={(e) => setNewVendorPhone(e.target.value)}
+                        placeholder="+91 98765 00000"
+                        className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                      Requirements / Deliverables Scope
+                    </label>
+                    <input
+                      type="text"
+                      value={newVendorRequirements}
+                      onChange={(e) => setNewVendorRequirements(e.target.value)}
+                      placeholder="e.g. Floral backdrop, 2 cordless mics"
+                      className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                      Agreed Price (₹) <span className="font-normal text-stone-400">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newVendorQuoted}
+                      onChange={(e) => setNewVendorQuoted(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0 (Optional)"
+                      className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddVendorModalOpen(false)}
+                      className="px-4 py-2 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-600 dark:text-stone-400 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow-xs"
+                    >
+                      Assign Vendor
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -733,18 +1144,29 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
           {/* Linked Invoices Section */}
           <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
                 Invoices Linked to Event ({eventInvoices.length})
               </h3>
-              {onOpenCreateInvoice && (
-                <button
-                  onClick={() => onOpenCreateInvoice(event.id)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900"
-                >
-                  + Generate New Invoice
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {onOpenRecordPayment && event.remainingBalance > 0 && (
+                  <button
+                    onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs"
+                  >
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span>+ Record Client Payment</span>
+                  </button>
+                )}
+                {onOpenCreateInvoice && (
+                  <button
+                    onClick={() => onOpenCreateInvoice(event.id)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700"
+                  >
+                    + Generate New Invoice
+                  </button>
+                )}
+              </div>
             </div>
 
             {eventInvoices.length === 0 ? (

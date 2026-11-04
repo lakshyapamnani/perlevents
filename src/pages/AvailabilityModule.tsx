@@ -48,15 +48,21 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
   const firstDayIndex = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  // Banquet daily limit calculations
+  const currentBanquet = banquets.find((b) => b.id === selectedBanquetId);
+  const maxDailyLimit = currentBanquet?.maxBookingsPerDay || 2;
+
   // Filter slots for the selected date
   const slotsOnDate = bookingSlots.filter((slot) => {
     const matchDate = slot.date === selectedDate;
     const matchBanquet = selectedBanquetId === 'all' || slot.banquetId === selectedBanquetId;
-    return matchDate && matchBanquet;
+    return matchDate && matchBanquet && slot.status !== 'cancelled';
   });
 
+  const isSelectedBanquetFull = selectedBanquetId !== 'all' && slotsOnDate.length >= maxDailyLimit;
+
   // Calculate day-by-day availability status for the calendar grid
-  const getDayStatus = (dayNum: number) => {
+  const getDayDetails = (dayNum: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
     const daySlots = bookingSlots.filter((s) => {
       const matchDate = s.date === dateStr;
@@ -64,9 +70,17 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
       return matchDate && matchBanquet && s.status !== 'cancelled';
     });
 
-    if (daySlots.length === 0) return 'available';
-    if (daySlots.some((s) => s.status === 'confirmed')) return 'booked';
-    return 'tentative';
+    const isFull = selectedBanquetId !== 'all' && daySlots.length >= maxDailyLimit;
+    let status: 'available' | 'tentative' | 'booked' | 'full' = 'available';
+    if (isFull) {
+      status = 'full';
+    } else if (daySlots.some((s) => s.status === 'confirmed')) {
+      status = 'booked';
+    } else if (daySlots.length > 0) {
+      status = 'tentative';
+    }
+
+    return { status, count: daySlots.length };
   };
 
   const statusBadgeConfig: Record<BookingStatus, { label: string; bg: string; text: string }> = {
@@ -154,7 +168,7 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
               const dayNum = i + 1;
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
               const isSelected = dateStr === selectedDate;
-              const status = getDayStatus(dayNum);
+              const { status, count } = getDayDetails(dayNum);
 
               return (
                 <button
@@ -167,6 +181,9 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
                   }`}
                 >
                   <span className="text-xs">{dayNum}</span>
+                  {status === 'full' && (
+                    <span className="text-[9px] font-black text-red-600 dark:text-red-400 mt-0.5">FULL</span>
+                  )}
                   {status === 'booked' && (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1" />
                   )}
@@ -176,13 +193,18 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
                   {status === 'available' && (
                     <span className="w-1.5 h-1.5 rounded-full bg-stone-300 dark:bg-stone-700 mt-1" />
                   )}
+                  {selectedBanquetId !== 'all' && count > 0 && status !== 'full' && (
+                    <span className="text-[8px] font-bold text-stone-500 dark:text-stone-400 mt-0.5">
+                      {count}/{maxDailyLimit}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 pt-3 border-t border-stone-100 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400">
+          <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-stone-100 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-stone-300 dark:bg-stone-700" />
               <span>Available</span>
@@ -195,20 +217,42 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Confirmed Booking</span>
             </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Daily Limit Full</span>
+            </div>
           </div>
         </div>
 
         {/* Selected Date Schedule & Booking Action (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="p-5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-800 gap-2">
               <div>
-                <span className="text-[10px] font-bold uppercase text-stone-600 dark:text-stone-400">
-                  Selected Date Schedule
-                </span>
-                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase text-stone-600 dark:text-stone-400">
+                    Selected Date Schedule
+                  </span>
+                  {selectedBanquetId !== 'all' && (
+                    <span
+                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                        isSelectedBanquetFull
+                          ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      }`}
+                    >
+                      {slotsOnDate.length} / {maxDailyLimit} Used
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-0.5">
                   {formatDate(selectedDate)}
                 </h3>
+                {selectedBanquetId !== 'all' && isSelectedBanquetFull && (
+                  <p className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">
+                    Daily limit reached (Max {maxDailyLimit}/day).
+                  </p>
+                )}
               </div>
               <button
                 onClick={() =>
@@ -217,10 +261,16 @@ export const AvailabilityModule: React.FC<AvailabilityModuleProps> = ({
                     selectedDate
                   )
                 }
-                className="px-3.5 py-2 text-xs font-semibold bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg shadow-sm flex items-center gap-1.5"
+                disabled={isSelectedBanquetFull}
+                className={`px-3.5 py-2 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
+                  isSelectedBanquetFull
+                    ? 'bg-stone-200 dark:bg-stone-800 text-stone-500 cursor-not-allowed'
+                    : 'bg-emerald-800 hover:bg-emerald-900 text-white'
+                }`}
+                title={isSelectedBanquetFull ? `Daily limit reached for this venue` : 'Book this slot'}
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Book This Slot</span>
+                <span>{isSelectedBanquetFull ? 'Limit Reached' : 'Book This Slot'}</span>
               </button>
             </div>
 

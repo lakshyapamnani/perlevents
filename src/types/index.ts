@@ -19,6 +19,10 @@ export interface OrganizationSettings {
   name: string;
   brandTagline: string;
   logoUrl?: string;
+  signatureUrl?: string;
+  authorizedSignatoryName?: string;
+  authorizedSignatoryTitle?: string;
+  taxNumber?: string;
   address: string;
   phone: string;
   email: string;
@@ -54,6 +58,7 @@ export interface Banquet {
   isActive: boolean;
   photos?: Attachment[];
   imageUrl?: string;
+  maxBookingsPerDay?: number; // Maximum times this venue can be booked per day (e.g. 1, 2)
   createdAt: string;
   updatedAt: string;
 }
@@ -357,8 +362,28 @@ export interface ActivityLog {
     | 'users'
     | 'settings'
     | 'reminders'
-    | 'clients';
+    | 'clients'
+    | 'targets';
   recordId: string;
   details: string;
   timestamp: string;
 }
+
+export type TargetPeriodType = 'monthly' | 'daily';
+
+export interface SalesTarget {
+  id: string;
+  salespersonId: string;
+  salespersonName: string;
+  salespersonEmail: string;
+  periodType: TargetPeriodType;
+  targetBookings: number;
+  periodValue: string;
+  year?: number;
+  notes?: string;
+  assignedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

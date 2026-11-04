@@ -19,10 +19,13 @@ import {
   Sale,
   UserProfile,
   Vendor,
+  VendorAssignment,
   ActivityLog,
   ReminderStatus,
   WorkStatus,
   Attachment,
+  SalesTarget,
+  TargetPeriodType,
 } from '../types';
 import {
   initialActivityLogs,
@@ -40,6 +43,7 @@ import {
   initialSettings,
   initialUsers,
   initialVendors,
+  initialTargets,
 } from './seedData';
 
 export const DEFAULT_VENDOR_CATEGORIES: string[] = [
@@ -55,7 +59,13 @@ export const DEFAULT_VENDOR_CATEGORIES: string[] = [
   'Entertainment',
 ];
 
-const STORAGE_KEY_PREFIX = 'perlevents_rt_';
+import {
+  isFirebaseConfigured,
+  writeRealtimeNode,
+  listenToRealtimeNode,
+} from './firebase';
+
+const STORAGE_KEY_PREFIX = 'pearlexperiences_clean_v1_';
 
 export interface FirebaseConfigOptions {
   apiKey: string;
@@ -84,6 +94,7 @@ export interface DatabaseState {
   invoices: Record<string, Invoice>;
   payments: Record<string, Payment>;
   activityLogs: ActivityLog[];
+  targets: Record<string, SalesTarget>;
 }
 
 type Listener = () => void;
@@ -99,7 +110,7 @@ class RealtimeDatabaseEngine {
     this.state = this.loadInitialState();
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
-        this.broadcastChannel = new BroadcastChannel('perlevents_realtime_sync');
+        this.broadcastChannel = new BroadcastChannel('pearlexperiences_realtime_sync');
         this.broadcastChannel.onmessage = (event) => {
           if (event.data?.type === 'SYNC_STATE') {
             this.state = this.loadInitialState();
@@ -109,6 +120,26 @@ class RealtimeDatabaseEngine {
       } catch (err) {
         console.warn('BroadcastChannel not supported or blocked:', err);
       }
+    }
+
+    // Connect Realtime Database live sync if configured
+    if (typeof window !== 'undefined' && isFirebaseConfigured()) {
+      listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
+        if (remoteState && typeof remoteState === 'object') {
+          this.state = {
+            ...this.state,
+            ...remoteState,
+            settings: { ...this.state.settings, ...(remoteState.settings || {}) },
+            users: { ...this.state.users, ...(remoteState.users || {}) },
+            banquets: { ...this.state.banquets, ...(remoteState.banquets || {}) },
+            events: { ...this.state.events, ...(remoteState.events || {}) },
+            bookingSlots: { ...this.state.bookingSlots, ...(remoteState.bookingSlots || {}) },
+            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
+            targets: { ...this.state.targets, ...(remoteState.targets || {}) },
+          };
+          this.notify();
+        }
+      });
     }
   }
 
@@ -124,6 +155,30 @@ class RealtimeDatabaseEngine {
         if (!parsed.vendorCategories || !Array.isArray(parsed.vendorCategories) || parsed.vendorCategories.length === 0) {
           parsed.vendorCategories = [...DEFAULT_VENDOR_CATEGORIES];
         }
+        if (!parsed.targets || typeof parsed.targets !== 'object') {
+          parsed.targets = initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {});
+        }
+        // Sync Pearlexperiences organization details
+        parsed.settings.name = 'Pearlexperiences';
+        parsed.settings.email = 'Pearlexperiencespvt.ltd@gmail.com';
+        parsed.settings.invoiceFooter = 'Thank you for choosing Pearlexperiences. For queries, contact Pearlexperiencespvt.ltd@gmail.com.';
+        if (!parsed.settings.authorizedSignatoryName) {
+          parsed.settings.authorizedSignatoryName = 'Authorized Signatory';
+        }
+        if (!parsed.settings.authorizedSignatoryTitle) {
+          parsed.settings.authorizedSignatoryTitle = 'Pearlexperiences Pvt. Ltd.';
+        }
+        if (!parsed.settings.taxNumber) {
+          parsed.settings.taxNumber = '07AAAAA0000A1Z5';
+        }
+
+        // Ensure default users exist
+        initialUsers.forEach((u) => {
+          if (!parsed.users[u.uid]) {
+            parsed.users[u.uid] = u;
+          }
+        });
+
         return parsed;
       }
     } catch (e) {
@@ -148,6 +203,7 @@ class RealtimeDatabaseEngine {
       invoices: initialInvoices.reduce((acc, i) => ({ ...acc, [i.id]: i }), {}),
       payments: initialPayments.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}),
       activityLogs: initialActivityLogs,
+      targets: initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {}),
     };
 
     this.saveState(defaultState);
@@ -172,6 +228,7 @@ class RealtimeDatabaseEngine {
       invoices: {},
       payments: {},
       activityLogs: [],
+      targets: {},
     };
   }
 
@@ -183,6 +240,10 @@ class RealtimeDatabaseEngine {
       } catch (e) {
         console.error('Failed to write to localStorage:', e);
       }
+    }
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode('pearlexperiences/state', state).catch(() => {});
     }
   }
 
@@ -386,7 +447,34 @@ class RealtimeDatabaseEngine {
     startTime: string;
     endTime: string;
     excludeEventId?: string;
-  }): { isAvailable: boolean; conflictReason?: string; conflictingBooking?: BookingSlot } {
+  }): {
+    isAvailable: boolean;
+    conflictReason?: string;
+    conflictingBooking?: BookingSlot;
+    remainingSlotsToday?: number;
+    maxBookingsPerDay?: number;
+  } {
+    const banquet = this.state.banquets[params.banquetId];
+    const maxDailyLimit = banquet?.maxBookingsPerDay || 2;
+
+    const existingSlots = Object.values(this.state.bookingSlots).filter(
+      (slot) =>
+        slot.banquetId === params.banquetId &&
+        slot.date === params.date &&
+        slot.status !== 'cancelled' &&
+        (!params.excludeEventId || slot.eventId !== params.excludeEventId)
+    );
+
+    // 1. Check max daily bookings count rule
+    if (existingSlots.length >= maxDailyLimit) {
+      return {
+        isAvailable: false,
+        conflictReason: `Daily booking limit reached: ${banquet?.name || 'This venue'} can only be booked ${maxDailyLimit} time${maxDailyLimit === 1 ? '' : 's'} per day (already has ${existingSlots.length} booking${existingSlots.length === 1 ? '' : 's'} on ${params.date}).`,
+        remainingSlotsToday: 0,
+        maxBookingsPerDay: maxDailyLimit,
+      };
+    }
+
     const setupBuffer = this.state.settings.defaultSetupBufferMinutes || 60;
     const cleanupBuffer = this.state.settings.defaultCleanupBufferMinutes || 60;
 
@@ -398,14 +486,6 @@ class RealtimeDatabaseEngine {
     const effectiveStart = this.minutesToTime(requestedStartMins - setupBuffer);
     const effectiveEnd = this.minutesToTime(requestedEndMins + cleanupBuffer);
 
-    const existingSlots = Object.values(this.state.bookingSlots).filter(
-      (slot) =>
-        slot.banquetId === params.banquetId &&
-        slot.date === params.date &&
-        slot.status !== 'cancelled' &&
-        (!params.excludeEventId || slot.eventId !== params.excludeEventId)
-    );
-
     for (const slot of existingSlots) {
       // Overlap with existing booked slot including buffer
       const slotStart = slot.bufferStartTime || slot.startTime;
@@ -416,11 +496,17 @@ class RealtimeDatabaseEngine {
           isAvailable: false,
           conflictReason: `Time conflict with existing booking "${slot.eventName}" (${slot.startTime} - ${slot.endTime}, status: ${slot.status}). A buffer of ${setupBuffer} min setup & ${cleanupBuffer} min cleanup is required between events.`,
           conflictingBooking: slot,
+          remainingSlotsToday: Math.max(0, maxDailyLimit - existingSlots.length),
+          maxBookingsPerDay: maxDailyLimit,
         };
       }
     }
 
-    return { isAvailable: true };
+    return {
+      isAvailable: true,
+      remainingSlotsToday: Math.max(0, maxDailyLimit - existingSlots.length),
+      maxBookingsPerDay: maxDailyLimit,
+    };
   }
 
   // --- DIRECT SALE & ATOMIC BOOKING ENGINE ---
@@ -449,17 +535,20 @@ class RealtimeDatabaseEngine {
         referencePhotos?: Attachment[];
       };
       financials: {
-        quotedAmount: number;
-        discount: number;
-        advanceRequested: number;
-        advanceReceived: number;
-        paymentTerms: string;
+        quotedAmount?: number;
+        discount?: number;
+        advanceRequested?: number;
+        advanceReceived?: number;
+        paymentTerms?: string;
       };
       vendorAssignments?: Array<{
-        vendorId: string;
+        vendorId?: string;
+        vendorName?: string;
+        vendorPhone?: string;
+        vendorWhatsApp?: string;
         category: string;
-        requirements: string;
-        quotedAmount: number;
+        requirements?: string;
+        quotedAmount?: number;
       }>;
       createInvoice?: boolean;
       convertedFromLeadId?: string;
@@ -535,19 +624,43 @@ class RealtimeDatabaseEngine {
     };
     this.state.bookingSlots[slotId] = newSlot;
 
-    // 4. Vendor Assignments
+    // 4. Vendor Assignments with flexible custom vendor creation
     const assignments = (data.vendorAssignments || []).map((va, idx) => {
-      const vendor = this.state.vendors[va.vendorId];
+      let vendor = va.vendorId ? this.state.vendors[va.vendorId] : undefined;
+      let vId = va.vendorId;
+      const vName = va.vendorName?.trim() || (vendor ? vendor.businessName : `Vendor ${idx + 1}`);
+      const vPhone = va.vendorPhone?.trim() || (vendor ? vendor.phone : '');
+      const vWhatsApp = va.vendorWhatsApp?.trim() || (vendor ? vendor.whatsApp : vPhone);
+
+      // Register new custom vendor into directory if not present
+      if (!vId || !vendor) {
+        vId = `vnd_${Date.now()}_${idx}`;
+        const newVendorRecord: Vendor = {
+          id: vId,
+          businessName: vName,
+          contactPerson: vName,
+          phone: vPhone,
+          whatsApp: vWhatsApp,
+          categories: [va.category || 'General'],
+          serviceArea: 'All Banquets',
+          pricingNotes: '',
+          internalNotes: 'Registered during direct sale',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        };
+        this.state.vendors[vId] = newVendorRecord;
+      }
+
       return {
         id: `va_${eventId}_${idx + 1}`,
         eventId,
-        vendorId: va.vendorId,
-        vendorName: vendor ? vendor.businessName : 'Vendor',
-        vendorPhone: vendor ? vendor.phone : '',
-        vendorWhatsApp: vendor ? vendor.whatsApp : '',
-        category: va.category,
-        requirements: va.requirements,
-        quotedAmount: va.quotedAmount,
+        vendorId: vId,
+        vendorName: vName,
+        vendorPhone: vPhone,
+        vendorWhatsApp: vWhatsApp,
+        category: va.category || 'General',
+        requirements: va.requirements || '',
+        quotedAmount: Number(va.quotedAmount) || 0,
         contactStatus: 'not_contacted' as ReminderStatus,
         workStatus: 'pending' as WorkStatus,
         assignedBy: currentUser.fullName,
@@ -555,8 +668,11 @@ class RealtimeDatabaseEngine {
       };
     });
 
-    const finalAmount = Math.max(0, data.financials.quotedAmount - (data.financials.discount || 0));
-    const advanceRec = data.financials.advanceReceived || 0;
+    const quoted = Number(data.financials?.quotedAmount) || 0;
+    const disc = Number(data.financials?.discount) || 0;
+    const finalAmount = Math.max(0, quoted - disc);
+    const advanceRec = Number(data.financials?.advanceReceived) || 0;
+    const advanceReq = Number(data.financials?.advanceRequested) || advanceRec;
     const remainingBal = Math.max(0, finalAmount - advanceRec);
 
     const manager = data.event.managerId ? this.state.users[data.event.managerId] : undefined;
@@ -583,13 +699,13 @@ class RealtimeDatabaseEngine {
       salespersonName: currentUser.fullName,
       managerId: manager?.uid,
       managerName: manager?.fullName,
-      quotedAmount: data.financials.quotedAmount,
-      discount: data.financials.discount || 0,
+      quotedAmount: quoted,
+      discount: disc,
       finalAmount,
-      advanceRequested: data.financials.advanceRequested || 0,
+      advanceRequested: advanceReq,
       advanceReceived: advanceRec,
       remainingBalance: remainingBal,
-      paymentTerms: data.financials.paymentTerms || 'Standard terms apply.',
+      paymentTerms: data.financials?.paymentTerms || 'Standard terms apply.',
       referencePhotos: data.event.referencePhotos || [],
       vendorAssignments: assignments,
       createdAt: new Date().toISOString(),
@@ -623,10 +739,10 @@ class RealtimeDatabaseEngine {
       salespersonId: currentUser.uid,
       salespersonName: currentUser.fullName,
       saleDate: new Date().toISOString().split('T')[0],
-      grossAmount: data.financials.quotedAmount,
-      discount: data.financials.discount || 0,
+      grossAmount: quoted,
+      discount: disc,
       finalSaleAmount: finalAmount,
-      advanceRequested: data.financials.advanceRequested || 0,
+      advanceRequested: advanceReq,
       paymentsReceived: advanceRec,
       outstandingBalance: remainingBal,
       status: 'confirmed',
@@ -685,20 +801,20 @@ class RealtimeDatabaseEngine {
             id: `it_${Date.now()}_1`,
             description: `${banquet.name} Venue Booking & Facilities (${newEvent.guestCount} Pax)`,
             quantity: 1,
-            unitPrice: data.financials.quotedAmount,
-            total: data.financials.quotedAmount,
+            unitPrice: quoted,
+            total: quoted,
           },
         ],
-        subtotal: data.financials.quotedAmount,
-        discount: data.financials.discount || 0,
+        subtotal: quoted,
+        discount: disc,
         taxAmount: 0,
         finalTotal: finalAmount,
-        advancePaymentRequired: (data.financials.advanceRequested || 0) > 0,
-        advanceRequested: data.financials.advanceRequested || 0,
+        advancePaymentRequired: advanceReq > 0,
+        advanceRequested: advanceReq,
         actualAdvanceReceived: advanceRec,
         remainingBalance: remainingBal,
-        paymentTerms: data.financials.paymentTerms,
-        status: advanceRec >= finalAmount ? 'paid' : advanceRec > 0 ? 'partially_paid' : 'issued',
+        paymentTerms: data.financials?.paymentTerms || 'Standard terms apply.',
+        status: advanceRec >= finalAmount && finalAmount > 0 ? 'paid' : advanceRec > 0 ? 'partially_paid' : 'issued',
         includePhotosInPdf: false,
         createdBy: currentUser.uid,
         createdByName: currentUser.fullName,
@@ -949,14 +1065,94 @@ class RealtimeDatabaseEngine {
     return { success: true };
   }
 
-  // --- VENDOR DIRECTORY & CATEGORY MANAGEMENT (Admin) ---
+  public addVendorToEvent(
+    currentUser: UserProfile,
+    eventId: string,
+    vendorData: {
+      vendorId?: string;
+      vendorName: string;
+      vendorPhone: string;
+      vendorWhatsApp?: string;
+      category: string;
+      requirements?: string;
+      quotedAmount?: number;
+    }
+  ): { success: boolean; assignment?: VendorAssignment; error?: string } {
+    const event = this.state.events[eventId];
+    if (!event) return { success: false, error: 'Event not found.' };
+
+    let vId = vendorData.vendorId;
+    if (!vId) {
+      vId = `vnd_${Date.now()}`;
+      const newV: Vendor = {
+        id: vId,
+        businessName: vendorData.vendorName.trim(),
+        contactPerson: vendorData.vendorName.trim(),
+        phone: vendorData.vendorPhone.trim(),
+        whatsApp: vendorData.vendorWhatsApp?.trim() || vendorData.vendorPhone.trim(),
+        categories: [vendorData.category || 'General'],
+        serviceArea: 'All Areas',
+        pricingNotes: '',
+        internalNotes: 'Added to event',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      this.state.vendors[vId] = newV;
+    }
+
+    const assignmentId = `va_${eventId}_${Date.now()}`;
+    const newAssignment: VendorAssignment = {
+      id: assignmentId,
+      eventId,
+      vendorId: vId,
+      vendorName: vendorData.vendorName.trim(),
+      vendorPhone: vendorData.vendorPhone.trim(),
+      vendorWhatsApp: vendorData.vendorWhatsApp?.trim() || vendorData.vendorPhone.trim(),
+      category: vendorData.category || 'General',
+      requirements: vendorData.requirements?.trim() || '',
+      quotedAmount: Number(vendorData.quotedAmount) || 0,
+      contactStatus: 'not_contacted',
+      workStatus: 'pending',
+      assignedBy: currentUser.fullName,
+      assignedAt: new Date().toISOString(),
+    };
+
+    event.vendorAssignments = [...(event.vendorAssignments || []), newAssignment];
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Added Vendor Assignment',
+      module: 'vendors',
+      recordId: assignmentId,
+      details: `Assigned vendor ${newAssignment.vendorName} (${newAssignment.category}) to event "${event.name}".`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true, assignment: newAssignment };
+  }
+
+  public removeVendorFromEvent(
+    currentUser: UserProfile,
+    eventId: string,
+    assignmentId: string
+  ): { success: boolean; error?: string } {
+    const event = this.state.events[eventId];
+    if (!event) return { success: false, error: 'Event not found.' };
+
+    event.vendorAssignments = (event.vendorAssignments || []).filter((a) => a.id !== assignmentId);
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
+  // --- VENDOR DIRECTORY & CATEGORY MANAGEMENT ---
   public saveVendor(
     currentUser: UserProfile,
     vendorData: Omit<Vendor, 'id' | 'createdAt'> & { id?: string }
   ): { success: boolean; vendor?: Vendor; error?: string } {
-    if (currentUser.role !== 'admin') {
-      return { success: false, error: 'Unauthorized: Only an Administrator can add or modify vendors.' };
-    }
     if (!vendorData.businessName?.trim()) {
       return { success: false, error: 'Business name is required.' };
     }
@@ -1313,6 +1509,90 @@ class RealtimeDatabaseEngine {
     });
     this.saveState(this.state);
     this.notify();
+    return { success: true };
+  }
+
+  // --- SALES TARGETS MANAGEMENT ---
+  public saveTarget(
+    currentUser: UserProfile,
+    targetData: {
+      id?: string;
+      salespersonId: string;
+      salespersonName: string;
+      salespersonEmail: string;
+      periodType: TargetPeriodType;
+      targetBookings: number;
+      periodValue: string;
+      year?: number;
+      notes?: string;
+    }
+  ): { success: boolean; target?: SalesTarget; error?: string } {
+    if (currentUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only Administrator can assign sales targets.' };
+    }
+
+    const now = new Date().toISOString();
+    const id = targetData.id || `tgt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const target: SalesTarget = {
+      id,
+      salespersonId: targetData.salespersonId,
+      salespersonName: targetData.salespersonName,
+      salespersonEmail: targetData.salespersonEmail,
+      periodType: targetData.periodType || 'monthly',
+      targetBookings: Number(targetData.targetBookings) || 1,
+      periodValue: targetData.periodValue || 'November 2026',
+      year: targetData.year || new Date().getFullYear(),
+      notes: targetData.notes || '',
+      assignedBy: currentUser.uid,
+      createdAt: this.state.targets?.[id]?.createdAt || now,
+      updatedAt: now,
+    };
+
+    if (!this.state.targets) {
+      this.state.targets = {};
+    }
+    this.state.targets[id] = target;
+
+    const periodLabel = target.periodType === 'daily' ? `Day (${target.periodValue})` : `Month (${target.periodValue})`;
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: targetData.id ? 'Updated Sales Target' : 'Assigned Sales Target',
+      module: 'targets',
+      recordId: id,
+      details: `Assigned target of ${target.targetBookings} booking${target.targetBookings === 1 ? '' : 's'} for ${periodLabel} to ${target.salespersonName}.`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true, target };
+  }
+
+  public deleteTarget(currentUser: UserProfile, targetId: string): { success: boolean; error?: string } {
+    if (currentUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only Administrator can delete sales targets.' };
+    }
+
+    if (this.state.targets && this.state.targets[targetId]) {
+      const target = this.state.targets[targetId];
+      delete this.state.targets[targetId];
+
+      this.logActivity({
+        actorId: currentUser.uid,
+        actorName: currentUser.fullName,
+        actorRole: currentUser.role,
+        action: 'Deleted Sales Target',
+        module: 'targets',
+        recordId: targetId,
+        details: `Deleted sales target for ${target.salespersonName} (${target.periodValue}).`,
+      });
+
+      this.saveState(this.state);
+      this.notify();
+    }
+
     return { success: true };
   }
 }

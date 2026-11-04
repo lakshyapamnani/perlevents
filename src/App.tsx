@@ -18,6 +18,8 @@ import { UsersModule } from './pages/UsersModule';
 import { VendorsModule } from './pages/VendorsModule';
 import { ClientsModule } from './pages/ClientsModule';
 import { CalendarModule } from './pages/CalendarModule';
+import { TargetsModule } from './pages/TargetsModule';
+import { LoginPage } from './pages/LoginPage';
 import { SettingsModule } from './pages/SettingsModule';
 import { DirectSaleModal } from './components/modals/DirectSaleModal';
 import { LeadModal } from './components/modals/LeadModal';
@@ -30,8 +32,8 @@ import { Invoice, Lead } from './types';
 const MainLayout: React.FC = () => {
   const { currentUser } = useAuth();
 
-  // Navigation State
-  const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  // Navigation State - First screen defaults to Calendar with Occupancy schedule
+  const [adminTab, setAdminTab] = useState<AdminTab>('calendar');
   const [salesTab, setSalesTab] = useState<SalespersonTab>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSalesMoreDrawer, setShowSalesMoreDrawer] = useState(false);
@@ -109,6 +111,10 @@ const MainLayout: React.FC = () => {
     });
   };
 
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
   const currentRole = currentUser?.role || 'admin';
 
   return (
@@ -185,6 +191,7 @@ const MainLayout: React.FC = () => {
                   {adminTab === 'calendar' && (
                     <CalendarModule onSelectEvent={(id) => setSelectedEventId(id)} />
                   )}
+                  {adminTab === 'targets' && <TargetsModule />}
                   {adminTab === 'leads' && (
                     <LeadsModule
                       onOpenAddLead={() => setIsLeadModalOpen(true)}
@@ -203,6 +210,7 @@ const MainLayout: React.FC = () => {
                         setIsInvoiceModalOpen(true);
                       }}
                       onSelectEvent={(id) => setSelectedEventId(id)}
+                      onOpenRecordPayment={handleOpenPayment}
                     />
                   )}
                   {adminTab === 'invoices' && (
@@ -287,6 +295,7 @@ const MainLayout: React.FC = () => {
                         setIsInvoiceModalOpen(true);
                       }}
                       onSelectEvent={(id) => setSelectedEventId(id)}
+                      onOpenRecordPayment={handleOpenPayment}
                     />
                   )}
                   {salesTab === 'invoices' && (
@@ -369,6 +378,11 @@ const MainLayout: React.FC = () => {
             setIsDirectSaleOpen(false);
             setDirectSalePreselectedLead(undefined);
           }}
+          onSelectEvent={(eventId) => {
+            setIsDirectSaleOpen(false);
+            setDirectSalePreselectedLead(undefined);
+            setSelectedEventId(eventId);
+          }}
           preselectedBanquetId={directSalePreselectedBanquet}
           preselectedDate={directSalePreselectedDate}
           preselectedLead={directSalePreselectedLead}
@@ -398,6 +412,7 @@ const MainLayout: React.FC = () => {
             setSelectedInvoiceToView(null);
           }}
           invoiceToView={selectedInvoiceToView}
+          onOpenRecordPayment={handleOpenPayment}
         />
       )}
 
