@@ -110,6 +110,11 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
   const [requirements, setRequirements] = useState(preselectedLead?.requirements || '');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [managerId, setManagerId] = useState('');
+  const [salespersonId, setSalespersonId] = useState<string>(
+    currentUser?.role === 'salesperson'
+      ? currentUser.uid
+      : (users.find((u) => u.role === 'salesperson')?.uid || currentUser?.uid || '')
+  );
   const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([]);
 
   // Financials - STRICTLY OPTIONAL
@@ -302,6 +307,7 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
         requirements,
         specialInstructions,
         managerId: managerId || undefined,
+        salespersonId: salespersonId || undefined,
         referencePhotos,
       },
       financials: {
@@ -724,22 +730,43 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
-                      Banquet Venue *
-                    </label>
-                    <select
-                      required
-                      value={banquetId}
-                      onChange={(e) => setBanquetId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
-                    >
-                      {banquets.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.capacity} Pax)
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                        Banquet Venue *
+                      </label>
+                      <select
+                        required
+                        value={banquetId}
+                        onChange={(e) => setBanquetId(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                      >
+                        {banquets.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.capacity} Pax)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                        Assigned Salesperson *
+                      </label>
+                      <select
+                        value={salespersonId}
+                        onChange={(e) => setSalespersonId(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                      >
+                        {users
+                          .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin' || u.role === 'manager'))
+                          .map((u) => (
+                            <option key={u.uid} value={u.uid}>
+                              {u.fullName} ({u.role})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div>

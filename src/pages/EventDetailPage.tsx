@@ -28,6 +28,8 @@ import {
   Check,
   Trash2,
   X,
+  Pencil,
+  Save,
 } from 'lucide-react';
 import { EventRecord, ReminderStatus, Attachment } from '../types';
 import {
@@ -78,12 +80,19 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     removeVendorFromEvent,
     toggleChecklistItem,
     addEventPhoto,
+    updateEventDetails,
   } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, allUsersList: users } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Edit Venue & Personnel Reassignment State
+  const [isEditAssignmentModalOpen, setIsEditAssignmentModalOpen] = useState(false);
+  const [editBanquetId, setEditBanquetId] = useState('');
+  const [editSalespersonId, setEditSalespersonId] = useState('');
+  const [editManagerId, setEditManagerId] = useState('');
 
   // Vendor Assignment State
   const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
@@ -146,6 +155,28 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     freshlyAdded.forEach((photo) => {
       addEventPhoto(event.id, photo);
     });
+  };
+
+  const handleOpenEditAssignment = () => {
+    setEditBanquetId(event.banquetId);
+    setEditSalespersonId(event.salespersonId || '');
+    setEditManagerId(event.managerId || '');
+    setIsEditAssignmentModalOpen(true);
+  };
+
+  const handleSaveAssignment = () => {
+    const res = updateEventDetails(event.id, {
+      banquetId: editBanquetId,
+      salespersonId: editSalespersonId,
+      managerId: editManagerId,
+    });
+    if (res.success) {
+      setIsEditAssignmentModalOpen(false);
+      setSaveSuccessMsg('Banquet venue and personnel assignments updated successfully!');
+      setTimeout(() => setSaveSuccessMsg(null), 3000);
+    } else {
+      alert(res.error || 'Failed to update assignment.');
+    }
   };
 
   const handleStatusChange = (newStatus: any) => {
@@ -224,6 +255,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </button>
           )}
 
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={handleOpenEditAssignment}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-semibold"
+              title="Change banquet venue or assigned personnel"
+            >
+              <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+              <span>Change Venue / Salesperson</span>
+            </button>
+          )}
+
           <div className="relative inline-block">
             <select
               value={event.status}
@@ -256,9 +298,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 {event.eventType}
               </span>
               <span
-                className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${
-                  statusBadgeColors[event.status] || 'bg-stone-800 text-stone-300 border-stone-700'
-                }`}
+                className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${statusBadgeColors[event.status] || 'bg-stone-800 text-stone-300 border-stone-700'
+                  }`}
               >
                 {event.status}
               </span>
@@ -321,20 +362,18 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  isActive
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${isActive
                     ? 'bg-emerald-800 text-white shadow-sm'
                     : 'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
-                }`}
+                  }`}
               >
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                      isActive
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive
                         ? 'bg-emerald-900/90 text-emerald-200'
                         : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'
-                    }`}
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -512,20 +551,18 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     >
                       <div className="flex items-center gap-2.5">
                         <div
-                          className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${
-                            t.status === 'completed'
+                          className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${t.status === 'completed'
                               ? 'bg-emerald-700 text-white'
                               : 'border border-stone-400 dark:border-stone-600'
-                          }`}
+                            }`}
                         >
                           {t.status === 'completed' && <Check className="w-3.5 h-3.5" />}
                         </div>
                         <span
-                          className={`text-xs ${
-                            t.status === 'completed'
+                          className={`text-xs ${t.status === 'completed'
                               ? 'line-through text-stone-400'
                               : 'font-medium text-stone-800 dark:text-stone-200'
-                          }`}
+                            }`}
                         >
                           {t.title}
                         </span>
@@ -587,9 +624,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
             {/* Personnel Assigned */}
             <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                Staff & Operations Assignment
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Staff & Operations Assignment
+                </h3>
+                {currentUser?.role === 'admin' && (
+                  <button
+                    onClick={handleOpenEditAssignment}
+                    className="p-1 rounded-md text-stone-400 hover:text-emerald-700 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                    title="Change venue or salesperson"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <div className="space-y-2 text-xs">
                 <div>
                   <span className="text-[11px] text-stone-500 block">Lead Salesperson:</span>
@@ -659,22 +707,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 return (
                   <div
                     key={task.id}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                      isDone
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${isDone
                         ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
                         : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 shadow-xs'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3.5">
                         <button
                           type="button"
                           onClick={() => handleToggle(task.id)}
-                          className={`mt-0.5 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 min-h-[44px] min-w-[44px] ${
-                            isDone
+                          className={`mt-0.5 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 min-h-[44px] min-w-[44px] ${isDone
                               ? 'bg-emerald-700 border-emerald-700 text-white shadow-xs'
                               : 'border-stone-400 dark:border-stone-500 hover:border-emerald-700 bg-white dark:bg-stone-800 text-transparent'
-                          }`}
+                            }`}
                           aria-label={`Mark ${task.title} as ${isDone ? 'pending' : 'completed'}`}
                         >
                           <CheckCircle2 className={`w-5 h-5 ${isDone ? 'opacity-100' : 'opacity-0'}`} />
@@ -682,11 +728,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
                         <div>
                           <h4
-                            className={`text-sm font-bold ${
-                              isDone
+                            className={`text-sm font-bold ${isDone
                                 ? 'line-through text-stone-400 dark:text-stone-500'
                                 : 'text-stone-900 dark:text-stone-100'
-                            }`}
+                              }`}
                           >
                             {task.title}
                           </h4>
@@ -798,11 +843,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 return (
                   <div
                     key={va.id}
-                    className={`p-5 rounded-2xl border shadow-xs space-y-3.5 flex flex-col justify-between transition-all ${
-                      isContacted
+                    className={`p-5 rounded-2xl border shadow-xs space-y-3.5 flex flex-col justify-between transition-all ${isContacted
                         ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
                         : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800'
-                    }`}
+                      }`}
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -835,15 +879,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
                         {/* Status pill */}
                         <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                            va.contactStatus === 'confirmed'
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${va.contactStatus === 'confirmed'
                               ? 'bg-emerald-700 text-white'
                               : va.contactStatus === 'contacted'
-                              ? 'bg-sky-600 text-white'
-                              : va.contactStatus === 'followup_required'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
-                          }`}
+                                ? 'bg-sky-600 text-white'
+                                : va.contactStatus === 'followup_required'
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
+                            }`}
                         >
                           {va.contactStatus.replace('_', ' ')}
                         </span>
@@ -871,8 +914,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           {va.contactStatus === 'confirmed'
                             ? '✓ Confirmed'
                             : va.contactStatus === 'contacted'
-                            ? '✓ Reminder Sent'
-                            : 'Mark Reminder Sent'}
+                              ? '✓ Reminder Sent'
+                              : 'Mark Reminder Sent'}
                         </span>
                       </label>
 
@@ -1190,6 +1233,64 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               </div>
             )}
           </div>
+
+          {/* Client Payment Ledger History */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                Payment & Deduction Ledger ({eventPayments.length})
+              </h3>
+              {onOpenRecordPayment && (
+                <button
+                  onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Record / Adjust Payment</span>
+                </button>
+              )}
+            </div>
+
+            {eventPayments.length === 0 ? (
+              <p className="text-xs text-stone-500 py-4 text-center">No payments or deductions recorded yet.</p>
+            ) : (
+              <div className="divide-y divide-stone-100 dark:divide-stone-800">
+                {eventPayments.map((p) => {
+                  const isRefund = p.type === 'refund';
+                  return (
+                    <div key={p.id} className="py-3 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`font-bold ${isRefund ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
+                              }`}
+                          >
+                            {isRefund ? '-' : '+'} {formatCurrency(p.amount)}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${isRefund
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              }`}
+                          >
+                            {isRefund ? 'Deduction / Refund' : 'Payment Received'}
+                          </span>
+                        </div>
+                        <div className="text-stone-500 text-[11px] mt-0.5">
+                          {formatDate(p.paymentDate)} via {p.paymentMethod.replace('_', ' ').toUpperCase()}
+                          {p.referenceNumber ? ` · Ref: ${p.referenceNumber}` : ''}
+                        </div>
+                        {p.notes && <div className="text-[11px] text-stone-400 italic mt-0.5">{p.notes}</div>}
+                      </div>
+                      <div className="text-right text-[11px] text-stone-400">
+                        Recorded by {p.recordedByName}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1233,6 +1334,108 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Banquet & Personnel Modal */}
+      {isEditAssignmentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                  Change Banquet Venue & Salesperson
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditAssignmentModalOpen(false)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Banquet Venue *
+                </label>
+                <select
+                  value={editBanquetId}
+                  onChange={(e) => setEditBanquetId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-bold"
+                >
+                  {banquets.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.capacity} Pax)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Reassigning the venue updates the booking schedule, linked sales cards, and invoices.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Lead Salesperson *
+                </label>
+                <select
+                  value={editSalespersonId}
+                  onChange={(e) => setEditSalespersonId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                >
+                  <option value="">-- Select Salesperson --</option>
+                  {users
+                    .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin'))
+                    .map((u) => (
+                      <option key={u.uid} value={u.uid}>
+                        {u.fullName} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                  Operations Manager (Optional)
+                </label>
+                <select
+                  value={editManagerId}
+                  onChange={(e) => setEditManagerId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                >
+                  <option value="">-- Unassigned (Admin Supervising) --</option>
+                  {users
+                    .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
+                    .map((u) => (
+                      <option key={u.uid} value={u.uid}>
+                        {u.fullName} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setIsEditAssignmentModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAssignment}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Reassignment</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

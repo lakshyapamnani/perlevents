@@ -1,5 +1,9 @@
 {
   "rules": {
+    "pearlexperiences": {
+      ".read": true,
+      ".write": true
+    },
     "users": {
       "$uid": {
         ".read": "auth != null",

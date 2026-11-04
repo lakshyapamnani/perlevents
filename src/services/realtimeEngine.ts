@@ -124,19 +124,51 @@ class RealtimeDatabaseEngine {
 
     // Connect Realtime Database live sync if configured
     if (typeof window !== 'undefined' && isFirebaseConfigured()) {
+      this.isLiveFirebase = true;
       listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
         if (remoteState && typeof remoteState === 'object') {
+          // If remote database has no entries yet, seed it with the current local state
+          const hasRemoteData = Boolean(
+            (remoteState.events && Object.keys(remoteState.events).length > 0) ||
+            (remoteState.users && Object.keys(remoteState.users).length > 0) ||
+            (remoteState.sales && Object.keys(remoteState.sales).length > 0) ||
+            (remoteState.banquets && Object.keys(remoteState.banquets).length > 0)
+          );
+
+          if (!hasRemoteData) {
+            this.saveState(this.state);
+            return;
+          }
+
           this.state = {
             ...this.state,
-            ...remoteState,
             settings: { ...this.state.settings, ...(remoteState.settings || {}) },
             users: { ...this.state.users, ...(remoteState.users || {}) },
             banquets: { ...this.state.banquets, ...(remoteState.banquets || {}) },
+            clients: { ...this.state.clients, ...(remoteState.clients || {}) },
+            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
+            leadFollowUps: { ...this.state.leadFollowUps, ...(remoteState.leadFollowUps || {}) },
             events: { ...this.state.events, ...(remoteState.events || {}) },
             bookingSlots: { ...this.state.bookingSlots, ...(remoteState.bookingSlots || {}) },
-            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
+            vendors: { ...this.state.vendors, ...(remoteState.vendors || {}) },
+            vendorCategories: Array.isArray(remoteState.vendorCategories) && remoteState.vendorCategories.length > 0
+              ? remoteState.vendorCategories
+              : this.state.vendorCategories,
+            checklistTemplates: { ...this.state.checklistTemplates, ...(remoteState.checklistTemplates || {}) },
+            checklistItems: { ...this.state.checklistItems, ...(remoteState.checklistItems || {}) },
+            sales: { ...this.state.sales, ...(remoteState.sales || {}) },
+            invoices: { ...this.state.invoices, ...(remoteState.invoices || {}) },
+            payments: { ...this.state.payments, ...(remoteState.payments || {}) },
+            activityLogs: Array.isArray(remoteState.activityLogs) && remoteState.activityLogs.length > 0
+              ? remoteState.activityLogs
+              : this.state.activityLogs,
             targets: { ...this.state.targets, ...(remoteState.targets || {}) },
           };
+
+          try {
+            localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(this.state));
+          } catch (_) {}
+
           this.notify();
         }
       });
@@ -303,6 +335,7 @@ class RealtimeDatabaseEngine {
       phone?: string;
       role: 'salesperson' | 'manager';
       initialPassword?: string;
+      customUid?: string;
       assignedBanquetIds?: string[];
     }
   ): { success: boolean; user?: UserProfile; error?: string } {
@@ -318,7 +351,7 @@ class RealtimeDatabaseEngine {
       return { success: false, error: `Account with email ${emailNormalized} already exists.` };
     }
 
-    const newUid = `usr_${data.role}_${Date.now()}`;
+    const newUid = data.customUid || `usr_${data.role}_${Date.now()}`;
     const newUser: UserProfile = {
       uid: newUid,
       fullName: data.fullName.trim(),
@@ -347,6 +380,60 @@ class RealtimeDatabaseEngine {
     this.saveState(this.state);
     this.notify();
     return { success: true, user: newUser };
+  }
+
+  public updateEmployeeAccount(
+    adminUser: UserProfile,
+    uid: string,
+    data: {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      role?: 'salesperson' | 'manager';
+      assignedBanquetIds?: string[];
+    }
+  ): { success: boolean; user?: UserProfile; error?: string } {
+    if (adminUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only an Administrator can update employee accounts.' };
+    }
+
+    const user = this.state.users[uid];
+    if (!user) {
+      return { success: false, error: 'User account not found.' };
+    }
+
+    if (data.email) {
+      const emailNormalized = data.email.trim().toLowerCase();
+      const existing = Object.values(this.state.users).find(
+        (u) => u.uid !== uid && u.email.toLowerCase() === emailNormalized
+      );
+      if (existing) {
+        return { success: false, error: `Account with email ${emailNormalized} already exists.` };
+      }
+      user.email = emailNormalized;
+    }
+
+    if (data.fullName) user.fullName = data.fullName.trim();
+    if (data.phone !== undefined) user.phone = data.phone.trim();
+    if (data.role) user.role = data.role;
+    if (data.assignedBanquetIds !== undefined) {
+      user.assignedBanquetIds = [...data.assignedBanquetIds];
+    }
+    user.updatedAt = new Date().toISOString();
+
+    this.logActivity({
+      actorId: adminUser.uid,
+      actorName: adminUser.fullName,
+      actorRole: adminUser.role,
+      action: `Updated ${user.role === 'salesperson' ? 'Salesperson' : 'Employee'} Profile`,
+      module: 'users',
+      recordId: uid,
+      details: `Updated ${user.fullName} (${user.email}). Assigned to ${user.assignedBanquetIds?.length || 0} venues.`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true, user };
   }
 
   public toggleUserStatus(adminUser: UserProfile, uid: string): { success: boolean; error?: string } {
@@ -532,6 +619,7 @@ class RealtimeDatabaseEngine {
         requirements: string;
         specialInstructions?: string;
         managerId?: string;
+        salespersonId?: string;
         referencePhotos?: Attachment[];
       };
       financials: {
@@ -677,6 +765,10 @@ class RealtimeDatabaseEngine {
 
     const manager = data.event.managerId ? this.state.users[data.event.managerId] : undefined;
 
+    const assignedSalesperson = data.event.salespersonId && this.state.users[data.event.salespersonId]
+      ? this.state.users[data.event.salespersonId]
+      : currentUser;
+
     // 5. Create Event Record
     const newEvent: EventRecord = {
       id: eventId,
@@ -695,8 +787,8 @@ class RealtimeDatabaseEngine {
       requirements: data.event.requirements,
       specialInstructions: data.event.specialInstructions || '',
       status: 'confirmed',
-      salespersonId: currentUser.uid,
-      salespersonName: currentUser.fullName,
+      salespersonId: assignedSalesperson.uid,
+      salespersonName: assignedSalesperson.fullName,
       managerId: manager?.uid,
       managerName: manager?.fullName,
       quotedAmount: quoted,
@@ -736,8 +828,8 @@ class RealtimeDatabaseEngine {
       eventName: newEvent.name,
       banquetId: banquet.id,
       banquetName: banquet.name,
-      salespersonId: currentUser.uid,
-      salespersonName: currentUser.fullName,
+      salespersonId: assignedSalesperson.uid,
+      salespersonName: assignedSalesperson.fullName,
       saleDate: new Date().toISOString().split('T')[0],
       grossAmount: quoted,
       discount: disc,
@@ -853,6 +945,143 @@ class RealtimeDatabaseEngine {
     this.saveState(this.state);
     this.notify();
     return { success: true, event: newEvent, invoice: createdInvoice };
+  }
+
+  // --- DELETE SALE ---
+  public deleteSale(
+    currentUser: UserProfile,
+    saleId: string
+  ): { success: boolean; error?: string } {
+    const sale = this.state.sales[saleId];
+    if (!sale) {
+      return { success: false, error: 'Sale record not found.' };
+    }
+
+    if (
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'manager' &&
+      sale.salespersonId !== currentUser.uid &&
+      sale.createdBy !== currentUser.uid
+    ) {
+      return {
+        success: false,
+        error: 'Unauthorized: Only Admins, Managers, or the assigned Salesperson can delete this sale.',
+      };
+    }
+
+    delete this.state.sales[saleId];
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Deleted Sale Record',
+      module: 'sales',
+      recordId: saleId,
+      details: `Deleted sale for ${sale.eventName} (Client: ${sale.clientName}, Amount: ₹${sale.finalSaleAmount?.toLocaleString()}).`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
+  // --- UPDATE EVENT DETAILS (Change Banquet Venue & Salesperson) ---
+  public updateEventDetails(
+    currentUser: UserProfile,
+    eventId: string,
+    data: {
+      banquetId?: string;
+      salespersonId?: string;
+      managerId?: string;
+      name?: string;
+      guestCount?: number;
+      date?: string;
+      startTime?: string;
+      endTime?: string;
+    }
+  ): { success: boolean; event?: EventRecord; error?: string } {
+    const event = this.state.events[eventId];
+    if (!event) return { success: false, error: 'Event not found.' };
+
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && event.salespersonId !== currentUser.uid) {
+      return { success: false, error: 'Unauthorized to modify this event.' };
+    }
+
+    let banquetChanged = false;
+    const oldBanquetName = event.banquetName;
+
+    if (data.banquetId && data.banquetId !== event.banquetId) {
+      const newBanquet = this.state.banquets[data.banquetId];
+      if (!newBanquet) return { success: false, error: 'Selected banquet does not exist.' };
+      event.banquetId = newBanquet.id;
+      event.banquetName = newBanquet.name;
+      banquetChanged = true;
+
+      // Update linked booking slot
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) {
+        linkedSlot.banquetId = newBanquet.id;
+      }
+
+      // Update linked sale
+      const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+      if (linkedSale) {
+        linkedSale.banquetId = newBanquet.id;
+        linkedSale.banquetName = newBanquet.name;
+      }
+
+      // Update linked invoice
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) {
+        linkedInvoice.banquetName = newBanquet.name;
+      }
+    }
+
+    if (data.salespersonId && data.salespersonId !== event.salespersonId) {
+      const newSalesperson = this.state.users[data.salespersonId];
+      if (newSalesperson) {
+        event.salespersonId = newSalesperson.uid;
+        event.salespersonName = newSalesperson.fullName;
+
+        // Update linked sale
+        const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+        if (linkedSale) {
+          linkedSale.salespersonId = newSalesperson.uid;
+          linkedSale.salespersonName = newSalesperson.fullName;
+        }
+      }
+    }
+
+    if (data.managerId !== undefined) {
+      const newManager = data.managerId ? this.state.users[data.managerId] : undefined;
+      event.managerId = newManager?.uid;
+      event.managerName = newManager?.fullName;
+    }
+
+    if (data.name) event.name = data.name.trim();
+    if (data.guestCount) event.guestCount = data.guestCount;
+    if (data.date) event.date = data.date;
+    if (data.startTime) event.startTime = data.startTime;
+    if (data.endTime) event.endTime = data.endTime;
+
+    event.updatedAt = new Date().toISOString();
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Updated Event Details',
+      module: 'events',
+      recordId: eventId,
+      details: banquetChanged
+        ? `Reassigned venue from ${oldBanquetName} to ${event.banquetName} for ${event.name}.`
+        : `Updated details for ${event.name}.`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true, event };
   }
 
   // --- LEAD MANAGEMENT ---
@@ -1432,15 +1661,17 @@ class RealtimeDatabaseEngine {
 
   public recordPayment(
     currentUser: UserProfile,
-    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'>
+    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'> & { type?: 'payment' | 'refund' }
   ): { success: boolean; payment?: Payment; error?: string } {
     if (paymentData.amount <= 0) {
       return { success: false, error: 'Payment amount must be greater than zero.' };
     }
 
+    const isSubtract = paymentData.type === 'refund';
     const paymentId = `pay_${Date.now()}`;
     const payment: Payment = {
       ...paymentData,
+      type: paymentData.type || 'payment',
       id: paymentId,
       recordedBy: currentUser.uid,
       recordedByName: currentUser.fullName,
@@ -1452,27 +1683,46 @@ class RealtimeDatabaseEngine {
     // Update Invoice balance if linked
     if (payment.invoiceId && this.state.invoices[payment.invoiceId]) {
       const inv = this.state.invoices[payment.invoiceId];
-      inv.actualAdvanceReceived += payment.amount;
+      if (isSubtract) {
+        inv.actualAdvanceReceived = Math.max(0, inv.actualAdvanceReceived - payment.amount);
+      } else {
+        inv.actualAdvanceReceived += payment.amount;
+      }
       inv.remainingBalance = Math.max(0, inv.finalTotal - inv.actualAdvanceReceived);
       if (inv.remainingBalance <= 0) {
         inv.status = 'paid';
       } else if (inv.actualAdvanceReceived > 0) {
         inv.status = 'partially_paid';
+      } else {
+        inv.status = 'issued';
       }
       inv.updatedAt = new Date().toISOString();
     }
 
-    // Update Sale balance if linked
-    if (payment.saleId && this.state.sales[payment.saleId]) {
-      const sale = this.state.sales[payment.saleId];
-      sale.paymentsReceived += payment.amount;
-      sale.outstandingBalance = Math.max(0, sale.finalSaleAmount - sale.paymentsReceived);
+    // Update Sale balance if linked directly or via eventId
+    const targetSale = payment.saleId && this.state.sales[payment.saleId]
+      ? this.state.sales[payment.saleId]
+      : payment.eventId
+      ? Object.values(this.state.sales).find((s) => s.eventId === payment.eventId)
+      : undefined;
+
+    if (targetSale) {
+      if (isSubtract) {
+        targetSale.paymentsReceived = Math.max(0, targetSale.paymentsReceived - payment.amount);
+      } else {
+        targetSale.paymentsReceived += payment.amount;
+      }
+      targetSale.outstandingBalance = Math.max(0, targetSale.finalSaleAmount - targetSale.paymentsReceived);
     }
 
     // Update Event balance if linked
     if (payment.eventId && this.state.events[payment.eventId]) {
       const evt = this.state.events[payment.eventId];
-      evt.advanceReceived += payment.amount;
+      if (isSubtract) {
+        evt.advanceReceived = Math.max(0, evt.advanceReceived - payment.amount);
+      } else {
+        evt.advanceReceived += payment.amount;
+      }
       evt.remainingBalance = Math.max(0, evt.finalAmount - evt.advanceReceived);
       evt.updatedAt = new Date().toISOString();
     }
@@ -1481,10 +1731,12 @@ class RealtimeDatabaseEngine {
       actorId: currentUser.uid,
       actorName: currentUser.fullName,
       actorRole: currentUser.role,
-      action: 'Recorded Payment',
+      action: isSubtract ? 'Subtracted / Refunded Payment' : 'Recorded Payment',
       module: 'payments',
       recordId: paymentId,
-      details: `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
+      details: isSubtract
+        ? `Subtracted / Refunded ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} for ${payment.clientName}.`
+        : `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
     });
 
     this.saveState(this.state);
