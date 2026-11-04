@@ -298,9 +298,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 {event.eventType}
               </span>
               <span
-                className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${
-                  statusBadgeColors[event.status] || 'bg-stone-800 text-stone-300 border-stone-700'
-                }`}
+                className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${statusBadgeColors[event.status] || 'bg-stone-800 text-stone-300 border-stone-700'
+                  }`}
               >
                 {event.status}
               </span>
@@ -363,20 +362,18 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  isActive
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${isActive
                     ? 'bg-emerald-800 text-white shadow-sm'
                     : 'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
-                }`}
+                  }`}
               >
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                      isActive
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive
                         ? 'bg-emerald-900/90 text-emerald-200'
                         : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'
-                    }`}
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -554,20 +551,18 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                     >
                       <div className="flex items-center gap-2.5">
                         <div
-                          className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${
-                            t.status === 'completed'
+                          className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${t.status === 'completed'
                               ? 'bg-emerald-700 text-white'
                               : 'border border-stone-400 dark:border-stone-600'
-                          }`}
+                            }`}
                         >
                           {t.status === 'completed' && <Check className="w-3.5 h-3.5" />}
                         </div>
                         <span
-                          className={`text-xs ${
-                            t.status === 'completed'
+                          className={`text-xs ${t.status === 'completed'
                               ? 'line-through text-stone-400'
                               : 'font-medium text-stone-800 dark:text-stone-200'
-                          }`}
+                            }`}
                         >
                           {t.title}
                         </span>
@@ -712,22 +707,20 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 return (
                   <div
                     key={task.id}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                      isDone
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${isDone
                         ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
                         : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 shadow-xs'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3.5">
                         <button
                           type="button"
                           onClick={() => handleToggle(task.id)}
-                          className={`mt-0.5 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 min-h-[44px] min-w-[44px] ${
-                            isDone
+                          className={`mt-0.5 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 min-h-[44px] min-w-[44px] ${isDone
                               ? 'bg-emerald-700 border-emerald-700 text-white shadow-xs'
                               : 'border-stone-400 dark:border-stone-500 hover:border-emerald-700 bg-white dark:bg-stone-800 text-transparent'
-                          }`}
+                            }`}
                           aria-label={`Mark ${task.title} as ${isDone ? 'pending' : 'completed'}`}
                         >
                           <CheckCircle2 className={`w-5 h-5 ${isDone ? 'opacity-100' : 'opacity-0'}`} />
@@ -735,11 +728,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
                         <div>
                           <h4
-                            className={`text-sm font-bold ${
-                              isDone
+                            className={`text-sm font-bold ${isDone
                                 ? 'line-through text-stone-400 dark:text-stone-500'
                                 : 'text-stone-900 dark:text-stone-100'
-                            }`}
+                              }`}
                           >
                             {task.title}
                           </h4>
@@ -851,11 +843,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 return (
                   <div
                     key={va.id}
-                    className={`p-5 rounded-2xl border shadow-xs space-y-3.5 flex flex-col justify-between transition-all ${
-                      isContacted
+                    className={`p-5 rounded-2xl border shadow-xs space-y-3.5 flex flex-col justify-between transition-all ${isContacted
                         ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
                         : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800'
-                    }`}
+                      }`}
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -888,15 +879,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
                         {/* Status pill */}
                         <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                            va.contactStatus === 'confirmed'
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${va.contactStatus === 'confirmed'
                               ? 'bg-emerald-700 text-white'
                               : va.contactStatus === 'contacted'
-                              ? 'bg-sky-600 text-white'
-                              : va.contactStatus === 'followup_required'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
-                          }`}
+                                ? 'bg-sky-600 text-white'
+                                : va.contactStatus === 'followup_required'
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300'
+                            }`}
                         >
                           {va.contactStatus.replace('_', ' ')}
                         </span>
@@ -924,8 +914,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           {va.contactStatus === 'confirmed'
                             ? '✓ Confirmed'
                             : va.contactStatus === 'contacted'
-                            ? '✓ Reminder Sent'
-                            : 'Mark Reminder Sent'}
+                              ? '✓ Reminder Sent'
+                              : 'Mark Reminder Sent'}
                         </span>
                       </label>
 
@@ -1272,18 +1262,16 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`font-bold ${
-                              isRefund ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
-                            }`}
+                            className={`font-bold ${isRefund ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
+                              }`}
                           >
                             {isRefund ? '-' : '+'} {formatCurrency(p.amount)}
                           </span>
                           <span
-                            className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                              isRefund
+                            className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${isRefund
                                 ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
                                 : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            }`}
+                              }`}
                           >
                             {isRefund ? 'Deduction / Refund' : 'Payment Received'}
                           </span>
