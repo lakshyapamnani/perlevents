@@ -430,7 +430,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                       />
                     ) : (
                       <span className="font-serif italic text-lg text-stone-800 tracking-wide select-none">
-                        {settings.authorizedSignatoryName || 'Lakshya Pamnani'}
+                        {settings.authorizedSignatoryName || 'Authorized Signatory'}
                       </span>
                     )}
                   </div>

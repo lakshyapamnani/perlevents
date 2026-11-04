@@ -279,7 +279,7 @@ export const SettingsModule: React.FC = () => {
                 <input
                   type="text"
                   value={formData.authorizedSignatoryName || ''}
-                  placeholder="e.g. Lakshya Pamnani"
+                  placeholder="e.g. Authorized Signatory"
                   onChange={(e) =>
                     setFormData({ ...formData, authorizedSignatoryName: e.target.value })
                   }
@@ -356,7 +356,7 @@ export const SettingsModule: React.FC = () => {
                     />
                   ) : (
                     <div className="font-serif italic text-lg text-stone-800 dark:text-stone-200 tracking-wide select-none">
-                      {formData.authorizedSignatoryName || 'Lakshya Pamnani'}
+                      {formData.authorizedSignatoryName || 'Authorized Signatory'}
                     </div>
                   )}
                   <div className="w-36 border-t border-stone-400 dark:border-stone-500 mt-1" />

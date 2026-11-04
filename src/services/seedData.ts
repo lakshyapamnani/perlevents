@@ -59,14 +59,7 @@ export const DEFAULT_USER_CREDENTIALS: Record<
     password: 'admin123',
     role: 'admin',
     uid: 'usr_admin_02',
-    name: 'Lakshya Pamnani (Director)',
-  },
-  'lakshyapamnani5@gmail.com': {
-    email: 'lakshyapamnani5@gmail.com',
-    password: 'admin123',
-    role: 'admin',
-    uid: 'usr_admin_02',
-    name: 'Lakshya Pamnani (Director)',
+    name: 'Executive Management',
   },
   'sales@perlexperiences.com': {
     email: 'sales@perlexperiences.com',
@@ -113,7 +106,7 @@ export const initialUsers: UserProfile[] = [
   },
   {
     uid: 'usr_admin_02',
-    fullName: 'Lakshya Pamnani (Director)',
+    fullName: 'Executive Management',
     email: 'Pearlexperiencespvt.ltd@gmail.com',
     phone: '+91 98111 22233',
     role: 'admin',

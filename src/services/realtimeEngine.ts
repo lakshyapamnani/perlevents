@@ -165,6 +165,17 @@ class RealtimeDatabaseEngine {
             targets: { ...this.state.targets, ...(remoteState.targets || {}) },
           };
 
+          if (this.state.users) {
+            Object.values(this.state.users).forEach((u) => {
+              if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
+                u.fullName = 'Executive Management';
+              }
+            });
+          }
+          if (this.state.settings?.authorizedSignatoryName && this.state.settings.authorizedSignatoryName.toLowerCase().includes('lakshya')) {
+            this.state.settings.authorizedSignatoryName = 'Authorized Signatory';
+          }
+
           try {
             localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(this.state));
           } catch (_) {}
@@ -210,6 +221,18 @@ class RealtimeDatabaseEngine {
             parsed.users[u.uid] = u;
           }
         });
+
+        // Remove any legacy Lakshya Pamnani references
+        if (parsed.users) {
+          Object.values(parsed.users).forEach((u) => {
+            if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
+              u.fullName = 'Executive Management';
+            }
+          });
+        }
+        if (parsed.settings.authorizedSignatoryName && parsed.settings.authorizedSignatoryName.toLowerCase().includes('lakshya')) {
+          parsed.settings.authorizedSignatoryName = 'Authorized Signatory';
+        }
 
         return parsed;
       }
