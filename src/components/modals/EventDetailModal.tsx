@@ -421,23 +421,38 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           </td>
                           <td className="p-3">
                             {rem.type === 'vendor' ? (
-                              <select
-                                value={rem.status}
-                                onChange={(e) =>
-                                  updateVendorAssignmentStatus(
-                                    event.id,
-                                    rem.id,
-                                    e.target.value as ReminderStatus
-                                  )
-                                }
-                                className="text-xs px-2 py-1 rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
-                              >
-                                <option value="not_contacted">Not Contacted</option>
-                                <option value="contacted">Contacted</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="followup_required">Follow-up Required</option>
-                                <option value="not_required">Not Required</option>
-                              </select>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={rem.status === 'contacted' || rem.status === 'confirmed'}
+                                  onChange={(e) =>
+                                    updateVendorAssignmentStatus(
+                                      event.id,
+                                      rem.id,
+                                      e.target.checked ? 'contacted' : 'not_contacted'
+                                    )
+                                  }
+                                  className="w-4 h-4 rounded text-emerald-800 focus:ring-emerald-700 cursor-pointer"
+                                  title="Check to mark reminder sent"
+                                />
+                                <select
+                                  value={rem.status}
+                                  onChange={(e) =>
+                                    updateVendorAssignmentStatus(
+                                      event.id,
+                                      rem.id,
+                                      e.target.value as ReminderStatus
+                                    )
+                                  }
+                                  className="text-xs px-2 py-1 rounded border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800"
+                                >
+                                  <option value="not_contacted">Not Contacted</option>
+                                  <option value="contacted">Contacted</option>
+                                  <option value="confirmed">Confirmed</option>
+                                  <option value="followup_required">Follow-up Required</option>
+                                  <option value="not_required">Not Required</option>
+                                </select>
+                              </div>
                             ) : (
                               <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-stone-100 dark:bg-stone-800 text-stone-700">
                                 {rem.status.replace('_', ' ')}

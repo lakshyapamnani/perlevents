@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../types';
 import { realtimeEngine } from '../services/realtimeEngine';
+import { DEFAULT_USER_CREDENTIALS } from '../services/seedData';
+import { authenticateWithFirebase, signOutFromFirebase, isFirebaseConfigured } from '../services/firebase';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
+  isAuthenticated: boolean;
   users: UserProfile[];
   allUsersList: UserProfile[];
+  loginWithEmailPassword: (email: string, password: string) => Promise<{ success: boolean; user?: UserProfile; error?: string }>;
   loginAs: (uid: string) => void;
   switchRole: (role: UserRole) => void;
   logout: () => void;
@@ -24,13 +28,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dbState, setDbState] = useState(realtimeEngine.getState());
-  const [currentUid, setCurrentUid] = useState<string>(() => {
-    // Default to Admin for testing unless saved
+  const [currentUid, setCurrentUid] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('perlevents_active_uid');
+      const saved = localStorage.getItem('pearlexperiences_active_uid');
       if (saved && dbState.users[saved]) return saved;
     }
-    return 'usr_admin_01'; // Default Admin
+    return null; // Show single login screen if not authenticated
   });
 
   useEffect(() => {
@@ -41,7 +44,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const allUsersList = Object.values(dbState.users);
-  const currentUser = dbState.users[currentUid] || allUsersList[0] || null;
+  const currentUser: UserProfile | null = currentUid && dbState.users[currentUid] ? dbState.users[currentUid] : null;
+
+  /**
+   * Unified Single Form Login
+   * Resolves user and role based on email & password:
+   * - admin@perlexperiences.com / admin123 -> Admin
+   * - sales@perlexperiences.com / sales123 -> Salesperson
+   * - manager@perlexperiences.com / manager123 -> Manager
+   * Also connects to Firebase Auth if user credentials are provided.
+   */
+  const loginWithEmailPassword = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: UserProfile; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return { success: false, error: 'Please enter both email and password.' };
+    }
+
+    // 1. Attempt Firebase Authentication if credentials are configured
+    if (isFirebaseConfigured()) {
+      try {
+        const fbRes = await authenticateWithFirebase(cleanEmail, cleanPassword);
+        if (fbRes.success && fbRes.user) {
+          // Find matching profile in database or match by email
+          const matchedUser = allUsersList.find(
+            (u) => u.email.toLowerCase() === cleanEmail || u.uid === fbRes.user?.uid
+          );
+          if (matchedUser) {
+            if (!matchedUser.isActive) {
+              return { success: false, error: 'Your Pearlexperiences account is deactivated. Contact Administrator.' };
+            }
+            setCurrentUid(matchedUser.uid);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('pearlexperiences_active_uid', matchedUser.uid);
+            }
+            return { success: true, user: matchedUser };
+          }
+        }
+      } catch (err) {
+        console.warn('Firebase auth attempt error:', err);
+      }
+    }
+
+    // 2. Validate against standard credentials & local database profiles
+    const creds = DEFAULT_USER_CREDENTIALS[cleanEmail];
+    let matchedUser: UserProfile | undefined;
+
+    if (creds && creds.password === cleanPassword) {
+      matchedUser = dbState.users[creds.uid] || allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
+    } else {
+      // Check if user exists in database and password matches default rule
+      const userByEmail = allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (userByEmail) {
+        // Expected passwords
+        const expectedPwd =
+          userByEmail.role === 'admin'
+            ? 'admin123'
+            : userByEmail.role === 'salesperson'
+            ? 'sales123'
+            : 'manager123';
+        if (cleanPassword === expectedPwd) {
+          matchedUser = userByEmail;
+        }
+      }
+    }
+
+    if (!matchedUser) {
+      return {
+        success: false,
+        error: 'Invalid credentials. Please verify your email and password.',
+      };
+    }
+
+    if (!matchedUser.isActive) {
+      return {
+        success: false,
+        error: 'This account has been deactivated. Please contact your administrator.',
+      };
+    }
+
+    setCurrentUid(matchedUser.uid);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pearlexperiences_active_uid', matchedUser.uid);
+    }
+
+    return { success: true, user: matchedUser };
+  };
 
   const loginAs = (uid: string) => {
     const user = dbState.users[uid];
@@ -52,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setCurrentUid(uid);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('perlevents_active_uid', uid);
+        localStorage.setItem('pearlexperiences_active_uid', uid);
       }
     }
   };
@@ -67,10 +159,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // Return to Admin or first available user
-    const admin = allUsersList.find((u) => u.role === 'admin');
-    if (admin) {
-      loginAs(admin.uid);
+    signOutFromFirebase();
+    setCurrentUid(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('pearlexperiences_active_uid');
     }
   };
 
@@ -99,8 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
+        isAuthenticated: currentUser !== null,
         users: allUsersList,
         allUsersList,
+        loginWithEmailPassword,
         loginAs,
         switchRole,
         logout,
