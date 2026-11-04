@@ -8,7 +8,11 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.uid === $uid)",
-        ".indexOn": ["email", "role", "organizationId"]
+        ".indexOn": [
+          "email",
+          "role",
+          "organizationId"
+        ]
       }
     },
     "organizations": {
@@ -21,21 +25,33 @@
       ".read": "auth != null",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       "$banquetId": {
-        ".indexOn": ["isActive", "name"]
+        ".indexOn": [
+          "isActive",
+          "name"
+        ]
       }
     },
     "clients": {
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$clientId": {
-        ".indexOn": ["primaryPhone", "fullName", "createdAt"]
+        ".indexOn": [
+          "primaryPhone",
+          "fullName",
+          "createdAt"
+        ]
       }
     },
     "leads": {
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$leadId": {
-        ".indexOn": ["salespersonId", "followUpDate", "status", "createdAt"]
+        ".indexOn": [
+          "salespersonId",
+          "followUpDate",
+          "status",
+          "createdAt"
+        ]
       }
     },
     "leadFollowUps": {
@@ -46,7 +62,14 @@
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson' || (root.child('users').child(auth.uid).child('role').val() === 'manager' && data.child('managerId').val() === auth.uid))",
       "$eventId": {
-        ".indexOn": ["date", "banquetId", "salespersonId", "managerId", "status", "createdAt"]
+        ".indexOn": [
+          "date",
+          "banquetId",
+          "salespersonId",
+          "managerId",
+          "status",
+          "createdAt"
+        ]
       }
     },
     "bookingSlots": {
@@ -54,7 +77,10 @@
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$banquetId": {
         "$date": {
-          ".indexOn": ["startTime", "status"]
+          ".indexOn": [
+            "startTime",
+            "status"
+          ]
         }
       }
     },
@@ -70,28 +96,49 @@
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$saleId": {
-        ".indexOn": ["salespersonId", "saleDate", "banquetId", "clientId", "status"]
+        ".indexOn": [
+          "salespersonId",
+          "saleDate",
+          "banquetId",
+          "clientId",
+          "status"
+        ]
       }
     },
     "invoices": {
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$invoiceId": {
-        ".indexOn": ["invoiceNumber", "clientId", "eventId", "status", "invoiceDate"]
+        ".indexOn": [
+          "invoiceNumber",
+          "clientId",
+          "eventId",
+          "status",
+          "invoiceDate"
+        ]
       }
     },
     "payments": {
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'salesperson')",
       "$paymentId": {
-        ".indexOn": ["invoiceId", "saleId", "clientId", "paymentDate"]
+        ".indexOn": [
+          "invoiceId",
+          "saleId",
+          "clientId",
+          "paymentDate"
+        ]
       }
     },
     "activityLogs": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       ".write": "auth != null",
       "$logId": {
-        ".indexOn": ["timestamp", "module", "actorId"]
+        ".indexOn": [
+          "timestamp",
+          "module",
+          "actorId"
+        ]
       }
     },
     "settings": {

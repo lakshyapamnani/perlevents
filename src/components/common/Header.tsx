@@ -121,7 +121,20 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right: Quick Role Switcher + Primary Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Quick return to Admin when testing as Salesperson or Manager */}
+          {currentRole !== 'admin' && (
+            <button
+              type="button"
+              onClick={() => switchRole('admin')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-700 rounded-lg transition-colors shadow-xs"
+              title="Switch back to Administrator view"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Back to Admin</span>
+            </button>
+          )}
+
           {onOpenDirectSale && (
             <button
               onClick={onOpenDirectSale}

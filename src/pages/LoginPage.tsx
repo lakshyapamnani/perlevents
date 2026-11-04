@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, Eye, EyeOff, Sparkles, Building2, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, Building2, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface LoginPageProps {
   onSuccess?: () => void;
@@ -32,12 +32,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage(null);
   };
 
   return (
@@ -139,44 +133,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               )}
             </button>
           </form>
-
-          {/* Discreet Demo Credentials Quick-Fill (For Instant Testing) */}
-          <div className="pt-4 border-t border-stone-800/80 space-y-2.5">
-            <div className="flex items-center justify-between text-[11px] text-stone-400">
-              <span className="font-semibold text-stone-300 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Demo Credentials:
-              </span>
-              <span className="text-[10px] text-stone-500 font-mono">Single Role-Based Form</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@perlexperiences.com', 'admin123')}
-                className="px-2 py-1.5 rounded-lg bg-stone-950/60 hover:bg-emerald-950/40 border border-stone-800 hover:border-emerald-800 text-[10px] text-stone-300 font-medium text-center transition-all truncate"
-                title="Fill Admin: admin@perlexperiences.com / admin123"
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('sales@perlexperiences.com', 'sales123')}
-                className="px-2 py-1.5 rounded-lg bg-stone-950/60 hover:bg-emerald-950/40 border border-stone-800 hover:border-emerald-800 text-[10px] text-stone-300 font-medium text-center transition-all truncate"
-                title="Fill Sales: sales@perlexperiences.com / sales123"
-              >
-                Salesperson
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('manager@perlexperiences.com', 'manager123')}
-                className="px-2 py-1.5 rounded-lg bg-stone-950/60 hover:bg-emerald-950/40 border border-stone-800 hover:border-emerald-800 text-[10px] text-stone-300 font-medium text-center transition-all truncate"
-                title="Fill Manager: manager@perlexperiences.com / manager123"
-              >
-                Manager
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer info */}

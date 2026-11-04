@@ -464,6 +464,48 @@ class RealtimeDatabaseEngine {
     return { success: true };
   }
 
+  public deleteEmployeeAccount(adminUser: UserProfile, uid: string): { success: boolean; error?: string } {
+    if (adminUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only Admin can delete accounts.' };
+    }
+    const user = this.state.users[uid];
+    if (!user) return { success: false, error: 'User not found.' };
+    if (user.uid === adminUser.uid) {
+      return { success: false, error: 'Cannot delete your own Administrator account.' };
+    }
+
+    const roleName = user.role === 'salesperson' ? 'Salesperson' : user.role === 'manager' ? 'Operations Manager' : 'Employee';
+    const userName = user.fullName;
+    const userEmail = user.email;
+
+    // Delete user from state
+    delete this.state.users[uid];
+
+    // Clean up any assigned references in banquets
+    Object.values(this.state.banquets).forEach((banquet) => {
+      if (banquet.assignedSalespersonId === uid) {
+        delete banquet.assignedSalespersonId;
+      }
+      if (banquet.assignedManagerId === uid) {
+        delete banquet.assignedManagerId;
+      }
+    });
+
+    this.logActivity({
+      actorId: adminUser.uid,
+      actorName: adminUser.fullName,
+      actorRole: adminUser.role,
+      action: `Deleted ${roleName} Account`,
+      module: 'users',
+      recordId: uid,
+      details: `Permanently deleted ${userName} (${userEmail}) from the organization.`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
   // --- BANQUET MANAGEMENT ---
   public saveBanquet(adminUser: UserProfile, banquet: Banquet): { success: boolean; error?: string } {
     if (adminUser.role !== 'admin') {
