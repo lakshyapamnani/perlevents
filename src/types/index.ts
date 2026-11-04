@@ -336,6 +336,7 @@ export interface Payment {
   invoiceId?: string;
   eventId?: string;
   amount: number;
+  type?: 'payment' | 'refund';
   paymentDate: string;
   paymentMethod: PaymentMethod;
   referenceNumber?: string;
@@ -363,7 +364,8 @@ export interface ActivityLog {
     | 'settings'
     | 'reminders'
     | 'clients'
-    | 'targets';
+    | 'targets'
+    | 'sales';
   recordId: string;
   details: string;
   timestamp: string;

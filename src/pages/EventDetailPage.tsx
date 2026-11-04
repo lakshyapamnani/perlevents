@@ -1190,6 +1190,66 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               </div>
             )}
           </div>
+
+          {/* Client Payment Ledger History */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                Payment & Deduction Ledger ({eventPayments.length})
+              </h3>
+              {onOpenRecordPayment && (
+                <button
+                  onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Record / Adjust Payment</span>
+                </button>
+              )}
+            </div>
+
+            {eventPayments.length === 0 ? (
+              <p className="text-xs text-stone-500 py-4 text-center">No payments or deductions recorded yet.</p>
+            ) : (
+              <div className="divide-y divide-stone-100 dark:divide-stone-800">
+                {eventPayments.map((p) => {
+                  const isRefund = p.type === 'refund';
+                  return (
+                    <div key={p.id} className="py-3 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`font-bold ${
+                              isRefund ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
+                            }`}
+                          >
+                            {isRefund ? '-' : '+'} {formatCurrency(p.amount)}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                              isRefund
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            }`}
+                          >
+                            {isRefund ? 'Deduction / Refund' : 'Payment Received'}
+                          </span>
+                        </div>
+                        <div className="text-stone-500 text-[11px] mt-0.5">
+                          {formatDate(p.paymentDate)} via {p.paymentMethod.replace('_', ' ').toUpperCase()}
+                          {p.referenceNumber ? ` · Ref: ${p.referenceNumber}` : ''}
+                        </div>
+                        {p.notes && <div className="text-[11px] text-stone-400 italic mt-0.5">{p.notes}</div>}
+                      </div>
+                      <div className="text-right text-[11px] text-stone-400">
+                        Recorded by {p.recordedByName}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

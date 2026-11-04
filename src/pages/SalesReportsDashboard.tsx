@@ -30,7 +30,10 @@ export const SalesReportsDashboard: React.FC = () => {
   const totalInvoicedValue = invoices
     .filter((i) => i.status !== 'cancelled')
     .reduce((sum, i) => sum + i.finalTotal, 0);
-  const totalPaymentsReceived = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPaymentsReceived = payments.reduce(
+    (sum, p) => sum + (p.type === 'refund' ? -p.amount : p.amount),
+    0
+  );
   const totalOutstanding = filteredSales.reduce((sum, s) => sum + s.outstandingBalance, 0);
   const averageSaleValue =
     filteredSales.length > 0 ? Math.round(totalSalesValue / filteredSales.length) : 0;

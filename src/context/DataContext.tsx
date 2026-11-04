@@ -167,8 +167,9 @@ interface DataContextType {
 
   saveInvoice: (invoice: Invoice) => { success: boolean; invoice?: Invoice; error?: string };
   recordPayment: (
-    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'>
+    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'> & { type?: 'payment' | 'refund' }
   ) => { success: boolean; payment?: Payment; error?: string };
+  deleteSale: (saleId: string) => { success: boolean; error?: string };
 
   updateSettings: (settings: OrganizationSettings) => { success: boolean; error?: string };
   saveTarget: (targetData: {
@@ -227,7 +228,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .filter((s) => s.status !== 'cancelled')
       .reduce((sum, s) => sum + s.finalSaleAmount, 0);
 
-    const paymentsReceived = payments.reduce((sum, p) => sum + p.amount, 0);
+    const paymentsReceived = payments.reduce(
+      (sum, p) => sum + (p.type === 'refund' ? -p.amount : p.amount),
+      0
+    );
 
     const outstandingBalances = sales
       .filter((s) => s.status !== 'cancelled')
@@ -385,6 +389,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.recordPayment(currentUser, paymentData);
   };
 
+  const deleteSale = (saleId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.deleteSale(currentUser, saleId);
+  };
+
   const updateSettings = (settings: OrganizationSettings) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
     return realtimeEngine.updateSettings(currentUser, settings);
@@ -453,6 +462,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addEventPhoto,
         saveInvoice,
         recordPayment,
+        deleteSale,
         updateSettings,
         saveTarget,
         deleteTarget,

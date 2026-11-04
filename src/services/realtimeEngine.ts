@@ -124,6 +124,7 @@ class RealtimeDatabaseEngine {
 
     // Connect Realtime Database live sync if configured
     if (typeof window !== 'undefined' && isFirebaseConfigured()) {
+      this.isLiveFirebase = true;
       listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
         if (remoteState && typeof remoteState === 'object') {
           this.state = {
@@ -855,6 +856,45 @@ class RealtimeDatabaseEngine {
     return { success: true, event: newEvent, invoice: createdInvoice };
   }
 
+  // --- DELETE SALE ---
+  public deleteSale(
+    currentUser: UserProfile,
+    saleId: string
+  ): { success: boolean; error?: string } {
+    const sale = this.state.sales[saleId];
+    if (!sale) {
+      return { success: false, error: 'Sale record not found.' };
+    }
+
+    if (
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'manager' &&
+      sale.salespersonId !== currentUser.uid &&
+      sale.createdBy !== currentUser.uid
+    ) {
+      return {
+        success: false,
+        error: 'Unauthorized: Only Admins, Managers, or the assigned Salesperson can delete this sale.',
+      };
+    }
+
+    delete this.state.sales[saleId];
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Deleted Sale Record',
+      module: 'sales',
+      recordId: saleId,
+      details: `Deleted sale for ${sale.eventName} (Client: ${sale.clientName}, Amount: ₹${sale.finalSaleAmount?.toLocaleString()}).`,
+    });
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
   // --- LEAD MANAGEMENT ---
   public saveLead(
     currentUser: UserProfile,
@@ -1432,15 +1472,17 @@ class RealtimeDatabaseEngine {
 
   public recordPayment(
     currentUser: UserProfile,
-    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'>
+    paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'> & { type?: 'payment' | 'refund' }
   ): { success: boolean; payment?: Payment; error?: string } {
     if (paymentData.amount <= 0) {
       return { success: false, error: 'Payment amount must be greater than zero.' };
     }
 
+    const isSubtract = paymentData.type === 'refund';
     const paymentId = `pay_${Date.now()}`;
     const payment: Payment = {
       ...paymentData,
+      type: paymentData.type || 'payment',
       id: paymentId,
       recordedBy: currentUser.uid,
       recordedByName: currentUser.fullName,
@@ -1452,27 +1494,46 @@ class RealtimeDatabaseEngine {
     // Update Invoice balance if linked
     if (payment.invoiceId && this.state.invoices[payment.invoiceId]) {
       const inv = this.state.invoices[payment.invoiceId];
-      inv.actualAdvanceReceived += payment.amount;
+      if (isSubtract) {
+        inv.actualAdvanceReceived = Math.max(0, inv.actualAdvanceReceived - payment.amount);
+      } else {
+        inv.actualAdvanceReceived += payment.amount;
+      }
       inv.remainingBalance = Math.max(0, inv.finalTotal - inv.actualAdvanceReceived);
       if (inv.remainingBalance <= 0) {
         inv.status = 'paid';
       } else if (inv.actualAdvanceReceived > 0) {
         inv.status = 'partially_paid';
+      } else {
+        inv.status = 'issued';
       }
       inv.updatedAt = new Date().toISOString();
     }
 
-    // Update Sale balance if linked
-    if (payment.saleId && this.state.sales[payment.saleId]) {
-      const sale = this.state.sales[payment.saleId];
-      sale.paymentsReceived += payment.amount;
-      sale.outstandingBalance = Math.max(0, sale.finalSaleAmount - sale.paymentsReceived);
+    // Update Sale balance if linked directly or via eventId
+    const targetSale = payment.saleId && this.state.sales[payment.saleId]
+      ? this.state.sales[payment.saleId]
+      : payment.eventId
+      ? Object.values(this.state.sales).find((s) => s.eventId === payment.eventId)
+      : undefined;
+
+    if (targetSale) {
+      if (isSubtract) {
+        targetSale.paymentsReceived = Math.max(0, targetSale.paymentsReceived - payment.amount);
+      } else {
+        targetSale.paymentsReceived += payment.amount;
+      }
+      targetSale.outstandingBalance = Math.max(0, targetSale.finalSaleAmount - targetSale.paymentsReceived);
     }
 
     // Update Event balance if linked
     if (payment.eventId && this.state.events[payment.eventId]) {
       const evt = this.state.events[payment.eventId];
-      evt.advanceReceived += payment.amount;
+      if (isSubtract) {
+        evt.advanceReceived = Math.max(0, evt.advanceReceived - payment.amount);
+      } else {
+        evt.advanceReceived += payment.amount;
+      }
       evt.remainingBalance = Math.max(0, evt.finalAmount - evt.advanceReceived);
       evt.updatedAt = new Date().toISOString();
     }
@@ -1481,10 +1542,12 @@ class RealtimeDatabaseEngine {
       actorId: currentUser.uid,
       actorName: currentUser.fullName,
       actorRole: currentUser.role,
-      action: 'Recorded Payment',
+      action: isSubtract ? 'Subtracted / Refunded Payment' : 'Recorded Payment',
       module: 'payments',
       recordId: paymentId,
-      details: `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
+      details: isSubtract
+        ? `Subtracted / Refunded ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} for ${payment.clientName}.`
+        : `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
     });
 
     this.saveState(this.state);
