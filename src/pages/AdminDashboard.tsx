@@ -66,7 +66,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div>
           <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Director Console · PerlEvents ERP</span>
+            <span>Admin Console · Pearlexperiences ERP</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
             Welcome back, {currentUser?.fullName?.split(' ')[0] || 'Administrator'}
