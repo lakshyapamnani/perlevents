@@ -37,6 +37,7 @@ interface AuthContextType {
     }
   ) => { success: boolean; user?: UserProfile; error?: string };
   toggleUserStatus: (uid: string) => { success: boolean; error?: string };
+  deleteEmployee: (uid: string) => { success: boolean; error?: string };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -120,8 +121,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userByEmail.role === 'admin'
             ? 'admin123'
             : userByEmail.role === 'salesperson'
-            ? 'sales123'
-            : 'manager123';
+              ? 'sales123'
+              : 'manager123';
         if (cleanPassword === expectedPwd) {
           matchedUser = userByEmail;
         }
@@ -241,6 +242,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.toggleUserStatus(currentUser, uid);
   };
 
+  const deleteEmployee = (uid: string) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only an Administrator can delete employee accounts.' };
+    }
+    return realtimeEngine.deleteEmployeeAccount(currentUser, uid);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -255,6 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provisionEmployee,
         updateEmployee,
         toggleUserStatus,
+        deleteEmployee,
       }}
     >
       {children}

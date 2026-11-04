@@ -12,6 +12,8 @@ import {
   Building2,
   Calendar,
   Pencil,
+  Trash2,
+  LogIn,
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { formatDate } from '../utils/formatters';
@@ -22,7 +24,7 @@ interface UsersModuleProps {
 }
 
 export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
-  const { allUsersList, toggleUserStatus, currentUser } = useAuth();
+  const { allUsersList, toggleUserStatus, deleteEmployee, loginAs, currentUser } = useAuth();
   const { banquets } = useData();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -42,6 +44,16 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
     const res = toggleUserStatus(uid);
     if (!res.success) {
       alert(res.error || 'Failed to update account status.');
+    }
+  };
+
+  const handleDeleteUser = (u: UserProfile) => {
+    const roleTitle = u.role === 'salesperson' ? 'Salesperson' : u.role === 'manager' ? 'Operations Manager' : 'Employee';
+    if (window.confirm(`Are you sure you want to permanently delete ${roleTitle} "${u.fullName}" (${u.email})?\nThis action cannot be undone.`)) {
+      const res = deleteEmployee(u.uid);
+      if (!res.success) {
+        alert(res.error || 'Failed to delete account.');
+      }
     }
   };
 
@@ -153,33 +165,62 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
                 </div>
               </div>
 
-              {/* Admin Actions: Edit Profile & Banquets / Status Toggle */}
+              {/* Admin Actions: Log in as User / Edit / Deactivate / Delete */}
               {currentUser?.role === 'admin' && (
-                <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedUserForEdit(u);
-                      setIsCreateModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 flex items-center gap-1 transition-colors"
-                    title="Edit name, phone, role, and assigned banquets"
-                  >
-                    <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-                    <span>Edit Banquets</span>
-                  </button>
-
-                  {!isMe && (
+                <div className="space-y-2.5 pt-3 border-t border-stone-100 dark:border-stone-800">
+                  {/* Direct Login as Salesperson / Manager button */}
+                  {!isMe && u.isActive && (
                     <button
-                      onClick={() => handleToggle(u.uid)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                        u.isActive
-                          ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/40'
-                          : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/40'
-                      }`}
+                      type="button"
+                      onClick={() => loginAs(u.uid)}
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                      title={`Log in as ${u.fullName} (${badge.label}) to see what's happening`}
                     >
-                      {u.isActive ? 'Deactivate' : 'Activate'}
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>
+                        Log in as {u.role === 'salesperson' ? 'Salesperson' : u.role === 'manager' ? 'Operations Manager' : 'User'}
+                      </span>
                     </button>
                   )}
+
+                  <div className="flex items-center justify-between gap-1.5">
+                    <button
+                      onClick={() => {
+                        setSelectedUserForEdit(u);
+                        setIsCreateModalOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 flex items-center gap-1 transition-colors"
+                      title="Edit name, phone, role, and assigned banquets"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                      <span>Edit</span>
+                    </button>
+
+                    {!isMe && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleToggle(u.uid)}
+                          className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                            u.isActive
+                              ? 'border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950/40'
+                              : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/40'
+                          }`}
+                        >
+                          {u.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUser(u)}
+                          className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/40 flex items-center gap-1 transition-colors"
+                          title={`Permanently delete ${u.fullName}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
