@@ -234,6 +234,7 @@ class RealtimeDatabaseEngine {
             const demoUids = ['usr_sales_01', 'usr_manager_01'];
             demoUids.forEach((id) => delete this.state.users[id]);
             Object.values(this.state.users).forEach((u) => {
+              if (!u || typeof u !== 'object') return;
               const email = (u.email || '').toLowerCase();
               if (
                 email === 'sales@perlexperiences.com' ||
@@ -271,12 +272,31 @@ class RealtimeDatabaseEngine {
       const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}state`);
       if (stored) {
         const parsed: DatabaseState = JSON.parse(stored);
+        if (!parsed.settings || typeof parsed.settings !== 'object') {
+          parsed.settings = { ...initialSettings };
+        }
+        if (!parsed.users || typeof parsed.users !== 'object') {
+          parsed.users = initialUsers.reduce((acc, u) => ({ ...acc, [u.uid]: u }), {});
+        }
         if (!parsed.vendorCategories || !Array.isArray(parsed.vendorCategories) || parsed.vendorCategories.length === 0) {
           parsed.vendorCategories = [...DEFAULT_VENDOR_CATEGORIES];
         }
         if (!parsed.targets || typeof parsed.targets !== 'object') {
           parsed.targets = initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {});
         }
+        if (!parsed.banquets || typeof parsed.banquets !== 'object') {
+          parsed.banquets = initialBanquets.reduce((acc, b) => ({ ...acc, [b.id]: b }), {});
+        }
+        if (!parsed.bookingSlots || typeof parsed.bookingSlots !== 'object') {
+          parsed.bookingSlots = initialBookingSlots.reduce((acc, s) => ({ ...acc, [s.id]: s }), {});
+        }
+        if (!parsed.events || typeof parsed.events !== 'object') {
+          parsed.events = initialEvents.reduce((acc, e) => ({ ...acc, [e.id]: e }), {});
+        }
+        if (!parsed.checklistItems || typeof parsed.checklistItems !== 'object') {
+          parsed.checklistItems = {};
+        }
+
         // Sync Pearlexperiences organization details
         parsed.settings.name = 'Pearl Experience';
         parsed.settings.brandTagline = 'Every Celebration is crafted like a Pearl – Rare, Valuable, Timeless, & Unforgettable.';
@@ -303,10 +323,11 @@ class RealtimeDatabaseEngine {
         // Ensure event arrays are valid
         if (parsed.events) {
           Object.values(parsed.events).forEach((e) => {
-            if (e && !Array.isArray(e.vendorAssignments)) {
+            if (!e || typeof e !== 'object') return;
+            if (!Array.isArray(e.vendorAssignments)) {
               e.vendorAssignments = [];
             }
-            if (e && !Array.isArray(e.referencePhotos)) {
+            if (!Array.isArray(e.referencePhotos)) {
               e.referencePhotos = [];
             }
           });
@@ -317,6 +338,7 @@ class RealtimeDatabaseEngine {
           const demoUids = ['usr_sales_01', 'usr_manager_01'];
           demoUids.forEach((id) => delete parsed.users[id]);
           Object.values(parsed.users).forEach((u) => {
+            if (!u || typeof u !== 'object') return;
             const email = (u.email || '').toLowerCase();
             if (
               email === 'sales@perlexperiences.com' ||

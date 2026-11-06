@@ -41,18 +41,19 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
   const totalDays = new Date(year, month + 1, 0).getDate();
 
   const filteredEvents = events.filter((e) => {
+    if (!e || !e.date) return false;
     const matchBanquet = selectedBanquet === 'all' || e.banquetId === selectedBanquet;
     const matchStatus = selectedStatus === 'all' || e.status === selectedStatus;
     return matchBanquet && matchStatus;
   });
 
-  const currentBanquetObj = selectedBanquet !== 'all' ? banquets.find((b) => b.id === selectedBanquet) : null;
+  const currentBanquetObj = selectedBanquet !== 'all' ? banquets.find((b) => b && b.id === selectedBanquet) : null;
   const currentBanquetMaxDaily = currentBanquetObj?.maxBookingsPerDay || 2;
 
   // Monthly stats
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const monthEvents = filteredEvents.filter((e) => e.date.startsWith(monthPrefix));
-  const occupiedDatesCount = new Set(monthEvents.map((e) => e.date)).size;
+  const monthEvents = filteredEvents.filter((e) => e.date && e.date.startsWith(monthPrefix));
+  const occupiedDatesCount = new Set(monthEvents.map((e) => e.date).filter(Boolean)).size;
   const confirmedOccupiedCount = monthEvents.filter((e) => e.status === 'confirmed').length;
   const tentativeCount = monthEvents.filter((e) => e.status === 'tentative').length;
 
