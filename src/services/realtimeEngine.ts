@@ -165,6 +165,17 @@ class RealtimeDatabaseEngine {
             targets: { ...this.state.targets, ...(remoteState.targets || {}) },
           };
 
+          if (this.state.events) {
+            Object.values(this.state.events).forEach((e) => {
+              if (e && !Array.isArray(e.vendorAssignments)) {
+                e.vendorAssignments = [];
+              }
+              if (e && !Array.isArray(e.referencePhotos)) {
+                e.referencePhotos = [];
+              }
+            });
+          }
+
           if (this.state.users) {
             // Purge demo sales & manager accounts
             const demoUids = ['usr_sales_01', 'usr_manager_01'];
@@ -233,6 +244,18 @@ class RealtimeDatabaseEngine {
             parsed.users[u.uid] = u;
           }
         });
+
+        // Ensure event arrays are valid
+        if (parsed.events) {
+          Object.values(parsed.events).forEach((e) => {
+            if (e && !Array.isArray(e.vendorAssignments)) {
+              e.vendorAssignments = [];
+            }
+            if (e && !Array.isArray(e.referencePhotos)) {
+              e.referencePhotos = [];
+            }
+          });
+        }
 
         // Purge demo sales & manager accounts
         if (parsed.users) {
@@ -1361,6 +1384,7 @@ class RealtimeDatabaseEngine {
     const event = this.state.events[eventId];
     if (!event) return { success: false, error: 'Event not found.' };
 
+    if (!Array.isArray(event.vendorAssignments)) event.vendorAssignments = [];
     const assignment = event.vendorAssignments.find((a) => a.id === assignmentId);
     if (!assignment) return { success: false, error: 'Vendor assignment not found.' };
 

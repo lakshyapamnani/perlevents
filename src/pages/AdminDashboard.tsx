@@ -49,8 +49,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const pendingReminders = events
     .flatMap((e) =>
-      e.vendorAssignments
-        .filter((va) => va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required')
+      (Array.isArray(e?.vendorAssignments) ? e.vendorAssignments : [])
+        .filter((va) => va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required'))
         .map((va) => ({ ...va, event: e }))
     )
     .slice(0, 4);

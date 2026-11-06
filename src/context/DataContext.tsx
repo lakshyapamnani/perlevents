@@ -214,56 +214,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  const banquets = useMemo(() => Object.values(dbState.banquets), [dbState.banquets]);
-  const clients = useMemo(() => Object.values(dbState.clients), [dbState.clients]);
-  const leads = useMemo(() => Object.values(dbState.leads), [dbState.leads]);
-  const events = useMemo(() => Object.values(dbState.events), [dbState.events]);
-  const bookingSlots = useMemo(() => Object.values(dbState.bookingSlots), [dbState.bookingSlots]);
-  const vendors = useMemo(() => Object.values(dbState.vendors), [dbState.vendors]);
+  const banquets = useMemo(() => Object.values(dbState.banquets || {}), [dbState.banquets]);
+  const clients = useMemo(() => Object.values(dbState.clients || {}), [dbState.clients]);
+  const leads = useMemo(() => Object.values(dbState.leads || {}), [dbState.leads]);
+  const events = useMemo(() => Object.values(dbState.events || {}), [dbState.events]);
+  const bookingSlots = useMemo(() => Object.values(dbState.bookingSlots || {}), [dbState.bookingSlots]);
+  const vendors = useMemo(() => Object.values(dbState.vendors || {}), [dbState.vendors]);
   const vendorCategories = useMemo(() => dbState.vendorCategories || [], [dbState.vendorCategories]);
-  const checklistTemplates = useMemo(() => Object.values(dbState.checklistTemplates), [dbState.checklistTemplates]);
-  const sales = useMemo(() => Object.values(dbState.sales), [dbState.sales]);
-  const invoices = useMemo(() => Object.values(dbState.invoices), [dbState.invoices]);
-  const payments = useMemo(() => Object.values(dbState.payments), [dbState.payments]);
+  const checklistTemplates = useMemo(() => Object.values(dbState.checklistTemplates || {}), [dbState.checklistTemplates]);
+  const sales = useMemo(() => Object.values(dbState.sales || {}), [dbState.sales]);
+  const invoices = useMemo(() => Object.values(dbState.invoices || {}), [dbState.invoices]);
+  const payments = useMemo(() => Object.values(dbState.payments || {}), [dbState.payments]);
   const targets = useMemo(() => Object.values(dbState.targets || {}), [dbState.targets]);
 
   // Real database-backed summary calculation
   const metrics: MetricsSummary = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
 
-    const activeBanquetsCount = banquets.filter((b) => b.isActive).length;
-    const todaysEventsCount = events.filter((e) => e.date === today && e.status !== 'cancelled').length;
-    const upcomingEventsCount = events.filter((e) => e.date >= today && e.status !== 'cancelled').length;
-    const newAndActiveLeadsCount = leads.filter((l) => l.status === 'active').length;
-    const confirmedBookingsCount = events.filter((e) => e.status === 'confirmed').length;
+    const activeBanquetsCount = banquets.filter((b) => b && b.isActive).length;
+    const todaysEventsCount = events.filter((e) => e && e.date === today && e.status !== 'cancelled').length;
+    const upcomingEventsCount = events.filter((e) => e && e.date >= today && e.status !== 'cancelled').length;
+    const newAndActiveLeadsCount = leads.filter((l) => l && l.status === 'active').length;
+    const confirmedBookingsCount = events.filter((e) => e && e.status === 'confirmed').length;
 
     // Distinct financial aggregations (never double count sales or confuse requested advance with actual received)
     const totalSalesValue = sales
-      .filter((s) => s.status !== 'cancelled')
-      .reduce((sum, s) => sum + s.finalSaleAmount, 0);
+      .filter((s) => s && s.status !== 'cancelled')
+      .reduce((sum, s) => sum + (s.finalSaleAmount || 0), 0);
 
     const paymentsReceived = payments.reduce(
-      (sum, p) => sum + (p.type === 'refund' ? -p.amount : p.amount),
+      (sum, p) => sum + (p.type === 'refund' ? -(p.amount || 0) : (p.amount || 0)),
       0
     );
 
     const outstandingBalances = sales
-      .filter((s) => s.status !== 'cancelled')
-      .reduce((sum, s) => sum + s.outstandingBalance, 0);
+      .filter((s) => s && s.status !== 'cancelled')
+      .reduce((sum, s) => sum + (s.outstandingBalance || 0), 0);
 
     // Events with vendor confirmations pending
     const eventsAwaitingVendor = events.filter((e) => {
-      if (e.status === 'cancelled' || e.status === 'completed') return false;
-      return e.vendorAssignments.some(
-        (va) => va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required'
+      if (!e || e.status === 'cancelled' || e.status === 'completed') return false;
+      const assignments = Array.isArray(e.vendorAssignments) ? e.vendorAssignments : [];
+      return assignments.some(
+        (va) => va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required')
       );
     }).length;
 
     // Incomplete checklist counts
     const eventsIncompleteChecklist = events.filter((e) => {
-      if (e.status === 'cancelled' || e.status === 'completed') return false;
-      const items = dbState.checklistItems[e.id] || [];
-      return items.some((i) => i.status === 'pending');
+      if (!e || e.status === 'cancelled' || e.status === 'completed') return false;
+      const items = Array.isArray(dbState.checklistItems?.[e.id]) ? dbState.checklistItems[e.id] : [];
+      return items.some((i) => i && i.status === 'pending');
     }).length;
 
     return {

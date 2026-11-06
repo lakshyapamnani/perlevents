@@ -130,6 +130,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const eventLogs = activityLogs.filter((log) => log.recordId === event.id);
   const eventInvoices = invoices.filter((inv) => inv.eventId === event.id);
   const eventPayments = payments.filter((p) => p.eventId === event.id);
+  const vendorAssignments = Array.isArray(event.vendorAssignments) ? event.vendorAssignments : [];
 
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
   const pct = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
@@ -200,7 +201,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     ...(!isSalesperson
       ? [{ id: 'checklist' as TabType, label: 'Ops Checklist', count: `${completedCount}/${tasks.length}` }]
       : []),
-    { id: 'vendors', label: 'Vendors & Reminders', count: event.vendorAssignments.length },
+    { id: 'vendors', label: 'Vendors & Reminders', count: vendorAssignments.length },
     { id: 'financials', label: 'Financials & Invoices', count: eventInvoices.length },
     { id: 'photos', label: 'Photos & Moodboard', count: event.referencePhotos?.length || 0 },
     { id: 'activity', label: 'Activity Logs', count: eventLogs.length },
@@ -422,7 +423,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                       <span>Vendor Reminders & WhatsApp Dispatch</span>
                     </h3>
                     <p className="text-xs text-stone-500">
-                      {event.vendorAssignments.length} vendors assigned · Send 1-click WhatsApp reminders & mark status
+                      {vendorAssignments.length} vendors assigned · Send 1-click WhatsApp reminders & mark status
                     </p>
                   </div>
                   <button
@@ -433,7 +434,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   </button>
                 </div>
 
-                {event.vendorAssignments.length === 0 ? (
+                {vendorAssignments.length === 0 ? (
                   <div className="p-4 rounded-xl border border-dashed border-stone-200 dark:border-stone-800 text-center text-xs text-stone-500">
                     <span>No vendors assigned yet. </span>
                     <button
@@ -445,7 +446,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-2 pt-1">
-                    {event.vendorAssignments.slice(0, 4).map((va) => {
+                    {vendorAssignments.slice(0, 4).map((va) => {
                       const msg = createVendorReminderMessage({
                         vendorContactPerson: va.vendorName,
                         vendorBusinessName: va.vendorName,
@@ -805,7 +806,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </button>
           </div>
 
-          {event.vendorAssignments.length === 0 ? (
+          {vendorAssignments.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-3">
               <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 flex items-center justify-center mx-auto">
                 <Users className="w-6 h-6" />
@@ -825,7 +826,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {event.vendorAssignments.map((va) => {
+              {vendorAssignments.map((va) => {
                 const msg = createVendorReminderMessage({
                   vendorContactPerson: va.vendorName,
                   vendorBusinessName: va.vendorName,
