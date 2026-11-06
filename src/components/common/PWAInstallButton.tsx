@@ -145,3 +145,4 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
     </>
   );
 };
+

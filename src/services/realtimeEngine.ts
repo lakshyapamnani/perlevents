@@ -278,7 +278,9 @@ class RealtimeDatabaseEngine {
           parsed.targets = initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {});
         }
         // Sync Pearlexperiences organization details
-        parsed.settings.name = 'Pearlexperiences';
+        parsed.settings.name = 'Pearl Experience';
+        parsed.settings.brandTagline = 'Every Celebration is crafted like a Pearl – Rare, Valuable, Timeless, & Unforgettable.';
+        parsed.settings.logoUrl = '/logo.png';
         parsed.settings.email = 'Pearlexperiencespvt.ltd@gmail.com';
         parsed.settings.invoiceFooter = 'Thank you for choosing Pearlexperiences. For queries, contact Pearlexperiencespvt.ltd@gmail.com.';
         if (!parsed.settings.authorizedSignatoryName) {

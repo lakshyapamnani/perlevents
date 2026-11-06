@@ -261,22 +261,11 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               {/* Invoice Brand Header */}
               <div className="flex justify-between items-start border-b border-stone-200 pb-6">
                 <div>
-                  {settings.logoUrl ? (
-                    <img
-                      src={settings.logoUrl}
-                      alt={settings.name || 'Pearlexperiences'}
-                      className="max-h-16 max-w-[240px] object-contain mb-2"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-950 text-amber-300 font-serif font-black flex items-center justify-center text-lg shadow-sm">
-                        P
-                      </div>
-                      <div className="text-2xl font-black text-stone-900 tracking-tight font-serif uppercase">
-                        {settings.name || 'Pearlexperiences'}
-                      </div>
-                    </div>
-                  )}
+                  <img
+                    src={settings.logoUrl || '/logo.png'}
+                    alt={settings.name || 'Pearl Experience'}
+                    className="max-h-16 max-w-[260px] object-contain mb-2"
+                  />
                   <div className="text-xs text-stone-600 font-medium">
                     {settings.brandTagline || 'Luxury Banquets, Palatial Venues & Event Management'}
                   </div>

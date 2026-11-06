@@ -103,13 +103,20 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100 font-sans">
-              Pearlexperiences
-            </span>
-            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-              Luxury Venues
-            </span>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/icon-192.png"
+              alt="Pearl Experience Logo"
+              className="w-8 h-8 rounded-lg object-contain shadow-2xs border border-stone-200 dark:border-stone-700 bg-white p-0.5"
+            />
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-bold tracking-tight text-stone-900 dark:text-stone-100 font-sans leading-tight">
+                Pearl Experience
+              </span>
+              <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 leading-none hidden sm:inline">
+                Luxury Venues & Events
+              </span>
+            </div>
           </div>
         </div>
 

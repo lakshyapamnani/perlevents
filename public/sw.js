@@ -1,12 +1,16 @@
 // Pearlexperiences PWA Service Worker
-const CACHE_NAME = 'pearlexperiences-pwa-v1';
+const CACHE_NAME = 'pearlexperiences-pwa-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/logo.png',
+  '/logo.jpg',
   '/icon-192.png',
   '/icon-512.png',
-  '/icon.svg'
+  '/apple-touch-icon.png',
+  '/favicon.png',
+  '/favicon-32x32.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,3 +58,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+

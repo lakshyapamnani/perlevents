@@ -43,16 +43,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       <div className="w-full max-w-md relative z-10">
         {/* Brand header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-800 to-emerald-600 text-white font-extrabold text-2xl shadow-xl shadow-emerald-950/50 mb-3 border border-emerald-500/30">
-            P
-          </div>
+          <img
+            src="/logo.png"
+            alt="Pearl Experience Logo"
+            className="w-20 h-20 rounded-2xl object-contain shadow-2xl mb-3 mx-auto bg-white p-1.5 border border-stone-700/60"
+          />
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans">
-            Pearlexperiences
+            Pearl Experience
           </h1>
-          <p className="text-xs text-stone-400 mt-1 font-medium">
-            Luxury Banquets & Event Management ERP
+          <p className="text-xs text-stone-300 mt-1 font-medium italic">
+            Every Celebration is crafted like a Pearl
           </p>
-          <div className="text-[11px] text-emerald-400/80 font-mono mt-1">
+          <div className="text-[11px] text-emerald-400/90 font-mono mt-1">
             Pearlexperiencespvt.ltd@gmail.com
           </div>
         </div>

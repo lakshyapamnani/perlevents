@@ -133,13 +133,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {isCollapsed ? (
             <>
               {/* Collapsed Brand Icon */}
-              <div
+              <img
+                src="/icon-192.png"
+                alt="Pearl Experience"
                 onClick={toggleCollapse}
-                className="w-10 h-10 rounded-xl bg-emerald-800 dark:bg-emerald-700 text-white flex items-center justify-center font-bold text-base shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
-                title="Pearlexperiences - Click to expand"
-              >
-                P
-              </div>
+                className="w-10 h-10 rounded-xl object-contain shadow-sm cursor-pointer hover:opacity-90 transition-opacity bg-white p-1 border border-stone-200 dark:border-stone-700"
+                title="Pearl Experience - Click to expand"
+              />
 
               {/* Desktop Expand Button */}
               <button
@@ -155,12 +155,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <>
               {/* Expanded Brand Lockup */}
               <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
-                  P
-                </div>
+                <img
+                  src="/icon-192.png"
+                  alt="Pearl Experience"
+                  className="w-8 h-8 rounded-lg object-contain shadow-xs flex-shrink-0 bg-white p-0.5 border border-stone-200 dark:border-stone-700"
+                />
                 <div className="overflow-hidden min-w-0">
                   <div className="font-bold text-sm tracking-tight text-stone-900 dark:text-stone-100 truncate">
-                    Pearlexperiences
+                    Pearl Experience
                   </div>
                   <div className="text-[11px] text-stone-600 dark:text-stone-400 font-medium truncate">
                     Luxury Event Management
