@@ -59,7 +59,7 @@ try {
   if (isFirebaseConfigured()) {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);
-    database = getDatabase(app);
+    database = getDatabase(app, firebaseConfig.databaseURL);
 
     if (typeof window !== 'undefined') {
       isSupported().then((supported) => {

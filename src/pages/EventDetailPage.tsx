@@ -456,14 +456,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                         date: event.date,
                         startTime: event.startTime,
                         endTime: event.endTime,
-                        requirements: va.notes || event.requirements,
+                        requirements: va.requirements || event.requirements,
                       });
-                      const waUrl = generateWhatsAppUrl(va.vendorPhone, msg);
+                      const waUrl = generateWhatsAppUrl(va.vendorWhatsApp || va.vendorPhone, msg);
                       const isReminderSent = va.contactStatus === 'contacted' || va.contactStatus === 'confirmed';
 
                       return (
                         <div
-                          key={va.vendorId}
+                          key={va.id}
                           className="flex items-center justify-between p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30"
                         >
                           <div className="flex items-center gap-2.5">
@@ -473,7 +473,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                               onChange={(e) => {
                                 updateVendorAssignmentStatus(
                                   event.id,
-                                  va.vendorId,
+                                  va.id,
                                   e.target.checked ? 'contacted' : 'not_contacted'
                                 );
                               }}
@@ -503,7 +503,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                             rel="noopener noreferrer"
                             onClick={() => {
                               if (!isReminderSent) {
-                                updateVendorAssignmentStatus(event.id, va.vendorId, 'contacted');
+                                updateVendorAssignmentStatus(event.id, va.id, 'contacted');
                               }
                             }}
                             className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1 shadow-xs"

@@ -71,7 +71,7 @@ export const createBanquetOwnerReminderMessage = (params: {
 }): string => {
   return `Hello ${params.ownerName},
 
-This is an operational reminder from PerlEvents regarding the upcoming event at *${params.banquetName}*.
+This is an operational reminder from Pearlexperiences regarding the upcoming event at *${params.banquetName}*.
 
 • *Event:* ${params.eventName}
 • *Date:* ${params.date}
@@ -84,7 +84,7 @@ ${params.requirements || 'Standard venue readiness, HVAC pre-cooling, and parkin
 Please confirm venue readiness and gate opening schedule.
 
 Thank you,
-PerlEvents Operations (Powered by Drona)`;
+Pearlexperiences Operations Team`;
 };
 
 /**
@@ -103,18 +103,18 @@ export const createVendorReminderMessage = (params: {
 }): string => {
   return `Hello ${params.vendorContactPerson || params.vendorBusinessName},
 
-This is a reminder from PerlEvents regarding your *${params.category}* service assignment at *${params.banquetName}*.
+This is an operational reminder from Pearlexperiences regarding your *${params.category}* service assignment at *${params.banquetName}*.
 
 • *Event:* ${params.eventName}
 • *Date:* ${params.date}
 • *Time:* ${params.startTime} - ${params.endTime}
 • *Venue:* ${params.banquetName}
 
-*Your Service Requirements:*
+*Service Scope & Requirements:*
 ${params.requirements || 'As per contractual agreement.'}
 
 Please confirm your team's arrival time and readiness.
 
 Thank you,
-PerlEvents Operations (Powered by Drona)`;
+Pearlexperiences Operations Team`;
 };

@@ -19,9 +19,9 @@ import {
 
 export const initialSettings: OrganizationSettings = {
   id: 'org_pearlexperiences',
-  name: 'Pearlexperiences',
-  brandTagline: 'Luxury Banquets, Palatial Venues & Event Management',
-  logoUrl: '',
+  name: 'Pearl Experience',
+  brandTagline: 'Every Celebration is crafted like a Pearl – Rare, Valuable, Timeless, & Unforgettable.',
+  logoUrl: '/logo.png',
   signatureUrl: '',
   authorizedSignatoryName: 'Authorized Signatory',
   authorizedSignatoryTitle: 'Pearlexperiences Pvt. Ltd.',

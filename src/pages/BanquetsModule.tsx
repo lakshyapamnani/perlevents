@@ -86,7 +86,8 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {banquets.map((b) => {
-          const assignedManager = users.find((u) => u.uid === b.assignedManagerId);
+            const assignedManager = users.find((u) => u.uid === b.assignedManagerId);
+            const assignedSalesperson = users.find((u) => u.uid === b.assignedSalespersonId);
 
           return (
             <div
@@ -173,6 +174,22 @@ export const BanquetsModule: React.FC<BanquetsModuleProps> = ({ onCheckAvailabil
                       WhatsApp: {b.ownerWhatsApp}
                     </span>
                   </div>
+                </div>
+
+                {/* Staff Assignment Tags */}
+                <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex flex-wrap gap-2 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium flex items-center gap-1">
+                    <span className="text-stone-400 font-normal">Sales:</span>
+                    <strong className={assignedSalesperson ? 'text-emerald-800 dark:text-emerald-400' : 'text-stone-500'}>
+                      {assignedSalesperson?.fullName || 'All (Open)'}
+                    </strong>
+                  </span>
+                  {assignedManager && (
+                    <span className="px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium flex items-center gap-1">
+                      <span className="text-stone-400 font-normal">Manager:</span>
+                      <strong>{assignedManager.fullName}</strong>
+                    </span>
+                  )}
                 </div>
               </div>
 
