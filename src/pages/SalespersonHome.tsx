@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { SalespersonTab } from '../components/common/SalespersonBottomNav';
-import { PWAInstallButton } from '../components/common/PWAInstallButton';
 
 interface SalespersonHomeProps {
   setActiveTab: (tab: SalespersonTab) => void;
@@ -76,9 +75,6 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
 
   return (
     <div className="space-y-5 pb-24 max-w-2xl mx-auto px-1 sm:px-4">
-      {/* PWA Install Banner */}
-      <PWAInstallButton variant="banner" />
-
       {/* Mobile Header Card */}
       <div className="p-5 rounded-2xl bg-gradient-to-br from-stone-900 to-emerald-950 text-white shadow-md border border-stone-800">
         <div className="flex items-center justify-between mb-2">

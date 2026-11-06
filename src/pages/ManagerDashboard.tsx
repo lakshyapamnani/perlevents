@@ -15,7 +15,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatDate, formatDateTime, generateWhatsAppUrl, createVendorReminderMessage } from '../utils/formatters';
-import { PWAInstallButton } from '../components/common/PWAInstallButton';
 import { VendorAssignment } from '../types';
 
 interface ManagerDashboardProps {
@@ -61,9 +60,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
 
   return (
     <div className="space-y-6 pb-20 max-w-5xl mx-auto">
-      {/* PWA Install Banner */}
-      <PWAInstallButton variant="banner" />
-
       {/* Header */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-stone-900 to-sky-950 text-white shadow-sm border border-stone-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -78,7 +74,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
             Event Day Execution, Vendor Readiness & Quality Inspection Checklists.
           </p>
         </div>
-        <PWAInstallButton variant="pill" className="shrink-0" />
       </div>
 
       {/* Event Selector Strip */}

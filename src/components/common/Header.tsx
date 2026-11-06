@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import {
   Shield,
   Briefcase,
   ClipboardList,
-  Sparkles,
   PlusCircle,
   Menu,
   X,
-  ChevronDown,
-  UserCheck,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
 } from 'lucide-react';
 import { UserRole } from '../../types';
-import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   onOpenDirectSale?: () => void;
@@ -35,9 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   isSidebarCollapsed,
   onToggleSidebar,
 }) => {
-  const { currentUser, allUsersList, loginAs, switchRole, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { settings } = useData();
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   const roleBadgeConfig: Record<
     UserRole,
@@ -128,26 +123,8 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-stone-600 dark:text-stone-400">{todayFormatted}</span>
         </div>
 
-        {/* Right: Quick Role Switcher + Primary Actions */}
+        {/* Right: Role indicator + Sign Out */}
         <div className="flex items-center gap-2.5">
-          {/* Download App / PWA Install button for Salesperson and Manager */}
-          {(currentRole === 'salesperson' || currentRole === 'manager') && (
-            <PWAInstallButton variant="header" />
-          )}
-
-          {/* Quick return to Admin when testing as Salesperson or Manager */}
-          {currentRole !== 'admin' && (
-            <button
-              type="button"
-              onClick={() => switchRole('admin')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-700 rounded-lg transition-colors shadow-xs"
-              title="Switch back to Administrator view"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Back to Admin</span>
-            </button>
-          )}
-
           {onOpenDirectSale && (
             <button
               onClick={onOpenDirectSale}
@@ -158,97 +135,26 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Quick Role Switcher Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${roleInfo.bg} ${roleInfo.text} min-h-[38px]`}
-              title="Click to switch active role for testing"
-            >
-              {roleInfo.icon}
-              <span className="hidden sm:inline font-medium">{currentUser?.fullName?.split(' ')[0]}</span>
-              <span className="uppercase text-[10px] tracking-wider px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 font-bold">
-                {roleInfo.label}
-              </span>
-              <ChevronDown className="w-3 h-3 opacity-70" />
-            </button>
-
-            {showRoleDropdown && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-xl p-2 z-50">
-                <div className="px-3 py-2 border-b border-stone-100 dark:border-stone-800 mb-1">
-                  <div className="text-[11px] font-semibold text-stone-600 dark:text-stone-400">
-                    Switch Test Account / Role
-                  </div>
-                  <div className="text-xs font-bold text-stone-900 dark:text-stone-100 truncate">
-                    {currentUser?.fullName} ({currentUser?.role})
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  {allUsersList.map((u) => {
-                    const isSelected = u.uid === currentUser?.uid;
-                    return (
-                      <button
-                        key={u.uid}
-                        onClick={() => {
-                          loginAs(u.uid);
-                          setShowRoleDropdown(false);
-                        }}
-                        disabled={!u.isActive}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors ${
-                          isSelected
-                            ? 'bg-stone-100 dark:bg-stone-800 font-semibold text-stone-900 dark:text-stone-100'
-                            : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800/60'
-                        } ${!u.isActive ? 'opacity-40 cursor-not-allowed' : ''}`}
-                      >
-                        <div className="truncate pr-2">
-                          <div className="text-stone-900 dark:text-stone-200 font-medium truncate">
-                            {u.fullName}
-                          </div>
-                          <div className="text-[10px] text-stone-600 dark:text-stone-400 truncate">
-                            {u.email}
-                          </div>
-                        </div>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                            u.role === 'admin'
-                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                              : u.role === 'salesperson'
-                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
-                              : 'bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="pt-2 mt-1 border-t border-stone-100 dark:border-stone-800">
-                  <button
-                    onClick={() => {
-                      logout();
-                      setShowRoleDropdown(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out of Pearlexperiences</span>
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* Current Role Indicator Pill */}
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${roleInfo.bg} ${roleInfo.text} min-h-[38px]`}
+          >
+            {roleInfo.icon}
+            <span className="hidden sm:inline font-medium">{currentUser?.fullName}</span>
+            <span className="uppercase text-[10px] tracking-wider px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 font-bold">
+              {roleInfo.label}
+            </span>
           </div>
 
-          {/* Quick Sign Out Icon Button */}
+          {/* Sign Out Button */}
           <button
             onClick={logout}
-            className="p-2 text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 hover:bg-stone-200/50 dark:hover:bg-stone-800 rounded-lg transition-colors"
-            title="Sign Out"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:text-red-600 dark:text-stone-300 dark:hover:text-red-400 hover:bg-stone-200/50 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-200 dark:border-stone-700 min-h-[38px]"
+            title="Sign Out of Pearlexperiences"
             aria-label="Sign Out"
           >
             <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </div>
