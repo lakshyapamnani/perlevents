@@ -253,19 +253,42 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                Assigned Salesperson
+              </label>
+              <select
+                value={assignedSalespersonId}
+                onChange={(e) => setAssignedSalespersonId(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
+              >
+                <option value="">-- No specific salesperson (All salespersons can sell) --</option>
+                {users
+                  .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin'))
+                  .map((s) => (
+                    <option key={s.uid} value={s.uid}>
+                      {s.fullName} ({s.role === 'admin' ? 'Admin' : 'Salesperson'})
+                    </option>
+                  ))}
+              </select>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
+                Restricts this banquet so that only this salesperson can view and sell it.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
                 Assigned Operations Manager
               </label>
               <select
                 value={assignedManagerId}
                 onChange={(e) => setAssignedManagerId(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
               >
-                <option value="">-- None --</option>
+                <option value="">-- No specific manager (Visible to all managers) --</option>
                 {users
-                  .filter((u) => u.role === 'manager')
+                  .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
                   .map((m) => (
                     <option key={m.uid} value={m.uid}>
-                      {m.fullName}
+                      {m.fullName} ({m.role === 'admin' ? 'Admin' : 'Operations Manager'})
                     </option>
                   ))}
               </select>

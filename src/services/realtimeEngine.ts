@@ -489,6 +489,18 @@ class RealtimeDatabaseEngine {
     };
 
     this.state.users[newUid] = newUser;
+
+    // Sync banquets assignedSalespersonId
+    if (data.role === 'salesperson' && Array.isArray(data.assignedBanquetIds)) {
+      data.assignedBanquetIds.forEach((bId) => {
+        if (this.state.banquets[bId]) {
+          this.state.banquets[bId].assignedSalespersonId = newUid;
+          if (isFirebaseConfigured()) {
+            writeRealtimeNode(`pearlexperiences/state/banquets/${bId}`, this.state.banquets[bId]).catch(() => {});
+          }
+        }
+      });
+    }
     this.logActivity({
       actorId: adminUser.uid,
       actorName: adminUser.fullName,
@@ -540,6 +552,20 @@ class RealtimeDatabaseEngine {
     if (data.role) user.role = data.role;
     if (data.assignedBanquetIds !== undefined) {
       user.assignedBanquetIds = [...data.assignedBanquetIds];
+      const newBIds = new Set(data.assignedBanquetIds);
+      Object.values(this.state.banquets).forEach((b) => {
+        if (newBIds.has(b.id)) {
+          b.assignedSalespersonId = user.uid;
+          if (isFirebaseConfigured()) {
+            writeRealtimeNode(`pearlexperiences/state/banquets/${b.id}`, b).catch(() => {});
+          }
+        } else if (b.assignedSalespersonId === user.uid) {
+          delete b.assignedSalespersonId;
+          if (isFirebaseConfigured()) {
+            writeRealtimeNode(`pearlexperiences/state/banquets/${b.id}`, b).catch(() => {});
+          }
+        }
+      });
     }
     user.updatedAt = new Date().toISOString();
 
@@ -638,10 +664,35 @@ class RealtimeDatabaseEngine {
       return { success: false, error: 'Unauthorized: Only Admin can manage banquets.' };
     }
     const isNew = !this.state.banquets[banquet.id];
+    const prevSalespersonId = this.state.banquets[banquet.id]?.assignedSalespersonId;
     banquet.updatedAt = new Date().toISOString();
     if (isNew) banquet.createdAt = new Date().toISOString();
 
     this.state.banquets[banquet.id] = banquet;
+
+    // Two-way synchronization with UserProfile.assignedBanquetIds
+    if (prevSalespersonId && prevSalespersonId !== banquet.assignedSalespersonId) {
+      const prevUser = this.state.users[prevSalespersonId];
+      if (prevUser && Array.isArray(prevUser.assignedBanquetIds)) {
+        prevUser.assignedBanquetIds = prevUser.assignedBanquetIds.filter((bId) => bId !== banquet.id);
+        if (isFirebaseConfigured()) {
+          writeRealtimeNode(`pearlexperiences/state/users/${prevUser.uid}`, prevUser).catch(() => {});
+        }
+      }
+    }
+
+    if (banquet.assignedSalespersonId) {
+      const assignedUser = this.state.users[banquet.assignedSalespersonId];
+      if (assignedUser) {
+        const curIds = Array.isArray(assignedUser.assignedBanquetIds) ? assignedUser.assignedBanquetIds : [];
+        if (!curIds.includes(banquet.id)) {
+          assignedUser.assignedBanquetIds = [...curIds, banquet.id];
+          if (isFirebaseConfigured()) {
+            writeRealtimeNode(`pearlexperiences/state/users/${assignedUser.uid}`, assignedUser).catch(() => {});
+          }
+        }
+      }
+    }
     this.logActivity({
       actorId: adminUser.uid,
       actorName: adminUser.fullName,

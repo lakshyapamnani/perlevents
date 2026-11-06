@@ -39,6 +39,7 @@ interface MetricsSummary {
 interface DataContextType {
   settings: OrganizationSettings;
   banquets: Banquet[];
+  allBanquets: Banquet[];
   clients: Client[];
   leads: Lead[];
   leadFollowUps: Record<string, LeadFollowUp[]>;
@@ -214,11 +215,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  const banquets = useMemo(() => Object.values(dbState.banquets || {}), [dbState.banquets]);
+  const allBanquets = useMemo(() => Object.values(dbState.banquets || {}), [dbState.banquets]);
+
+  // For Salesperson: restrict visible banquets strictly to their assigned venue(s)
+  const banquets = useMemo(() => {
+    if (!currentUser || currentUser.role !== 'salesperson') {
+      return allBanquets;
+    }
+
+    const myUid = currentUser.uid;
+    const myAssignedIds = Array.isArray(currentUser.assignedBanquetIds)
+      ? currentUser.assignedBanquetIds
+      : [];
+
+    return allBanquets.filter((b) => {
+      // Banquet specifically assigned to this salesperson
+      if (b.assignedSalespersonId && b.assignedSalespersonId === myUid) {
+        return true;
+      }
+      // Banquet listed in this salesperson's assignedBanquetIds
+      if (myAssignedIds.includes(b.id)) {
+        return true;
+      }
+      // If banquet is explicitly assigned to another salesperson, NEVER show
+      if (b.assignedSalespersonId && b.assignedSalespersonId !== myUid) {
+        return false;
+      }
+      // If banquet has no assigned salesperson, and this salesperson has no assignments yet, show as fallback
+      const hasAnyAssignments = myAssignedIds.length > 0 || allBanquets.some((v) => v.assignedSalespersonId === myUid);
+      return !hasAnyAssignments && !b.assignedSalespersonId;
+    });
+  }, [allBanquets, currentUser]);
+
   const clients = useMemo(() => Object.values(dbState.clients || {}), [dbState.clients]);
   const leads = useMemo(() => Object.values(dbState.leads || {}), [dbState.leads]);
   const events = useMemo(() => Object.values(dbState.events || {}), [dbState.events]);
-  const bookingSlots = useMemo(() => Object.values(dbState.bookingSlots || {}), [dbState.bookingSlots]);
+  const bookingSlots = useMemo(() => {
+    const allSlots = Object.values(dbState.bookingSlots || {});
+    if (!currentUser || currentUser.role !== 'salesperson') {
+      return allSlots;
+    }
+    const myBanquetIds = new Set(banquets.map((b) => b.id));
+    return allSlots.filter((s) => myBanquetIds.has(s.banquetId));
+  }, [dbState.bookingSlots, currentUser, banquets]);
   const vendors = useMemo(() => Object.values(dbState.vendors || {}), [dbState.vendors]);
   const vendorCategories = useMemo(() => dbState.vendorCategories || [], [dbState.vendorCategories]);
   const checklistTemplates = useMemo(() => Object.values(dbState.checklistTemplates || {}), [dbState.checklistTemplates]);
@@ -460,6 +499,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         settings: dbState.settings,
         banquets,
+        allBanquets,
         clients,
         leads,
         leadFollowUps: dbState.leadFollowUps,
