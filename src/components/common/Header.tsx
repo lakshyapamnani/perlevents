@@ -16,6 +16,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { UserRole } from '../../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   onOpenDirectSale?: () => void;
@@ -122,6 +123,11 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Quick Role Switcher + Primary Actions */}
         <div className="flex items-center gap-2.5">
+          {/* Download App / PWA Install button for Salesperson and Manager */}
+          {(currentRole === 'salesperson' || currentRole === 'manager') && (
+            <PWAInstallButton variant="header" />
+          )}
+
           {/* Quick return to Admin when testing as Salesperson or Manager */}
           {currentRole !== 'admin' && (
             <button

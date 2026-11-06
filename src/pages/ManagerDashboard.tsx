@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatDate, formatDateTime, generateWhatsAppUrl, createVendorReminderMessage } from '../utils/formatters';
+import { PWAInstallButton } from '../components/common/PWAInstallButton';
 
 interface ManagerDashboardProps {
   onSelectEvent: (eventId: string) => void;
@@ -57,18 +58,24 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
 
   return (
     <div className="space-y-6 pb-20 max-w-5xl mx-auto">
+      {/* PWA Install Banner */}
+      <PWAInstallButton variant="banner" />
+
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-stone-900 to-sky-950 text-white shadow-sm border border-stone-800">
-        <div className="flex items-center gap-1.5 text-sky-400 text-xs font-semibold uppercase tracking-wider mb-1">
-          <ClipboardCheck className="w-4 h-4" />
-          <span>Operational Execution Console</span>
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-stone-900 to-sky-950 text-white shadow-sm border border-stone-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-sky-400 text-xs font-semibold uppercase tracking-wider mb-1">
+            <ClipboardCheck className="w-4 h-4" />
+            <span>Operational Execution Console</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            Operations Manager: {currentUser?.fullName}
+          </h1>
+          <p className="text-xs text-stone-300 mt-1">
+            Event Day Execution, Vendor Readiness & Quality Inspection Checklists.
+          </p>
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-          Operations Manager: {currentUser?.fullName}
-        </h1>
-        <p className="text-xs text-stone-300 mt-1">
-          Event Day Execution, Vendor Readiness & Quality Inspection Checklists.
-        </p>
+        <PWAInstallButton variant="pill" className="shrink-0" />
       </div>
 
       {/* Event Selector Strip */}
