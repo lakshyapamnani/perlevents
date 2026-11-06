@@ -166,7 +166,19 @@ class RealtimeDatabaseEngine {
           };
 
           if (this.state.users) {
+            // Purge demo sales & manager accounts
+            const demoUids = ['usr_sales_01', 'usr_manager_01'];
+            demoUids.forEach((id) => delete this.state.users[id]);
             Object.values(this.state.users).forEach((u) => {
+              const email = (u.email || '').toLowerCase();
+              if (
+                email === 'sales@perlexperiences.com' ||
+                email === 'manager@perlexperiences.com' ||
+                email === 'rahul.sales@perlevents.com' ||
+                email === 'priya.manager@perlevents.com'
+              ) {
+                delete this.state.users[u.uid];
+              }
               if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
                 u.fullName = 'Executive Management';
               }
@@ -222,9 +234,20 @@ class RealtimeDatabaseEngine {
           }
         });
 
-        // Remove any legacy Lakshya Pamnani references
+        // Purge demo sales & manager accounts
         if (parsed.users) {
+          const demoUids = ['usr_sales_01', 'usr_manager_01'];
+          demoUids.forEach((id) => delete parsed.users[id]);
           Object.values(parsed.users).forEach((u) => {
+            const email = (u.email || '').toLowerCase();
+            if (
+              email === 'sales@perlexperiences.com' ||
+              email === 'manager@perlexperiences.com' ||
+              email === 'rahul.sales@perlevents.com' ||
+              email === 'priya.manager@perlevents.com'
+            ) {
+              delete parsed.users[u.uid];
+            }
             if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
               u.fullName = 'Executive Management';
             }
