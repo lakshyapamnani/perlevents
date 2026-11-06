@@ -724,7 +724,7 @@ class RealtimeDatabaseEngine {
       action: isNew ? 'Created Banquet' : 'Updated Banquet',
       module: 'banquets',
       recordId: banquet.id,
-      details: `${banquet.name} (${banquet.capacity} pax, base tariff ₹${banquet.basePrice.toLocaleString()}).`,
+      details: `${banquet.name} (${banquet.capacity} pax, base tariff ₹${(Number(banquet.basePrice) || 0).toLocaleString('en-IN')}).`,
     });
 
     if (isFirebaseConfigured()) {
@@ -1186,7 +1186,7 @@ class RealtimeDatabaseEngine {
       action: 'Created Direct Sale & Confirmed Booking',
       module: 'events',
       recordId: eventId,
-      details: `Booked ${banquet.name} for ${client.fullName} on ${newEvent.date} (${newEvent.startTime}-${newEvent.endTime}) for ₹${finalAmount.toLocaleString()}.`,
+      details: `Booked ${banquet.name} for ${client.fullName} on ${newEvent.date} (${newEvent.startTime}-${newEvent.endTime}) for ₹${(Number(finalAmount) || 0).toLocaleString('en-IN')}.`,
     });
 
     if (isFirebaseConfigured()) {
@@ -1245,7 +1245,7 @@ class RealtimeDatabaseEngine {
       action: 'Deleted Sale Record',
       module: 'sales',
       recordId: saleId,
-      details: `Deleted sale for ${sale.eventName} (Client: ${sale.clientName}, Amount: ₹${sale.finalSaleAmount?.toLocaleString()}).`,
+      details: `Deleted sale for ${sale.eventName} (Client: ${sale.clientName}, Amount: ₹${(Number(sale.finalSaleAmount) || 0).toLocaleString('en-IN')}).`,
     });
 
     this.saveState(this.state);
@@ -1953,7 +1953,7 @@ class RealtimeDatabaseEngine {
       action: 'Saved Invoice',
       module: 'invoices',
       recordId: invoice.id,
-      details: `Invoice ${invoice.invoiceNumber} for ${invoice.clientName} (Total: ₹${invoice.finalTotal.toLocaleString()}, Balance: ₹${invoice.remainingBalance.toLocaleString()}).`,
+      details: `Invoice ${invoice.invoiceNumber} for ${invoice.clientName} (Total: ₹${(Number(invoice.finalTotal) || 0).toLocaleString('en-IN')}, Balance: ₹${(Number(invoice.remainingBalance) || 0).toLocaleString('en-IN')}).`,
     });
 
     if (isFirebaseConfigured()) {
@@ -2041,8 +2041,8 @@ class RealtimeDatabaseEngine {
       module: 'payments',
       recordId: paymentId,
       details: isSubtract
-        ? `Subtracted / Refunded ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} for ${payment.clientName}.`
-        : `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
+        ? `Subtracted / Refunded ₹${(Number(payment.amount) || 0).toLocaleString('en-IN')} via ${payment.paymentMethod.toUpperCase()} for ${payment.clientName}.`
+        : `Received ₹${(Number(payment.amount) || 0).toLocaleString('en-IN')} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
     });
 
     if (isFirebaseConfigured()) {

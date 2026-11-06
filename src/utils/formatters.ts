@@ -2,28 +2,37 @@
  * Utility functions for currency, dates, and WhatsApp integration
  */
 
-export const formatCurrency = (amount: number, symbol: string = '₹'): string => {
-  return `${symbol}${amount.toLocaleString('en-IN')}`;
+export const formatCurrency = (amount?: number | null | string, symbol: string = '₹'): string => {
+  if (amount === undefined || amount === null || amount === '') {
+    return `${symbol}0`;
+  }
+  const numeric = typeof amount === 'number' ? amount : Number(amount);
+  if (isNaN(numeric)) {
+    return `${symbol}0`;
+  }
+  return `${symbol}${numeric.toLocaleString('en-IN')}`;
 };
 
-export const formatDate = (dateStr: string): string => {
+export const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
     return d.toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 };
 
-export const formatDateTime = (isoStr: string): string => {
+export const formatDateTime = (isoStr?: string | null): string => {
   if (!isoStr) return '';
   try {
     const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr);
     return d.toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -31,7 +40,7 @@ export const formatDateTime = (isoStr: string): string => {
       minute: '2-digit',
     });
   } catch {
-    return isoStr;
+    return String(isoStr);
   }
 };
 
@@ -39,9 +48,9 @@ export const formatDateTime = (isoStr: string): string => {
  * Normalizes phone number to international format for WhatsApp click-to-chat.
  * E.g., "+91 98765 43210" -> "919876543210"
  */
-export const cleanPhoneForWhatsApp = (phone: string): string => {
+export const cleanPhoneForWhatsApp = (phone?: string | null): string => {
   if (!phone) return '';
-  let digits = phone.replace(/\D/g, '');
+  let digits = String(phone).replace(/\D/g, '');
   if (digits.length === 10) {
     digits = `91${digits}`; // Default to India prefix if 10 digits
   }
