@@ -1,3 +1,4 @@
+
 /**
  * PerlEvents Realtime Database Engine & Firebase Bridge
  * Supports both Live Firebase Realtime Database & Auth,
@@ -127,42 +128,94 @@ class RealtimeDatabaseEngine {
       this.isLiveFirebase = true;
       listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
         if (remoteState && typeof remoteState === 'object') {
-          // If remote database has no entries yet, seed it with the current local state
-          const hasRemoteData = Boolean(
-            (remoteState.events && Object.keys(remoteState.events).length > 0) ||
-            (remoteState.users && Object.keys(remoteState.users).length > 0) ||
-            (remoteState.sales && Object.keys(remoteState.sales).length > 0) ||
-            (remoteState.banquets && Object.keys(remoteState.banquets).length > 0)
-          );
+          const remoteEvents = remoteState.events && typeof remoteState.events === 'object'
+            ? remoteState.events
+            : null;
+          const remoteSales = remoteState.sales && typeof remoteState.sales === 'object'
+            ? remoteState.sales
+            : null;
+          const remoteBanquets = remoteState.banquets && typeof remoteState.banquets === 'object'
+            ? remoteState.banquets
+            : null;
+          const remoteClients = remoteState.clients && typeof remoteState.clients === 'object'
+            ? remoteState.clients
+            : null;
+          const remoteSlots = remoteState.bookingSlots && typeof remoteState.bookingSlots === 'object'
+            ? remoteState.bookingSlots
+            : null;
+          const remoteChecklist = remoteState.checklistItems && typeof remoteState.checklistItems === 'object'
+            ? remoteState.checklistItems
+            : null;
 
-          if (!hasRemoteData) {
-            this.saveState(this.state);
-            return;
+          // Merge: adopt remote records while preserving any freshly created local records not yet echoed
+          const mergedEvents = remoteEvents
+            ? { ...remoteEvents, ...this.state.events }
+            : { ...this.state.events };
+          const mergedSales = remoteSales
+            ? { ...remoteSales, ...this.state.sales }
+            : { ...this.state.sales };
+          const mergedBanquets = remoteBanquets
+            ? { ...this.state.banquets, ...remoteBanquets }
+            : { ...this.state.banquets };
+          const mergedClients = remoteClients
+            ? { ...this.state.clients, ...remoteClients }
+            : { ...this.state.clients };
+          const mergedSlots = remoteSlots
+            ? { ...remoteSlots, ...this.state.bookingSlots }
+            : { ...this.state.bookingSlots };
+          const mergedChecklist = remoteChecklist
+            ? { ...remoteChecklist, ...this.state.checklistItems }
+            : { ...this.state.checklistItems };
+
+          // If remote RTDB is missing records that exist locally, push them to remote to guarantee sync
+          if (!remoteBanquets && Object.keys(mergedBanquets).length > 0) {
+            writeRealtimeNode('pearlexperiences/state/banquets', mergedBanquets).catch(() => {});
+          }
+          if (!remoteEvents && Object.keys(mergedEvents).length > 0) {
+            writeRealtimeNode('pearlexperiences/state/events', mergedEvents).catch(() => {});
+          }
+          if (!remoteSales && Object.keys(mergedSales).length > 0) {
+            writeRealtimeNode('pearlexperiences/state/sales', mergedSales).catch(() => {});
+          }
+          if (!remoteClients && Object.keys(mergedClients).length > 0) {
+            writeRealtimeNode('pearlexperiences/state/clients', mergedClients).catch(() => {});
           }
 
           this.state = {
             ...this.state,
             settings: { ...this.state.settings, ...(remoteState.settings || {}) },
             users: { ...this.state.users, ...(remoteState.users || {}) },
-            banquets: { ...this.state.banquets, ...(remoteState.banquets || {}) },
-            clients: { ...this.state.clients, ...(remoteState.clients || {}) },
-            leads: { ...this.state.leads, ...(remoteState.leads || {}) },
-            leadFollowUps: { ...this.state.leadFollowUps, ...(remoteState.leadFollowUps || {}) },
-            events: { ...this.state.events, ...(remoteState.events || {}) },
-            bookingSlots: { ...this.state.bookingSlots, ...(remoteState.bookingSlots || {}) },
-            vendors: { ...this.state.vendors, ...(remoteState.vendors || {}) },
+            banquets: mergedBanquets,
+            clients: mergedClients,
+            leads: remoteState.leads && typeof remoteState.leads === 'object'
+              ? { ...this.state.leads, ...remoteState.leads }
+              : this.state.leads,
+            leadFollowUps: remoteState.leadFollowUps && typeof remoteState.leadFollowUps === 'object'
+              ? { ...this.state.leadFollowUps, ...remoteState.leadFollowUps }
+              : this.state.leadFollowUps,
+            events: mergedEvents,
+            bookingSlots: mergedSlots,
+            vendors: remoteState.vendors && typeof remoteState.vendors === 'object'
+              ? { ...this.state.vendors, ...remoteState.vendors }
+              : this.state.vendors,
             vendorCategories: Array.isArray(remoteState.vendorCategories) && remoteState.vendorCategories.length > 0
               ? remoteState.vendorCategories
               : this.state.vendorCategories,
             checklistTemplates: { ...this.state.checklistTemplates, ...(remoteState.checklistTemplates || {}) },
-            checklistItems: { ...this.state.checklistItems, ...(remoteState.checklistItems || {}) },
-            sales: { ...this.state.sales, ...(remoteState.sales || {}) },
-            invoices: { ...this.state.invoices, ...(remoteState.invoices || {}) },
-            payments: { ...this.state.payments, ...(remoteState.payments || {}) },
+            checklistItems: mergedChecklist,
+            sales: mergedSales,
+            invoices: remoteState.invoices && typeof remoteState.invoices === 'object'
+              ? { ...this.state.invoices, ...remoteState.invoices }
+              : this.state.invoices,
+            payments: remoteState.payments && typeof remoteState.payments === 'object'
+              ? { ...this.state.payments, ...remoteState.payments }
+              : this.state.payments,
             activityLogs: Array.isArray(remoteState.activityLogs) && remoteState.activityLogs.length > 0
               ? remoteState.activityLogs
               : this.state.activityLogs,
-            targets: { ...this.state.targets, ...(remoteState.targets || {}) },
+            targets: remoteState.targets && typeof remoteState.targets === 'object'
+              ? { ...this.state.targets, ...remoteState.targets }
+              : this.state.targets,
           };
 
           if (this.state.events) {
@@ -570,6 +623,10 @@ class RealtimeDatabaseEngine {
       details: `Permanently deleted ${userName} (${userEmail}) from the organization.`,
     });
 
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/users/${uid}`, null).catch(() => {});
+    }
+
     this.saveState(this.state);
     this.notify();
     return { success: true };
@@ -594,6 +651,10 @@ class RealtimeDatabaseEngine {
       recordId: banquet.id,
       details: `${banquet.name} (${banquet.capacity} pax, base tariff ₹${banquet.basePrice.toLocaleString()}).`,
     });
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/banquets/${banquet.id}`, banquet).catch(() => {});
+    }
 
     this.saveState(this.state);
     this.notify();
@@ -1053,6 +1114,23 @@ class RealtimeDatabaseEngine {
       details: `Booked ${banquet.name} for ${client.fullName} on ${newEvent.date} (${newEvent.startTime}-${newEvent.endTime}) for ₹${finalAmount.toLocaleString()}.`,
     });
 
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, newEvent).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/sales/${saleId}`, newSale).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/bookingSlots/${slotId}`, newSlot).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, checklistItems).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/clients/${clientId}`, client).catch(() => {});
+      if (advanceRec > 0) {
+        const paymentObj = Object.values(this.state.payments).find((p) => p.eventId === eventId);
+        if (paymentObj) {
+          writeRealtimeNode(`pearlexperiences/state/payments/${paymentObj.id}`, paymentObj).catch(() => {});
+        }
+      }
+      if (createdInvoice) {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${createdInvoice.id}`, createdInvoice).catch(() => {});
+      }
+    }
+
     this.saveState(this.state);
     this.notify();
     return { success: true, event: newEvent, invoice: createdInvoice };
@@ -1081,6 +1159,9 @@ class RealtimeDatabaseEngine {
     }
 
     delete this.state.sales[saleId];
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/sales/${saleId}`, null).catch(() => {});
+    }
 
     this.logActivity({
       actorId: currentUser.uid,
@@ -1177,6 +1258,22 @@ class RealtimeDatabaseEngine {
     if (data.endTime) event.endTime = data.endTime;
 
     event.updatedAt = new Date().toISOString();
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, event).catch(() => {});
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) {
+        writeRealtimeNode(`pearlexperiences/state/bookingSlots/${linkedSlot.id}`, linkedSlot).catch(() => {});
+      }
+      const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+      if (linkedSale) {
+        writeRealtimeNode(`pearlexperiences/state/sales/${linkedSale.id}`, linkedSale).catch(() => {});
+      }
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${linkedInvoice.id}`, linkedInvoice).catch(() => {});
+      }
+    }
 
     this.logActivity({
       actorId: currentUser.uid,
@@ -1401,6 +1498,10 @@ class RealtimeDatabaseEngine {
       details: `Vendor ${assignment.vendorName} (${assignment.category}) status set to ${status}.`,
     });
 
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, event).catch(() => {});
+    }
+
     this.saveState(this.state);
     this.notify();
     return { success: true };
@@ -1439,6 +1540,9 @@ class RealtimeDatabaseEngine {
         createdAt: new Date().toISOString(),
       };
       this.state.vendors[vId] = newV;
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/vendors/${vId}`, newV).catch(() => {});
+      }
     }
 
     const assignmentId = `va_${eventId}_${Date.now()}`;
@@ -1470,6 +1574,10 @@ class RealtimeDatabaseEngine {
       details: `Assigned vendor ${newAssignment.vendorName} (${newAssignment.category}) to event "${event.name}".`,
     });
 
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, event).catch(() => {});
+    }
+
     this.saveState(this.state);
     this.notify();
     return { success: true, assignment: newAssignment };
@@ -1484,6 +1592,9 @@ class RealtimeDatabaseEngine {
     if (!event) return { success: false, error: 'Event not found.' };
 
     event.vendorAssignments = (event.vendorAssignments || []).filter((a) => a.id !== assignmentId);
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, event).catch(() => {});
+    }
     this.saveState(this.state);
     this.notify();
     return { success: true };
@@ -1706,6 +1817,10 @@ class RealtimeDatabaseEngine {
       });
     }
 
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, updatedItems).catch(() => {});
+    }
+
     this.saveState(this.state);
     this.notify();
     return { success: true };
@@ -1765,6 +1880,10 @@ class RealtimeDatabaseEngine {
       recordId: invoice.id,
       details: `Invoice ${invoice.invoiceNumber} for ${invoice.clientName} (Total: ₹${invoice.finalTotal.toLocaleString()}, Balance: ₹${invoice.remainingBalance.toLocaleString()}).`,
     });
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/invoices/${invoice.id}`, invoice).catch(() => {});
+    }
 
     this.saveState(this.state);
     this.notify();
@@ -1850,6 +1969,19 @@ class RealtimeDatabaseEngine {
         ? `Subtracted / Refunded ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} for ${payment.clientName}.`
         : `Received ₹${payment.amount.toLocaleString()} via ${payment.paymentMethod.toUpperCase()} from ${payment.clientName}.`,
     });
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/payments/${paymentId}`, payment).catch(() => {});
+      if (targetSale) {
+        writeRealtimeNode(`pearlexperiences/state/sales/${targetSale.id}`, targetSale).catch(() => {});
+      }
+      if (payment.eventId && this.state.events[payment.eventId]) {
+        writeRealtimeNode(`pearlexperiences/state/events/${payment.eventId}`, this.state.events[payment.eventId]).catch(() => {});
+      }
+      if (payment.invoiceId && this.state.invoices[payment.invoiceId]) {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${payment.invoiceId}`, this.state.invoices[payment.invoiceId]).catch(() => {});
+      }
+    }
 
     this.saveState(this.state);
     this.notify();

@@ -738,7 +738,13 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                       <select
                         required
                         value={banquetId}
-                        onChange={(e) => setBanquetId(e.target.value)}
+                        onChange={(e) => {
+                          const newBId = e.target.value;
+                          setBanquetId(newBId);
+                          const b = banquets.find((item) => item.id === newBId);
+                          if (b?.assignedSalespersonId) setSalespersonId(b.assignedSalespersonId);
+                          if (b?.assignedManagerId) setManagerId(b.assignedManagerId);
+                        }}
                         className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
                       >
                         {banquets.map((b) => (
@@ -763,6 +769,26 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                           .map((u) => (
                             <option key={u.uid} value={u.uid}>
                               {u.fullName} ({u.role})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                        Assigned Operations Manager
+                      </label>
+                      <select
+                        value={managerId}
+                        onChange={(e) => setManagerId(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
+                      >
+                        <option value="">-- No specific manager (Visible to All) --</option>
+                        {users
+                          .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
+                          .map((u) => (
+                            <option key={u.uid} value={u.uid}>
+                              {u.fullName} ({u.role === 'admin' ? 'Admin' : 'Operations Manager'})
                             </option>
                           ))}
                       </select>
