@@ -215,7 +215,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  const allBanquets = useMemo(() => Object.values(dbState.banquets || {}), [dbState.banquets]);
+  const allBanquets = useMemo(() => {
+    const raw = Object.values(dbState.banquets || {});
+    return raw.filter((b): b is Banquet => Boolean(b && typeof b === 'object' && b.id));
+  }, [dbState.banquets]);
 
   // For Salesperson: restrict visible banquets strictly to their assigned venue(s)
   const banquets = useMemo(() => {
@@ -225,10 +228,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const myUid = currentUser.uid;
     const myAssignedIds = Array.isArray(currentUser.assignedBanquetIds)
-      ? currentUser.assignedBanquetIds
+      ? currentUser.assignedBanquetIds.filter(Boolean)
       : [];
 
     return allBanquets.filter((b) => {
+      if (!b || !b.id) return false;
       // Banquet specifically assigned to this salesperson
       if (b.assignedSalespersonId && b.assignedSalespersonId === myUid) {
         return true;
@@ -242,68 +246,163 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       // If banquet has no assigned salesperson, and this salesperson has no assignments yet, show as fallback
-      const hasAnyAssignments = myAssignedIds.length > 0 || allBanquets.some((v) => v.assignedSalespersonId === myUid);
+      const hasAnyAssignments = myAssignedIds.length > 0 || allBanquets.some((v) => Boolean(v && v.assignedSalespersonId === myUid));
       return !hasAnyAssignments && !b.assignedSalespersonId;
     });
   }, [allBanquets, currentUser]);
 
-  const clients = useMemo(() => Object.values(dbState.clients || {}), [dbState.clients]);
-  const leads = useMemo(() => Object.values(dbState.leads || {}), [dbState.leads]);
-  const events = useMemo(() => Object.values(dbState.events || {}), [dbState.events]);
+  const clients = useMemo(() => {
+    return Object.values(dbState.clients || {}).filter(
+      (c): c is Client => Boolean(c && typeof c === 'object' && c.id)
+    );
+  }, [dbState.clients]);
+
+  const leads = useMemo(() => {
+    return Object.values(dbState.leads || {}).filter(
+      (l): l is Lead => Boolean(l && typeof l === 'object' && l.id)
+    );
+  }, [dbState.leads]);
+
+  const events = useMemo(() => {
+    return Object.values(dbState.events || {}).filter(
+      (e): e is EventRecord => Boolean(e && typeof e === 'object' && e.id && e.date)
+    );
+  }, [dbState.events]);
+
   const bookingSlots = useMemo(() => {
-    const allSlots = Object.values(dbState.bookingSlots || {});
+    const allSlots = Object.values(dbState.bookingSlots || {}).filter(
+      (s): s is BookingSlot => Boolean(s && typeof s === 'object' && s.id && s.banquetId)
+    );
     if (!currentUser || currentUser.role !== 'salesperson') {
       return allSlots;
     }
-    const myBanquetIds = new Set(banquets.map((b) => b.id));
-    return allSlots.filter((s) => myBanquetIds.has(s.banquetId));
+    const myBanquetIds = new Set(banquets.map((b) => b?.id).filter(Boolean));
+    return allSlots.filter((s) => s && s.banquetId && myBanquetIds.has(s.banquetId));
   }, [dbState.bookingSlots, currentUser, banquets]);
-  const vendors = useMemo(() => Object.values(dbState.vendors || {}), [dbState.vendors]);
-  const vendorCategories = useMemo(() => dbState.vendorCategories || [], [dbState.vendorCategories]);
-  const checklistTemplates = useMemo(() => Object.values(dbState.checklistTemplates || {}), [dbState.checklistTemplates]);
-  const sales = useMemo(() => Object.values(dbState.sales || {}), [dbState.sales]);
-  const invoices = useMemo(() => Object.values(dbState.invoices || {}), [dbState.invoices]);
-  const payments = useMemo(() => Object.values(dbState.payments || {}), [dbState.payments]);
-  const targets = useMemo(() => Object.values(dbState.targets || {}), [dbState.targets]);
+
+  const vendors = useMemo(() => {
+    return Object.values(dbState.vendors || {}).filter(
+      (v): v is Vendor => Boolean(v && typeof v === 'object' && v.id)
+    );
+  }, [dbState.vendors]);
+
+  const vendorCategories = useMemo(() => {
+    return Array.isArray(dbState.vendorCategories)
+      ? dbState.vendorCategories.filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+      : [];
+  }, [dbState.vendorCategories]);
+
+  const checklistTemplates = useMemo(() => {
+    return Object.values(dbState.checklistTemplates || {}).filter(
+      (t): t is ChecklistTemplate => Boolean(t && typeof t === 'object' && t.id)
+    );
+  }, [dbState.checklistTemplates]);
+
+  const sales = useMemo(() => {
+    return Object.values(dbState.sales || {}).filter(
+      (s): s is Sale => Boolean(s && typeof s === 'object' && s.id)
+    );
+  }, [dbState.sales]);
+
+  const invoices = useMemo(() => {
+    return Object.values(dbState.invoices || {}).filter(
+      (i): i is Invoice => Boolean(i && typeof i === 'object' && i.id)
+    );
+  }, [dbState.invoices]);
+
+  const payments = useMemo(() => {
+    return Object.values(dbState.payments || {}).filter(
+      (p): p is Payment => Boolean(p && typeof p === 'object' && p.id)
+    );
+  }, [dbState.payments]);
+
+  const targets = useMemo(() => {
+    return Object.values(dbState.targets || {}).filter(
+      (t): t is SalesTarget => Boolean(t && typeof t === 'object' && t.id)
+    );
+  }, [dbState.targets]);
+
+  const normalizedChecklistItems: Record<string, ChecklistItem[]> = useMemo(() => {
+    const raw = dbState.checklistItems || {};
+    const result: Record<string, ChecklistItem[]> = {};
+    for (const [eventId, items] of Object.entries(raw)) {
+      if (Array.isArray(items)) {
+        result[eventId] = items.filter((i): i is ChecklistItem => Boolean(i && typeof i === 'object' && 'id' in i));
+      } else if (items && typeof items === 'object') {
+        result[eventId] = (Object.values(items) as any[]).filter((i): i is ChecklistItem => Boolean(i && typeof i === 'object' && 'id' in i));
+      } else {
+        result[eventId] = [];
+      }
+    }
+    return result;
+  }, [dbState.checklistItems]);
+
+  const leadFollowUps: Record<string, LeadFollowUp[]> = useMemo(() => {
+    const raw = dbState.leadFollowUps || {};
+    const result: Record<string, LeadFollowUp[]> = {};
+    for (const [leadId, followUps] of Object.entries(raw)) {
+      if (Array.isArray(followUps)) {
+        result[leadId] = followUps.filter((f): f is LeadFollowUp => Boolean(f && typeof f === 'object' && 'id' in f));
+      } else if (followUps && typeof followUps === 'object') {
+        result[leadId] = (Object.values(followUps) as any[]).filter((f): f is LeadFollowUp => Boolean(f && typeof f === 'object' && 'id' in f));
+      } else {
+        result[leadId] = [];
+      }
+    }
+    return result;
+  }, [dbState.leadFollowUps]);
+
+  const activityLogs: ActivityLog[] = useMemo(() => {
+    const raw = dbState.activityLogs;
+    if (Array.isArray(raw)) {
+      return raw.filter((l): l is ActivityLog => Boolean(l && typeof l === 'object' && 'id' in l));
+    }
+    if (raw && typeof raw === 'object') {
+      return (Object.values(raw) as any[]).filter((l): l is ActivityLog => Boolean(l && typeof l === 'object' && 'id' in l));
+    }
+    return [];
+  }, [dbState.activityLogs]);
 
   // Real database-backed summary calculation
   const metrics: MetricsSummary = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
 
-    const activeBanquetsCount = banquets.filter((b) => b && b.isActive).length;
-    const todaysEventsCount = events.filter((e) => e && e.date === today && e.status !== 'cancelled').length;
-    const upcomingEventsCount = events.filter((e) => e && e.date >= today && e.status !== 'cancelled').length;
-    const newAndActiveLeadsCount = leads.filter((l) => l && l.status === 'active').length;
-    const confirmedBookingsCount = events.filter((e) => e && e.status === 'confirmed').length;
+    const activeBanquetsCount = banquets.filter((b) => Boolean(b && b.isActive)).length;
+    const todaysEventsCount = events.filter((e) => Boolean(e && e.date === today && e.status !== 'cancelled')).length;
+    const upcomingEventsCount = events.filter((e) => Boolean(e && e.date >= today && e.status !== 'cancelled')).length;
+    const newAndActiveLeadsCount = leads.filter((l) => Boolean(l && l.status === 'active')).length;
+    const confirmedBookingsCount = events.filter((e) => Boolean(e && e.status === 'confirmed')).length;
 
     // Distinct financial aggregations (never double count sales or confuse requested advance with actual received)
     const totalSalesValue = sales
-      .filter((s) => s && s.status !== 'cancelled')
-      .reduce((sum, s) => sum + (s.finalSaleAmount || 0), 0);
+      .filter((s) => Boolean(s && s.status !== 'cancelled'))
+      .reduce((sum, s) => sum + (Number(s.finalSaleAmount) || 0), 0);
 
     const paymentsReceived = payments.reduce(
-      (sum, p) => sum + (p.type === 'refund' ? -(p.amount || 0) : (p.amount || 0)),
+      (sum, p) => sum + (p && p.type === 'refund' ? -(Number(p.amount) || 0) : (Number(p?.amount) || 0)),
       0
     );
 
     const outstandingBalances = sales
-      .filter((s) => s && s.status !== 'cancelled')
-      .reduce((sum, s) => sum + (s.outstandingBalance || 0), 0);
+      .filter((s) => Boolean(s && s.status !== 'cancelled'))
+      .reduce((sum, s) => sum + (Number(s.outstandingBalance) || 0), 0);
 
     // Events with vendor confirmations pending
     const eventsAwaitingVendor = events.filter((e) => {
       if (!e || e.status === 'cancelled' || e.status === 'completed') return false;
-      const assignments = Array.isArray(e.vendorAssignments) ? e.vendorAssignments : [];
+      const assignments = Array.isArray(e.vendorAssignments)
+        ? e.vendorAssignments
+        : (e.vendorAssignments && typeof e.vendorAssignments === 'object' ? Object.values(e.vendorAssignments) : []);
       return assignments.some(
-        (va) => va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required')
+        (va: any) => Boolean(va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required'))
       );
     }).length;
 
     // Incomplete checklist counts
     const eventsIncompleteChecklist = events.filter((e) => {
       if (!e || e.status === 'cancelled' || e.status === 'completed') return false;
-      const items = Array.isArray(dbState.checklistItems?.[e.id]) ? dbState.checklistItems[e.id] : [];
-      return items.some((i) => i && i.status === 'pending');
+      const items = normalizedChecklistItems[e.id] || [];
+      return items.some((i) => Boolean(i && i.status === 'pending'));
     }).length;
 
     return {
@@ -318,7 +417,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       eventsAwaitingVendorConfirmation: eventsAwaitingVendor,
       eventsWithIncompleteChecklists: eventsIncompleteChecklist,
     };
-  }, [banquets, events, leads, sales, payments, dbState.checklistItems]);
+  }, [banquets, events, leads, sales, payments, normalizedChecklistItems]);
 
   const saveBanquet = (banquet: Banquet) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
@@ -502,17 +601,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         allBanquets,
         clients,
         leads,
-        leadFollowUps: dbState.leadFollowUps,
+        leadFollowUps,
         events,
         bookingSlots,
         vendors,
         vendorCategories,
         checklistTemplates,
-        checklistItems: dbState.checklistItems,
+        checklistItems: normalizedChecklistItems,
         sales,
         invoices,
         payments,
-        activityLogs: dbState.activityLogs,
+        activityLogs,
         targets,
         metrics,
         saveBanquet,

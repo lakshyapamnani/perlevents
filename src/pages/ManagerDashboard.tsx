@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatDateTime, generateWhatsAppUrl, createVendorReminderMessage } from '../utils/formatters';
 import { PWAInstallButton } from '../components/common/PWAInstallButton';
+import { VendorAssignment } from '../types';
 
 interface ManagerDashboardProps {
   onSelectEvent: (eventId: string) => void;
@@ -30,13 +31,15 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
 
   // Filter events assigned to this manager (or all if admin or no specific manager set)
   const assignedEvents = events.filter(
-    (e) => !e.managerId || e.managerId === currentUser?.uid || currentUser?.role === 'admin'
+    (e) => Boolean(e && (!e.managerId || e.managerId === currentUser?.uid || currentUser?.role === 'admin'))
   );
 
   const activeEventId = selectedEventId || assignedEvents[0]?.id || '';
-  const currentEvent = events.find((e) => e.id === activeEventId);
-  const currentTasks = checklistItems[activeEventId] || [];
-  const currentVendors = Array.isArray(currentEvent?.vendorAssignments) ? currentEvent.vendorAssignments : [];
+  const currentEvent = events.find((e) => e && e.id === activeEventId);
+  const currentTasks = Array.isArray(checklistItems[activeEventId]) ? checklistItems[activeEventId] : [];
+  const currentVendors: VendorAssignment[] = Array.isArray(currentEvent?.vendorAssignments)
+    ? currentEvent.vendorAssignments
+    : (currentEvent?.vendorAssignments && typeof currentEvent.vendorAssignments === 'object' ? Object.values(currentEvent.vendorAssignments) as VendorAssignment[] : []);
 
   const completedCount = currentTasks.filter((t) => t.status === 'completed').length;
   const percentComplete =

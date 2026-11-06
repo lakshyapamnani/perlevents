@@ -31,7 +31,7 @@ import {
   Pencil,
   Save,
 } from 'lucide-react';
-import { EventRecord, ReminderStatus, Attachment } from '../types';
+import { EventRecord, ReminderStatus, Attachment, VendorAssignment } from '../types';
 import {
   formatCurrency,
   formatDate,
@@ -124,13 +124,15 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     );
   }
 
-  const banquet = banquets.find((b) => b.id === event.banquetId);
-  const client = clients.find((c) => c.id === event.clientId);
-  const tasks = checklistItems[event.id] || [];
-  const eventLogs = activityLogs.filter((log) => log.recordId === event.id);
-  const eventInvoices = invoices.filter((inv) => inv.eventId === event.id);
-  const eventPayments = payments.filter((p) => p.eventId === event.id);
-  const vendorAssignments = Array.isArray(event.vendorAssignments) ? event.vendorAssignments : [];
+  const banquet = banquets.find((b) => b && b.id === event.banquetId);
+  const client = clients.find((c) => c && c.id === event.clientId);
+  const tasks = Array.isArray(checklistItems[event.id]) ? checklistItems[event.id] : [];
+  const eventLogs = (Array.isArray(activityLogs) ? activityLogs : []).filter((log) => log && log.recordId === event.id);
+  const eventInvoices = (Array.isArray(invoices) ? invoices : []).filter((inv) => inv && inv.eventId === event.id);
+  const eventPayments = (Array.isArray(payments) ? payments : []).filter((p) => p && p.eventId === event.id);
+  const vendorAssignments: VendorAssignment[] = Array.isArray(event.vendorAssignments)
+    ? event.vendorAssignments
+    : (event.vendorAssignments && typeof event.vendorAssignments === 'object' ? Object.values(event.vendorAssignments) as VendorAssignment[] : []);
 
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
   const pct = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;

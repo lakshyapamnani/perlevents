@@ -39,24 +39,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const today = new Date().toISOString().split('T')[0];
 
   const upcomingEvents = events
-    .filter((e) => e.date >= today && e.status !== 'cancelled')
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter((e) => Boolean(e && e.date && e.date >= today && e.status !== 'cancelled'))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     .slice(0, 5);
 
   const recentLeads = [...leads]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter(Boolean)
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, 5);
 
   const pendingReminders = events
-    .flatMap((e) =>
-      (Array.isArray(e?.vendorAssignments) ? e.vendorAssignments : [])
-        .filter((va) => va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required'))
-        .map((va) => ({ ...va, event: e }))
-    )
+    .flatMap((e) => {
+      if (!e) return [];
+      const assignments = Array.isArray(e.vendorAssignments)
+        ? e.vendorAssignments
+        : (e.vendorAssignments && typeof e.vendorAssignments === 'object' ? Object.values(e.vendorAssignments) : []);
+      return assignments
+        .filter((va: any) => Boolean(va && (va.contactStatus === 'not_contacted' || va.contactStatus === 'followup_required')))
+        .map((va: any) => ({ ...va, event: e }));
+    })
     .slice(0, 4);
 
   const recentInvoices = [...invoices]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter(Boolean)
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, 5);
 
   return (

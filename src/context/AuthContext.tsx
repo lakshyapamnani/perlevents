@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUid, setCurrentUid] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pearlexperiences_active_uid');
-      if (saved && dbState.users[saved]) return saved;
+      if (saved && dbState?.users && dbState.users[saved] && dbState.users[saved].isActive) return saved;
     }
     return null; // Show single login screen if not authenticated
   });
@@ -59,8 +59,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
-  const allUsersList = Object.values(dbState.users);
-  const currentUser: UserProfile | null = currentUid && dbState.users[currentUid] ? dbState.users[currentUid] : null;
+  const allUsersList = Object.values(dbState?.users || {}).filter(
+    (u): u is UserProfile => Boolean(u && typeof u === 'object' && u.uid)
+  );
+  const currentUser: UserProfile | null =
+    currentUid && dbState?.users && dbState.users[currentUid] && dbState.users[currentUid].isActive
+      ? dbState.users[currentUid]
+      : null;
 
   /**
    * Unified Single Form Login

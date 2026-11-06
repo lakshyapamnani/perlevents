@@ -50,9 +50,9 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
   );
 
   // Salesperson-relevant data & live achieved bookings count
-  const mySales = sales.filter((s) => s.salespersonId === currentUser?.uid || (!s.salespersonId && true));
+  const mySales = sales.filter((s) => Boolean(s && (s.salespersonId === currentUser?.uid || !s.salespersonId)));
   const matchingSales = myTarget?.periodType === 'daily'
-    ? mySales.filter((s) => s.saleDate === myTarget.periodValue || s.createdAt?.startsWith(myTarget.periodValue))
+    ? mySales.filter((s) => Boolean(s && (s.saleDate === myTarget.periodValue || (s.createdAt && s.createdAt.startsWith(myTarget.periodValue)))))
     : mySales;
   const myDealsCount = matchingSales.length;
   const targetBookingsGoal = myTarget?.targetBookings || 1;
@@ -62,15 +62,15 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
     : 0;
   const remainingBookings = myTarget ? Math.max(0, targetBookingsGoal - myDealsCount) : 0;
 
-  const myEvents = events.filter((e) => e.salespersonId === currentUser?.uid || true);
-  const todaysEvents = myEvents.filter((e) => e.date === today && e.status !== 'cancelled');
+  const myEvents = events.filter((e) => Boolean(e && (e.salespersonId === currentUser?.uid || true)));
+  const todaysEvents = myEvents.filter((e) => Boolean(e && e.date === today && e.status !== 'cancelled'));
   const upcomingEvents = myEvents
-    .filter((e) => e.date > today && e.status !== 'cancelled')
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter((e) => Boolean(e && e.date && e.date > today && e.status !== 'cancelled'))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     .slice(0, 3);
 
-  const activeLeads = leads.filter((l) => l.status === 'active');
-  const followUpsDueToday = activeLeads.filter((l) => l.followUpDate <= today);
+  const activeLeads = leads.filter((l) => Boolean(l && l.status === 'active'));
+  const followUpsDueToday = activeLeads.filter((l) => Boolean(l && l.followUpDate && l.followUpDate <= today));
 
   const recentDirectSales = sales.slice(0, 3);
 
