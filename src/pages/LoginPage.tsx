@@ -135,6 +135,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               )}
             </button>
           </form>
+
+          {/* Quick Role Fillers */}
+          <div className="pt-3 border-t border-stone-800/80">
+            <div className="text-[11px] font-semibold text-stone-400 mb-2 text-center">
+              Quick Role Credentials
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@perlexperiences.com');
+                  setPassword('admin123');
+                }}
+                className="py-2 px-2 bg-stone-800/80 hover:bg-stone-700 active:bg-stone-900 border border-stone-700/80 rounded-xl text-[11px] font-semibold text-stone-200 transition-colors text-center"
+              >
+                Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('sales@perlexperiences.com');
+                  setPassword('sales123');
+                }}
+                className="py-2 px-2 bg-stone-800/80 hover:bg-stone-700 active:bg-stone-900 border border-stone-700/80 rounded-xl text-[11px] font-semibold text-emerald-400 transition-colors text-center"
+              >
+                Sales
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('manager@perlexperiences.com');
+                  setPassword('manager123');
+                }}
+                className="py-2 px-2 bg-stone-800/80 hover:bg-stone-700 active:bg-stone-900 border border-stone-700/80 rounded-xl text-[11px] font-semibold text-sky-400 transition-colors text-center"
+              >
+                Manager
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Footer info */}

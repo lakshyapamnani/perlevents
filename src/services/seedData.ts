@@ -47,8 +47,16 @@ export const DEFAULT_USER_CREDENTIALS: Record<
   string,
   { email: string; password: string; role: 'admin' | 'salesperson' | 'manager'; uid: string; name: string }
 > = {
+  // Admin credentials
   'admin@perlexperiences.com': {
     email: 'admin@perlexperiences.com',
+    password: 'admin123',
+    role: 'admin',
+    uid: 'usr_admin_01',
+    name: 'Pearlexperiences Admin',
+  },
+  'admin@pearlexperiences.com': {
+    email: 'admin@pearlexperiences.com',
     password: 'admin123',
     role: 'admin',
     uid: 'usr_admin_01',
@@ -60,6 +68,36 @@ export const DEFAULT_USER_CREDENTIALS: Record<
     role: 'admin',
     uid: 'usr_admin_02',
     name: 'Executive Management',
+  },
+  // Sales credentials
+  'sales@perlexperiences.com': {
+    email: 'sales@perlexperiences.com',
+    password: 'sales123',
+    role: 'salesperson',
+    uid: 'usr_sales_01',
+    name: 'Sales Executive',
+  },
+  'sales@pearlexperiences.com': {
+    email: 'sales@pearlexperiences.com',
+    password: 'sales123',
+    role: 'salesperson',
+    uid: 'usr_sales_01',
+    name: 'Sales Executive',
+  },
+  // Manager credentials
+  'manager@perlexperiences.com': {
+    email: 'manager@perlexperiences.com',
+    password: 'manager123',
+    role: 'manager',
+    uid: 'usr_manager_01',
+    name: 'Operations Manager',
+  },
+  'manager@pearlexperiences.com': {
+    email: 'manager@pearlexperiences.com',
+    password: 'manager123',
+    role: 'manager',
+    uid: 'usr_manager_01',
+    name: 'Operations Manager',
   },
 };
 
@@ -82,6 +120,30 @@ export const initialUsers: UserProfile[] = [
     email: 'Pearlexperiencespvt.ltd@gmail.com',
     phone: '+91 98111 22233',
     role: 'admin',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    createdAt: '2026-01-10T09:00:00Z',
+    createdBy: 'system_root',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
+  {
+    uid: 'usr_sales_01',
+    fullName: 'Sales Executive',
+    email: 'sales@perlexperiences.com',
+    phone: '+91 98222 33344',
+    role: 'salesperson',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    createdAt: '2026-01-10T09:00:00Z',
+    createdBy: 'system_root',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
+  {
+    uid: 'usr_manager_01',
+    fullName: 'Operations Manager',
+    email: 'manager@perlexperiences.com',
+    phone: '+91 98333 44455',
+    role: 'manager',
     organizationId: 'org_pearlexperiences',
     isActive: true,
     createdAt: '2026-01-10T09:00:00Z',
