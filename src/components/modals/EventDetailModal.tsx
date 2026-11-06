@@ -98,7 +98,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         requirements: event.requirements,
       }),
     },
-    ...event.vendorAssignments.map((va) => ({
+    ...(Array.isArray(event.vendorAssignments) ? event.vendorAssignments : []).map((va) => ({
       id: va.id,
       type: 'vendor',
       name: va.vendorName,
@@ -334,17 +334,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                  Assigned Service Vendors ({event.vendorAssignments.length})
+                  Assigned Service Vendors ({(event.vendorAssignments || []).length})
                 </h3>
               </div>
 
-              {event.vendorAssignments.length === 0 ? (
+              {(event.vendorAssignments || []).length === 0 ? (
                 <div className="p-6 text-center text-xs text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800/30 rounded-xl">
                   No vendors assigned to this event yet.
                 </div>
               ) : (
                 <div className="divide-y divide-stone-200 dark:divide-stone-800 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden">
-                  {event.vendorAssignments.map((va) => (
+                  {(event.vendorAssignments || []).map((va) => (
                     <div key={va.id} className="p-4 bg-white dark:bg-stone-900 flex flex-col sm:flex-row justify-between gap-3 text-xs">
                       <div>
                         <div className="font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
