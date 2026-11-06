@@ -79,11 +79,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string
   ): Promise<{ success: boolean; user?: UserProfile; error?: string }> => {
-    const cleanEmail = email.trim().toLowerCase();
+    let cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
     if (!cleanEmail || !cleanPassword) {
       return { success: false, error: 'Please enter both email and password.' };
+    }
+
+    // Support shorthand role aliases
+    if (cleanEmail === 'sales' || cleanEmail === 'salesperson') {
+      cleanEmail = 'sales@perlexperiences.com';
+    } else if (cleanEmail === 'manager') {
+      cleanEmail = 'manager@perlexperiences.com';
+    } else if (cleanEmail === 'admin') {
+      cleanEmail = 'admin@perlexperiences.com';
     }
 
     // 1. Attempt Firebase Authentication if credentials are configured
@@ -116,7 +125,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let matchedUser: UserProfile | undefined;
 
     if (creds && creds.password === cleanPassword) {
-      matchedUser = dbState.users[creds.uid] || allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
+      matchedUser = dbState?.users?.[creds.uid] || allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (!matchedUser) {
+        matchedUser = {
+          uid: creds.uid,
+          fullName: creds.name,
+          email: creds.email,
+          phone: '',
+          role: creds.role,
+          organizationId: 'org_pearlexperiences',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          createdBy: 'system',
+          updatedAt: new Date().toISOString(),
+        };
+        if (dbState?.users) {
+          dbState.users[creds.uid] = matchedUser;
+        }
+      }
     } else {
       // Check if user exists in database and password matches default rule
       const userByEmail = allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
@@ -128,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : userByEmail.role === 'salesperson'
               ? 'sales123'
               : 'manager123';
-        if (cleanPassword === expectedPwd) {
+        if (cleanPassword === expectedPwd || cleanPassword === (userByEmail as any).initialPassword) {
           matchedUser = userByEmail;
         }
       }

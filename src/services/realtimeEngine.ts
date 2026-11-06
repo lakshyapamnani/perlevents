@@ -230,15 +230,11 @@ class RealtimeDatabaseEngine {
           }
 
           if (this.state.users) {
-            // Purge demo sales & manager accounts
-            const demoUids = ['usr_sales_01', 'usr_manager_01'];
-            demoUids.forEach((id) => delete this.state.users[id]);
+            // Remove legacy dummy accounts with old domain
             Object.values(this.state.users).forEach((u) => {
               if (!u || typeof u !== 'object') return;
               const email = (u.email || '').toLowerCase();
               if (
-                email === 'sales@perlexperiences.com' ||
-                email === 'manager@perlexperiences.com' ||
                 email === 'rahul.sales@perlevents.com' ||
                 email === 'priya.manager@perlevents.com'
               ) {
@@ -246,6 +242,13 @@ class RealtimeDatabaseEngine {
               }
               if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
                 u.fullName = 'Executive Management';
+              }
+            });
+
+            // Guarantee standard active role accounts exist
+            initialUsers.forEach((u) => {
+              if (!this.state.users[u.uid]) {
+                this.state.users[u.uid] = { ...u };
               }
             });
           }
@@ -333,16 +336,12 @@ class RealtimeDatabaseEngine {
           });
         }
 
-        // Purge demo sales & manager accounts
+        // Guarantee standard active role accounts exist
         if (parsed.users) {
-          const demoUids = ['usr_sales_01', 'usr_manager_01'];
-          demoUids.forEach((id) => delete parsed.users[id]);
           Object.values(parsed.users).forEach((u) => {
             if (!u || typeof u !== 'object') return;
             const email = (u.email || '').toLowerCase();
             if (
-              email === 'sales@perlexperiences.com' ||
-              email === 'manager@perlexperiences.com' ||
               email === 'rahul.sales@perlevents.com' ||
               email === 'priya.manager@perlevents.com'
             ) {
@@ -350,6 +349,12 @@ class RealtimeDatabaseEngine {
             }
             if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
               u.fullName = 'Executive Management';
+            }
+          });
+
+          initialUsers.forEach((u) => {
+            if (!parsed.users[u.uid]) {
+              parsed.users[u.uid] = { ...u };
             }
           });
         }
