@@ -32,7 +32,7 @@ import { getAnalytics, isSupported } from 'firebase/analytics';
 export const firebaseConfig = {
   apiKey: "AIzaSyBxnAWlXCV5AGnbWIKzgvlw09UIDPVMWRc",
   authDomain: "perlevents-8897a.firebaseapp.com",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://perlevents-8897a-default-rtdb.firebaseio.com",
+  databaseURL: "https://perlevents-8897a-default-rtdb.firebaseio.com",
   projectId: "perlevents-8897a",
   storageBucket: "perlevents-8897a.firebasestorage.app",
   messagingSenderId: "814985450267",
@@ -215,4 +215,44 @@ export function listenToRealtimeNode(nodePath: string, callback: (snapshotVal: a
     console.warn('Realtime Database listen error:', e);
     return () => {};
   }
+}
+
+/**
+ * Proactively fetches the full live state from Firebase Realtime Database.
+ * Attempts SDK get() first; if connection is delayed or blocked, falls back
+ * immediately to HTTPS REST endpoint.
+ */
+export async function fetchRealtimeState(): Promise<any> {
+  if (!isFirebaseConfigured()) return null;
+
+  // 1. Try Firebase SDK get()
+  try {
+    if (database) {
+      const nodeRef = ref(database, 'pearlexperiences/state');
+      const snap = await get(nodeRef);
+      if (snap.exists()) {
+        const val = snap.val();
+        if (val && typeof val === 'object') {
+          return val;
+        }
+      }
+    }
+  } catch (sdkErr) {
+    console.warn('Firebase SDK get() notice, trying REST fallback:', sdkErr);
+  }
+
+  // 2. HTTPS REST fallback
+  try {
+    const res = await fetch('https://perlevents-8897a-default-rtdb.firebaseio.com/pearlexperiences/state.json');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        return data;
+      }
+    }
+  } catch (restErr) {
+    console.warn('Firebase REST fetch notice:', restErr);
+  }
+
+  return null;
 }

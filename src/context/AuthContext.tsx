@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
+    realtimeEngine.syncFromFirebase();
     const unsubscribe = realtimeEngine.subscribe(() => {
       setDbState(realtimeEngine.getState());
     });
