@@ -129,6 +129,7 @@ interface DataContextType {
     eventId: string,
     newStatus: 'tentative' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   ) => { success: boolean; error?: string };
+  deleteEvent: (eventId: string) => { success: boolean; error?: string };
   updateEventDetails: (
     eventId: string,
     data: {
@@ -469,6 +470,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.updateEventStatus(currentUser, eventId, newStatus);
   };
 
+  const deleteEvent = (eventId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.deleteEvent(currentUser, eventId);
+  };
+
   const updateEventDetails = (
     eventId: string,
     data: {
@@ -624,6 +630,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteLead,
         saveClient,
         updateEventStatus,
+        deleteEvent,
         updateEventDetails,
         saveVendor,
         deleteVendor,
