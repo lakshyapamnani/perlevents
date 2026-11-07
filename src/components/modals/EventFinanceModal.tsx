@@ -23,6 +23,7 @@ import {
   downloadEventInvoicePDF,
   downloadPaymentReceiptPDF,
   openPrintableInvoiceWindow,
+  sendInvoiceOnWhatsApp,
 } from '../../utils/pdfReceiptGenerator';
 
 interface EventFinanceModalProps {
@@ -583,14 +584,33 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sendInvoiceOnWhatsApp({
+                    event,
+                    client,
+                    invoice: linkedInvoice,
+                    payments: eventPayments,
+                    settings,
+                  });
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] active:bg-[#1da850] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                title="Directly share/send the official PDF receipt on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 fill-white text-[#25D366]" />
+                <span>Send PDF on WhatsApp</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#25D366] hover:bg-[#20ba59] active:bg-[#1da850] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-700 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2"
+                title="Send pre-filled WhatsApp message summary"
               >
-                <Send className="w-4 h-4" />
-                <span>Send WhatsApp Message</span>
+                <Send className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
+                <span>Send Message Text</span>
               </button>
             </div>
           </div>
