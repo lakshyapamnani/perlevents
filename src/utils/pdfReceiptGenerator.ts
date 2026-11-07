@@ -87,8 +87,8 @@ export function downloadPaymentReceiptPDF({
 
     y += 24;
 
-    // Centered "FEE RECEIPT" Pill (Exact match to reference)
-    const pillWidth = 36;
+    // Centered "INVOICE" Pill (Replacing "FEE RECEIPT")
+    const pillWidth = 32;
     const pillHeight = 7;
     const pillX = (pageWidth - pillWidth) / 2;
     doc.setFillColor(15, 23, 42); // Black/Navy Pill
@@ -97,7 +97,7 @@ export function downloadPaymentReceiptPDF({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text('FEE RECEIPT', pageWidth / 2, y + 4.8, { align: 'center' });
+    doc.text('INVOICE', pageWidth / 2, y + 4.8, { align: 'center' });
 
     y += 12;
 
@@ -139,16 +139,16 @@ export function downloadPaymentReceiptPDF({
       leftY += 5;
     });
 
-    // Right Column: Receipt Info
+    // Right Column: Invoice Info
     const rightColX = margin + colWidth + 6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('RECEIPT INFO', pageWidth - margin, y, { align: 'right' });
+    doc.text('INVOICE INFO', pageWidth - margin, y, { align: 'right' });
 
     let rightY = y + 5;
     const rightLabels = [
-      ['Receipt No:', receiptNo],
+      ['Invoice No:', receiptNo],
       ['Date:', formatDate(payment.paymentDate)],
       ['Time:', event.startTime || '12:00 pm'],
       ['Payment Mode:', payment.paymentMethod.toUpperCase().replace('_', ' ')],
@@ -247,7 +247,7 @@ export function downloadPaymentReceiptPDF({
     }
 
     const sumRows: SumRow[] = [
-      { lbl: 'Total Event Fees', val: formatPdfCurrency(pkgTotal), weight: 'normal', lblColor: [71, 85, 105], valColor: [15, 23, 42] },
+      { lbl: 'Total Event Amount', val: formatPdfCurrency(pkgTotal), weight: 'normal', lblColor: [71, 85, 105], valColor: [15, 23, 42] },
       { lbl: 'Down Payment', val: formatPdfCurrency(downPmt), weight: 'normal', lblColor: [71, 85, 105], valColor: [37, 99, 235] },
       { lbl: 'Total Paid (All)', val: formatPdfCurrency(paidAll), weight: 'normal', lblColor: [71, 85, 105], valColor: [5, 150, 105] },
       { lbl: 'Outstanding Balance', val: formatPdfCurrency(outstanding), weight: 'bold', lblColor: [15, 23, 42], valColor: [220, 38, 38] },
@@ -268,7 +268,7 @@ export function downloadPaymentReceiptPDF({
       rowY += 6.5;
     });
 
-    // Left side: Terms & Conditions (matching reference image)
+    // Left side: Terms & Conditions
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
@@ -277,9 +277,9 @@ export function downloadPaymentReceiptPDF({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
     doc.setTextColor(100, 116, 139);
-    doc.text('1. Fees once paid are non-refundable.', margin, y + 9);
-    doc.text('2. This is a computer-generated receipt and does not require a physical signature.', margin, y + 13.5);
-    doc.text('3. Please retain this receipt for your records.', margin, y + 18);
+    doc.text('1. Amount once paid is non-refundable.', margin, y + 9);
+    doc.text('2. This is a computer-generated invoice and does not require a physical signature.', margin, y + 13.5);
+    doc.text('3. Please retain this invoice for your records.', margin, y + 18);
 
     y += 36;
 
@@ -439,8 +439,8 @@ export function downloadEventInvoicePDF({
 
     y += 24;
 
-    // FEE RECEIPT / TAX INVOICE Pill
-    const pillWidth = 44;
+    // INVOICE Pill
+    const pillWidth = 32;
     const pillHeight = 7.5;
     const pillX = (pageWidth - pillWidth) / 2;
     doc.setFillColor(15, 23, 42);
@@ -449,7 +449,7 @@ export function downloadEventInvoicePDF({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text('FEE & TAX INVOICE', pageWidth / 2, y + 5, { align: 'center' });
+    doc.text('INVOICE', pageWidth / 2, y + 5, { align: 'center' });
 
     y += 12;
     doc.setDrawColor(15, 23, 42);
@@ -587,7 +587,7 @@ export function downloadEventInvoicePDF({
     }
 
     const sumRows: SumRow[] = [
-      { lbl: 'Total Event Fees', val: formatPdfCurrency(finalTotal), weight: 'normal', lblColor: [71, 85, 105], valColor: [15, 23, 42] },
+      { lbl: 'Total Event Amount', val: formatPdfCurrency(finalTotal), weight: 'normal', lblColor: [71, 85, 105], valColor: [15, 23, 42] },
       { lbl: 'Down Payment', val: formatPdfCurrency(event.advanceRequested || 0), weight: 'normal', lblColor: [71, 85, 105], valColor: [37, 99, 235] },
       { lbl: 'Total Paid (All)', val: formatPdfCurrency(totalPaid), weight: 'normal', lblColor: [71, 85, 105], valColor: [5, 150, 105] },
       { lbl: 'Outstanding Balance', val: formatPdfCurrency(outstanding), weight: 'bold', lblColor: [15, 23, 42], valColor: [220, 38, 38] },
@@ -758,7 +758,7 @@ export function openPrintableInvoiceWindow({
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Fee Receipt - ${invNumber} - ${clientName}</title>
+  <title>Invoice - ${invNumber} - ${clientName}</title>
   <style>
     @page { size: A4 portrait; margin: 14mm; }
     * { box-sizing: border-box; }
@@ -975,7 +975,7 @@ export function openPrintableInvoiceWindow({
   </div>
 
   <div style="text-align: center;">
-    <div class="pill-badge">FEE RECEIPT</div>
+    <div class="pill-badge">INVOICE</div>
   </div>
 
   <hr class="divider">
@@ -1003,9 +1003,9 @@ export function openPrintableInvoiceWindow({
     </div>
 
     <div>
-      <div class="meta-title" style="text-align: right;">Receipt Info</div>
+      <div class="meta-title" style="text-align: right;">Invoice Info</div>
       <div class="meta-row">
-        <span class="meta-label">Receipt No:</span>
+        <span class="meta-label">Invoice No:</span>
         <span class="meta-val">${invNumber}</span>
       </div>
       <div class="meta-row">
@@ -1048,7 +1048,7 @@ export function openPrintableInvoiceWindow({
         </td>
       </tr>
       <tr class="total-paid-row">
-        <td colspan="2" style="text-align: right; letter-spacing: 0.5px;">TOTAL PAID (THIS RECEIPT)</td>
+        <td colspan="2" style="text-align: right; letter-spacing: 0.5px;">TOTAL PAID (THIS INVOICE)</td>
         <td style="text-align: right; font-size: 15px; color: #0f172a;">${formatInrSymbol(totalPaid)}</td>
       </tr>
     </tbody>
@@ -1058,14 +1058,14 @@ export function openPrintableInvoiceWindow({
   <div class="finance-flex">
     <div class="terms">
       <div class="terms-title">Terms & Conditions:</div>
-      <div>1. Fees once paid are non-refundable.</div>
-      <div>2. This is a computer-generated receipt and does not require a physical signature.</div>
-      <div>3. Please retain this receipt for your records.</div>
+      <div>1. Amount once paid is non-refundable.</div>
+      <div>2. This is a computer-generated invoice and does not require a physical signature.</div>
+      <div>3. Please retain this invoice for your records.</div>
     </div>
 
     <div class="summary-card">
       <div class="summary-row">
-        <span style="color: #64748b;">Total Event Fees</span>
+        <span style="color: #64748b;">Total Event Amount</span>
         <span style="font-weight: 700;">${formatInrSymbol(finalTotal)}</span>
       </div>
       <div class="summary-row">

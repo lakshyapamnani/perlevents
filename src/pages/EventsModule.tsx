@@ -630,7 +630,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                           });
                         }}
                         className="p-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center transition-colors shadow-xs"
-                        title="Download Tax Invoice & Fee Receipt PDF"
+                        title="Download Tax Invoice PDF"
                       >
                         <Download className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
                       </button>
