@@ -164,25 +164,25 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/80 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div className="relative w-full max-w-4xl bg-[#0b1324] text-stone-100 rounded-3xl shadow-2xl border border-stone-800/90 my-6 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-stone-950/70 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-3xl shadow-2xl border border-stone-200 dark:border-stone-800 my-6 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800/80 bg-[#070d1a]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-center text-emerald-800 dark:text-emerald-400 shadow-xs">
               <Receipt className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white tracking-tight">
+                <h2 className="text-base font-bold text-stone-900 dark:text-white tracking-tight">
                   {event.name}
                 </h2>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/60">
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60">
                   {event.eventType}
                 </span>
               </div>
-              <p className="text-xs text-stone-400 mt-0.5">
-                {event.banquetName} · Client: <span className="text-stone-200 font-semibold">{event.clientName}</span> ({event.clientPhone})
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                {event.banquetName} · Client: <span className="text-stone-900 dark:text-stone-200 font-semibold">{event.clientName}</span> ({event.clientPhone})
               </p>
             </div>
           </div>
@@ -217,10 +217,10 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   settings,
                 });
               }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold border border-stone-700 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold border border-stone-200 dark:border-stone-700 transition-colors"
               title="Print / Save As PDF"
             >
-              <Printer className="w-3.5 h-3.5 text-stone-400" />
+              <Printer className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
               <span>Print</span>
             </button>
 
@@ -228,17 +228,17 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
               <button
                 type="button"
                 onClick={() => onInspectEvent(event.id)}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold border border-stone-700 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold border border-stone-200 dark:border-stone-700 transition-colors"
                 title="Open Event Detail Page"
               >
-                <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
+                <ExternalLink className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                 <span>Event Ops</span>
               </button>
             )}
 
             <button
               onClick={onClose}
-              className="p-2 text-stone-400 hover:text-white rounded-xl hover:bg-stone-800/80 transition-colors"
+              className="p-2 text-stone-400 hover:text-stone-900 dark:hover:text-white rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -248,46 +248,46 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
-          {/* Top 5 Stat Cards (Matching Picture 1 layout) */}
+          {/* Top 5 Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="p-4 rounded-2xl bg-[#111c33] border border-[#1e2f52] shadow-sm">
-              <span className="text-[11px] font-medium text-stone-400 block">Total Fees</span>
-              <div className="text-lg sm:text-xl font-extrabold text-white mt-1 tabular-nums">
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs">
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Total Fees</span>
+              <div className="text-lg sm:text-xl font-extrabold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(totalFees)}
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#111c33] border border-[#1e2f52] shadow-sm">
-              <span className="text-[11px] font-medium text-stone-400 block">Down Payment</span>
-              <div className="text-lg sm:text-xl font-extrabold text-sky-400 mt-1 tabular-nums">
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs">
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Down Payment</span>
+              <div className="text-lg sm:text-xl font-extrabold text-sky-600 dark:text-sky-400 mt-1 tabular-nums">
                 {formatCurrency(downPayment)}
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#111c33] border border-[#1e2f52] shadow-sm">
-              <span className="text-[11px] font-medium text-stone-400 block">Total Paid</span>
-              <div className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1 tabular-nums">
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs">
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Total Paid</span>
+              <div className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
                 {formatCurrency(totalPaid)}
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#111c33] border border-[#1e2f52] shadow-sm">
-              <span className="text-[11px] font-medium text-stone-400 block">Remaining</span>
-              <div className="text-lg sm:text-xl font-extrabold text-rose-500 mt-1 tabular-nums">
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs">
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Remaining</span>
+              <div className="text-lg sm:text-xl font-extrabold text-rose-600 dark:text-rose-500 mt-1 tabular-nums">
                 {formatCurrency(remaining)}
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#111c33] border border-[#1e2f52] shadow-sm col-span-2 sm:col-span-1">
-              <span className="text-[11px] font-medium text-stone-400 block">Adjusted EMI / Due</span>
-              <div className="text-lg sm:text-xl font-extrabold text-sky-400 mt-1 tabular-nums">
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs col-span-2 sm:col-span-1">
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Adjusted EMI / Due</span>
+              <div className="text-lg sm:text-xl font-extrabold text-sky-600 dark:text-sky-400 mt-1 tabular-nums">
                 {formatCurrency(remaining)}
               </div>
             </div>
           </div>
 
-          {/* Add Payment Amount Card (Distinct Teal/Dark Cyan Container from Picture 1) */}
-          <div className="bg-[#0b333c] border border-[#155e75] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden text-white">
+          {/* Add Payment Amount Card */}
+          <div className="bg-gradient-to-br from-stone-900 via-stone-900 to-emerald-950 border border-stone-700/80 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden text-white">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-emerald-400" />
@@ -295,7 +295,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   Add Payment Amount
                 </h3>
               </div>
-              <span className="text-[11px] font-medium text-emerald-300/80 bg-[#07242a] px-2.5 py-1 rounded-lg border border-[#155e75]">
+              <span className="text-[11px] font-medium text-emerald-300 bg-stone-950/80 px-2.5 py-1 rounded-lg border border-emerald-800/60">
                 Deducts directly from unpaid to paid balance
               </span>
             </div>
@@ -332,7 +332,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                       value={amountToAdd}
                       onChange={(e) => setAmountToAdd(e.target.value)}
                       placeholder="Amount"
-                      className="w-full pl-8 pr-3.5 py-2.5 bg-[#061e23] border border-[#155e75] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-bold text-white placeholder-stone-500 outline-none transition-colors tabular-nums"
+                      className="w-full pl-8 pr-3.5 py-2.5 bg-stone-950 border border-stone-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-bold text-white placeholder-stone-500 outline-none transition-colors tabular-nums"
                     />
                   </div>
                 </div>
@@ -348,7 +348,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                     value={receiptNo}
                     onChange={(e) => setReceiptNo(e.target.value)}
                     placeholder="480"
-                    className="w-full px-3.5 py-2.5 bg-[#061e23] border border-[#155e75] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white placeholder-stone-500 outline-none transition-colors font-mono"
+                    className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white placeholder-stone-500 outline-none transition-colors font-mono"
                   />
                 </div>
 
@@ -362,7 +362,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                     required
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#061e23] border border-[#155e75] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -376,7 +376,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as PaymentMethod)}
-                    className="w-full px-3.5 py-2.5 bg-[#061e23] border border-[#155e75] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs font-semibold text-white outline-none transition-colors"
                   >
                     <option value="cash">Cash</option>
                     <option value="upi">UPI / QR Code</option>
@@ -397,7 +397,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
                     placeholder="e.g. Stage & catering installment"
-                    className="w-full px-3.5 py-2.5 bg-[#061e23] border border-[#155e75] focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs text-white placeholder-stone-500 outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl text-xs text-white placeholder-stone-500 outline-none transition-colors"
                   />
                 </div>
 
@@ -405,7 +405,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                 <div className="sm:col-span-1">
                   <button
                     type="submit"
-                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-950 transition-all flex items-center justify-center gap-2 min-h-[40px]"
+                    className="w-full py-2.5 px-4 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 min-h-[40px]"
                   >
                     <span>Record Payment</span>
                   </button>
@@ -414,19 +414,19 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
             </form>
           </div>
 
-          {/* Payment History Section (Matching Picture 1 layout) */}
+          {/* Payment History Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white tracking-tight">
+              <h3 className="text-sm font-bold text-stone-900 dark:text-white tracking-tight">
                 Payment History ({eventPayments.length})
               </h3>
-              <span className="text-xs text-stone-400 font-medium">
-                Total Cleared: <span className="text-emerald-400 font-bold">{formatCurrency(totalPaid)}</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                Total Cleared: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(totalPaid)}</span>
               </span>
             </div>
 
             {eventPayments.length === 0 ? (
-              <div className="p-6 text-center text-xs text-stone-400 bg-[#0e172a] rounded-2xl border border-stone-800">
+              <div className="p-6 text-center text-xs text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-950/70 rounded-2xl border border-stone-200 dark:border-stone-800">
                 No payment receipts logged yet. Use the form above to record the initial token/down payment.
               </div>
             ) : (
@@ -439,30 +439,30 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   return (
                     <div
                       key={p.id}
-                      className="p-4 rounded-2xl bg-[#0f172a] border border-[#1e293b] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-emerald-600/60 transition-colors"
+                      className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-emerald-600/60 transition-colors"
                     >
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-xs text-white">
-                            {isFirst ? 'Down Payment' : isRefund ? 'Refund / Adjustment' : 'Payment'} · <span className="text-indigo-400 font-mono">{receiptLabel}</span>
+                          <span className="font-bold text-xs text-stone-900 dark:text-white">
+                            {isFirst ? 'Down Payment' : isRefund ? 'Refund / Adjustment' : 'Payment'} · <span className="text-emerald-700 dark:text-emerald-400 font-mono">{receiptLabel}</span>
                           </span>
                           <span
                             className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
                               isRefund
-                                ? 'bg-red-950/80 text-red-300 border border-red-800'
-                                : 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
+                                ? 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60'
                             }`}
                           >
                             {isFirst ? 'PAID AT SETUP' : isRefund ? 'REFUND' : 'CLEARED'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-stone-400">
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400">
                           {formatDate(p.paymentDate)} · {p.notes || `Credit received via ${p.paymentMethod.replace('_', ' ').toUpperCase()}`}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                        <span className={`text-sm font-extrabold tabular-nums ${isRefund ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        <span className={`text-sm font-extrabold tabular-nums ${isRefund ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                           {isRefund ? '-' : '+'}{formatCurrency(p.amount)}
                         </span>
 
@@ -480,7 +480,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                                 remainingBalance: remaining,
                               });
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/80 rounded-lg transition-colors border border-emerald-800/60 text-[11px] font-semibold"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/80 rounded-lg transition-colors border border-emerald-300 dark:border-emerald-800/60 text-[11px] font-semibold"
                             title="Download Official Receipt Voucher PDF"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -498,7 +498,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                                 settings,
                               });
                             }}
-                            className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-800 rounded-lg transition-colors"
+                            className="p-1.5 text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
                             title="Print Document"
                           >
                             <Printer className="w-4 h-4" />
@@ -512,25 +512,25 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
             )}
           </div>
 
-          {/* Send WhatsApp Fees Notification (Matching Picture 1 layout) */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-[#0e172a] border border-[#1e293b] shadow-xl space-y-4">
+          {/* Send WhatsApp Fees Notification */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <h3 className="text-sm font-bold text-white tracking-tight">
+                <h3 className="text-sm font-bold text-stone-900 dark:text-white tracking-tight">
                   Send WhatsApp Fees Notification
                 </h3>
               </div>
 
               {/* Toggle Pills: Payment Received vs Fee Due Reminder */}
-              <div className="flex items-center gap-1.5 bg-[#070d1a] p-1 rounded-xl border border-stone-800 self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 bg-stone-200/80 dark:bg-stone-900 p-1 rounded-xl border border-stone-300 dark:border-stone-800 self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={() => setWhatsappMode('received')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     whatsappMode === 'received'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-stone-400 hover:text-stone-200'
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   Payment Received
@@ -540,8 +540,8 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   onClick={() => setWhatsappMode('reminder')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     whatsappMode === 'reminder'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-stone-400 hover:text-stone-200'
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   Fee Due Reminder
@@ -551,7 +551,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-stone-300 mb-1.5">
+                <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1.5">
                   WhatsApp Number *
                 </label>
                 <input
@@ -559,7 +559,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                   value={whatsappNumber}
                   onChange={(e) => setWhatsappNumber(e.target.value)}
                   placeholder="e.g. +91 98765 43210"
-                  className="w-full px-3.5 py-2.5 bg-[#070d1a] border border-stone-800 focus:border-emerald-500 rounded-xl text-xs text-white outline-none font-mono"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 focus:border-emerald-600 rounded-xl text-xs text-stone-900 dark:text-white outline-none font-mono"
                 />
                 <span className="text-[10px] text-stone-500 mt-1 block">
                   Clicking send opens WhatsApp click-to-chat directly.
@@ -568,29 +568,29 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
 
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-semibold text-stone-300">
+                  <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400">
                     Payment Confirmation Message
                   </label>
-                  <span className="text-[10px] text-stone-500 italic">Editable before sending</span>
+                  <span className="text-[10px] text-stone-400 italic">Editable before sending</span>
                 </div>
                 <textarea
                   rows={4}
                   value={getWhatsAppMessage()}
                   onChange={() => {}}
                   readOnly
-                  className="w-full p-3 bg-[#070d1a] border border-stone-800 rounded-xl text-xs text-stone-300 font-sans outline-none leading-relaxed resize-none"
+                  className="w-full p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl text-xs text-stone-800 dark:text-stone-200 font-sans outline-none leading-relaxed resize-none focus:border-emerald-600"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-end pt-2">
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-950 transition-all flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#25D366] hover:bg-[#20ba59] active:bg-[#1da850] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
-                <MessageCircle className="w-4 h-4 fill-white text-emerald-700" />
-                <span>Send WhatsApp Notification</span>
+                <Send className="w-4 h-4" />
+                <span>Send WhatsApp Message</span>
               </button>
             </div>
           </div>

@@ -157,20 +157,20 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
   return (
     <div className="space-y-8 pb-24">
       {/* =========================================================================
-          TOP FINANCIAL DASHBOARD (Matching Picture 2 Fees Overview Dashboard)
+          TOP FINANCIAL DASHBOARD (Matching Fees Overview Dashboard with app luxury theme)
          ========================================================================= */}
-      <div className="p-6 sm:p-7 rounded-3xl bg-[#091122] border border-[#172544] text-white shadow-2xl space-y-6">
+      <div className="p-6 sm:p-7 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-900 dark:text-stone-100 shadow-sm space-y-6">
         {/* Header bar of Dashboard */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1b2b4d] gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-stone-200 dark:border-stone-800 gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
               <TrendingUp className="w-4 h-4" />
               <span>Fees & Event Sales Dashboard</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white font-sans">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 dark:text-white font-sans">
               Fees Overview Dashboard
             </h1>
-            <p className="text-xs text-stone-400">
+            <p className="text-xs text-stone-500 dark:text-stone-400">
               Live financial calculations, collection tracking & fee status analytics across events and banquets
             </p>
           </div>
@@ -179,7 +179,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
             <button
               type="button"
               onClick={handleResetFilters}
-              className="px-3.5 py-2 bg-[#121f3a] hover:bg-[#1a2c52] text-stone-300 rounded-xl text-xs font-semibold border border-[#223762] transition-colors flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-semibold border border-stone-200 dark:border-stone-700 transition-colors flex items-center gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset Filters</span>
@@ -187,7 +187,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
 
             <button
               onClick={onOpenDirectSale}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-950 transition-all flex items-center gap-1.5 min-h-[36px]"
+              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 min-h-[36px]"
             >
               <Plus className="w-4 h-4" />
               <span>New Direct Sale</span>
@@ -196,31 +196,31 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
         </div>
 
         {/* Filter bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-[#0d172e] p-3 rounded-2xl border border-[#1b2c52]">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-stone-50 dark:bg-stone-950/70 p-3 rounded-2xl border border-stone-200 dark:border-stone-800">
           <div>
-            <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">
               Search Event / Client
             </label>
             <div className="relative">
-              <Search className="w-3.5 h-3.5 text-stone-500 absolute left-3 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-2.5" />
               <input
                 type="text"
                 placeholder="Search name, phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#21345c] bg-[#070e1e] text-white placeholder-stone-500 outline-none"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-stone-500 outline-none focus:border-emerald-600"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">
               Month / Period
             </label>
             <select
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs rounded-xl border border-[#21345c] bg-[#070e1e] text-white outline-none"
+              className="w-full px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white outline-none focus:border-emerald-600"
             >
               <option value="all">All Months</option>
               {monthOptions.map((m) => (
@@ -232,13 +232,13 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">
               Banquet / Venue
             </label>
             <select
               value={banquetFilter}
               onChange={(e) => setBanquetFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs rounded-xl border border-[#21345c] bg-[#070e1e] text-white outline-none"
+              className="w-full px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white outline-none focus:border-emerald-600"
             >
               <option value="all">All Banquets</option>
               {banquets.map((b) => (
@@ -250,13 +250,13 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+            <label className="block text-[10px] font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">
               Payment Status
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs rounded-xl border border-[#21345c] bg-[#070e1e] text-white outline-none"
+              className="w-full px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white outline-none focus:border-emerald-600"
             >
               <option value="all">All Statuses</option>
               <option value="confirmed">Confirmed</option>
@@ -267,80 +267,80 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
           </div>
         </div>
 
-        {/* Primary 3 Metric Cards (Matching Picture 2) */}
+        {/* Primary 3 Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: Total Fees */}
-          <div className="p-5 rounded-2xl bg-[#0c1527] border border-[#1d2d50] relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+          <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
                   TOTAL FEES
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-200/80 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700">
                   100% Structured
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">
+              <div className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mt-2 tabular-nums">
                 {formatCurrency(dashboardStats.totalFees)}
               </div>
-              <div className="text-[11px] text-stone-400 mt-1">
+              <div className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
                 Assigned across {dashboardStats.activeCount} active events
               </div>
             </div>
-            <div className="mt-3 text-[10px] font-semibold text-indigo-300 flex items-center gap-1">
+            <div className="mt-3 text-[10px] font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1">
               <span>Structure Coverage</span>
-              <span className="ml-auto">100% Assigned ↗</span>
+              <span className="ml-auto font-bold text-emerald-700 dark:text-emerald-400">100% Assigned ↗</span>
             </div>
           </div>
 
           {/* Card 2: Received / Collected */}
-          <div className="p-5 rounded-2xl bg-[#0c1527] border border-[#155e42]/60 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+          <div className="p-5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   RECEIVED
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700/60">
                   {dashboardStats.collectionRate}% Collected
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2 tabular-nums">
+              <div className="text-2xl sm:text-3xl font-black text-emerald-800 dark:text-emerald-400 mt-2 tabular-nums">
                 {formatCurrency(dashboardStats.totalReceived)}
               </div>
-              <div className="text-[11px] text-stone-400 mt-1">
+              <div className="text-[11px] text-stone-600 dark:text-stone-400 mt-1">
                 Collected event revenue
               </div>
             </div>
-            <div className="mt-3 text-[10px] font-semibold text-emerald-300 flex items-center gap-1">
+            <div className="mt-3 text-[10px] font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
               <span>Collection Rate</span>
-              <span className="ml-auto">{dashboardStats.collectionRate}% of Total</span>
+              <span className="ml-auto font-bold">{dashboardStats.collectionRate}% of Total</span>
             </div>
           </div>
 
           {/* Card 3: Due Amount / Remaining */}
-          <div className="p-5 rounded-2xl bg-[#0c1527] border border-[#5c1c28]/60 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+          <div className="p-5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   DUE AMOUNT
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800/80">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800">
                   {dashboardStats.pendingRate}% Pending
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-rose-400 mt-2 tabular-nums">
+              <div className="text-2xl sm:text-3xl font-black text-rose-700 dark:text-rose-400 mt-2 tabular-nums">
                 {formatCurrency(dashboardStats.totalDue)}
               </div>
-              <div className="text-[11px] text-stone-400 mt-1">
+              <div className="text-[11px] text-stone-600 dark:text-stone-400 mt-1">
                 Total outstanding balance remaining
               </div>
             </div>
-            <div className="mt-3 text-[10px] font-semibold text-rose-300 flex items-center gap-1">
+            <div className="mt-3 text-[10px] font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-1">
               <span>Outstanding Balance</span>
-              <span className="ml-auto">{dashboardStats.pendingRate}% Remaining</span>
+              <span className="ml-auto font-bold">{dashboardStats.pendingRate}% Remaining</span>
             </div>
           </div>
         </div>
@@ -348,137 +348,137 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
         {/* Middle Section: Collection Summary & Event Payment Status */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Collection Summary */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#0d1629] border border-[#1d2d50]">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1b2b4d] mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-stone-300 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="p-4 sm:p-5 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800 mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                 <span>Collection Summary</span>
               </span>
-              <span className="text-[10px] text-stone-400">Real-time stats</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">Real-time stats</span>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-indigo-400 block">Today</span>
-                <div className="text-sm font-bold text-emerald-400 mt-1 tabular-nums">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Today</span>
+                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1 tabular-nums">
                   {formatCurrency(dashboardStats.todayReceived)}
                 </div>
-                <div className="text-[10px] text-stone-400 mt-0.5">Today's collection</div>
+                <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Today's collection</div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-indigo-400 block">This Month</span>
-                <div className="text-sm font-bold text-emerald-400 mt-1 tabular-nums">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">This Month</span>
+                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1 tabular-nums">
                   {formatCurrency(dashboardStats.monthReceived)}
                 </div>
-                <div className="text-[10px] text-stone-400 mt-0.5">Month's collection</div>
+                <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Month's collection</div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-rose-400 block">Total Due</span>
-                <div className="text-sm font-bold text-rose-400 mt-1 tabular-nums">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 block">Total Due</span>
+                <div className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-1 tabular-nums">
                   {formatCurrency(dashboardStats.totalDue)}
                 </div>
-                <div className="text-[10px] text-stone-400 mt-0.5">Pending collection</div>
+                <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Pending collection</div>
               </div>
             </div>
           </div>
 
           {/* Event Booking Fee Status */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#0d1629] border border-[#1d2d50]">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1b2b4d] mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-stone-300 flex items-center gap-1.5">
-                <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="p-4 sm:p-5 rounded-2xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800 mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                <FileCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                 <span>Event Payment Status</span>
               </span>
-              <span className="text-[10px] text-stone-400">Total: {dashboardStats.activeCount}</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">Total: {dashboardStats.activeCount}</span>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                   <span>●</span> Fully Cleared
                 </span>
-                <div className="text-sm font-bold text-white mt-1">
-                  {dashboardStats.fullyPaidCount} <span className="text-xs font-normal text-stone-400">events</span>
+                <div className="text-sm font-bold text-stone-900 dark:text-white mt-1">
+                  {dashboardStats.fullyPaidCount} <span className="text-xs font-normal text-stone-500">events</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-sky-400 flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 flex items-center gap-1">
                   <span>●</span> Partial Paid
                 </span>
-                <div className="text-sm font-bold text-white mt-1">
-                  {dashboardStats.partialCount} <span className="text-xs font-normal text-stone-400">events</span>
+                <div className="text-sm font-bold text-stone-900 dark:text-white mt-1">
+                  {dashboardStats.partialCount} <span className="text-xs font-normal text-stone-500">events</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#070e1c] border border-[#1b2b4d]">
-                <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800">
+                <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
                   <span>●</span> Unpaid Advance
                 </span>
-                <div className="text-sm font-bold text-white mt-1">
-                  {dashboardStats.unpaidCount} <span className="text-xs font-normal text-stone-400">events</span>
+                <div className="text-sm font-bold text-stone-900 dark:text-white mt-1">
+                  {dashboardStats.unpaidCount} <span className="text-xs font-normal text-stone-500">events</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Payment Mode Breakdown (Matching Picture 2 bottom row) */}
+        {/* Payment Mode Breakdown */}
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2.5 flex items-center gap-1.5">
-            <Wallet className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-2.5 flex items-center gap-1.5">
+            <Wallet className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>Payment Mode Breakdown</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">Cash</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Cash</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.cash.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.cash.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.cash.count} txns</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">UPI / QR</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">UPI / QR</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.upi.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.upi.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.upi.count} txns</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">Bank Transfer</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Bank Transfer</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.bank_transfer.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.bank_transfer.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.bank_transfer.count} txns</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">Card</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Card</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.card.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.card.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.card.count} txns</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">Cheque</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Cheque</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.cheque.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.cheque.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.cheque.count} txns</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0c1527] border border-[#1d2d50]">
-              <span className="text-[10px] font-semibold text-stone-400 block">Other</span>
-              <div className="text-xs font-bold text-white mt-1 tabular-nums">
+            <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">Other</span>
+              <div className="text-xs font-bold text-stone-900 dark:text-white mt-1 tabular-nums">
                 {formatCurrency(dashboardStats.modeTotals.other.amount)}
               </div>
-              <span className="text-[9px] text-stone-500">{dashboardStats.modeTotals.other.count} txns</span>
+              <span className="text-[9px] text-stone-400">{dashboardStats.modeTotals.other.count} txns</span>
             </div>
           </div>
         </div>
