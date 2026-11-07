@@ -28,6 +28,7 @@ import {
   Sparkles,
   Send,
   MessageCircle,
+  Trash2,
 } from 'lucide-react';
 import { BookingStatus, EventRecord } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -45,7 +46,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
   onSelectEvent,
   onOpenInvoice,
 }) => {
-  const { events, banquets, payments, invoices, clients, settings } = useData();
+  const { events, banquets, payments, invoices, clients, settings, deleteEvent } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -612,7 +613,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                       </div>
                     </div>
 
-                    {/* Actions: Download Icon & WhatsApp Button */}
+                    {/* Actions: Download Icon, WhatsApp Button, & Delete Button */}
                     <div className="pt-2 flex items-center justify-between gap-2">
                       {/* Direct Invoice Download Icon Button */}
                       <button
@@ -655,6 +656,25 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                       >
                         <MessageCircle className="w-3.5 h-3.5 fill-white text-[#25D366]" />
                         <span>WhatsApp PDF</span>
+                      </button>
+
+                      {/* Delete Event Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            window.confirm(
+                              `Are you sure you want to permanently delete event "${evt.name}"?\n\nThis will remove the event, delete its booking slot, and remove its ₹${(Number(evt.finalAmount) || 0).toLocaleString('en-IN')} billing amount & all recorded payment history from the payments dashboard.`
+                            )
+                          ) {
+                            deleteEvent(evt.id);
+                          }
+                        }}
+                        className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-xl border border-red-200 dark:border-red-800/60 flex items-center justify-center transition-colors shadow-xs"
+                        title="Delete Event & Remove from Payments Dashboard"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>

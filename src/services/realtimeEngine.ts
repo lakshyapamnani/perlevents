@@ -1334,6 +1334,95 @@ class RealtimeDatabaseEngine {
     return { success: true };
   }
 
+  // --- DELETE EVENT (Removes Event, Linked Sales, Invoices, Booking Slots, and Payments from Dashboard) ---
+  public deleteEvent(
+    currentUser: UserProfile,
+    eventId: string
+  ): { success: boolean; error?: string } {
+    const event = this.state.events[eventId];
+    if (!event) {
+      return { success: false, error: 'Event not found.' };
+    }
+
+    if (
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'manager' &&
+      event.salespersonId !== currentUser.uid &&
+      event.createdBy !== currentUser.uid
+    ) {
+      return {
+        success: false,
+        error: 'Unauthorized: Only Admins, Managers, or the assigned Salesperson can delete this event.',
+      };
+    }
+
+    // 1. Remove Event
+    delete this.state.events[eventId];
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, null).catch(() => {});
+    }
+
+    // 2. Remove associated Payments so amounts are deducted from payments dashboard
+    const paymentsToDelete = Object.values(this.state.payments).filter((p) => p && p.eventId === eventId);
+    paymentsToDelete.forEach((p) => {
+      delete this.state.payments[p.id];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/payments/${p.id}`, null).catch(() => {});
+      }
+    });
+
+    // 3. Remove associated Sales records
+    const salesToDelete = Object.values(this.state.sales).filter((s) => s && s.eventId === eventId);
+    salesToDelete.forEach((s) => {
+      delete this.state.sales[s.id];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/sales/${s.id}`, null).catch(() => {});
+      }
+    });
+
+    // 4. Remove associated Invoices
+    const invoicesToDelete = Object.values(this.state.invoices).filter((i) => i && i.eventId === eventId);
+    invoicesToDelete.forEach((i) => {
+      delete this.state.invoices[i.id];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${i.id}`, null).catch(() => {});
+      }
+    });
+
+    // 5. Remove associated BookingSlots
+    const slotsToDelete = Object.values(this.state.bookingSlots).filter((slot) => slot && slot.eventId === eventId);
+    slotsToDelete.forEach((slot) => {
+      delete this.state.bookingSlots[slot.id];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/bookingSlots/${slot.id}`, null).catch(() => {});
+      }
+    });
+
+    // 6. Remove Checklist Items
+    if (this.state.checklistItems && this.state.checklistItems[eventId]) {
+      delete this.state.checklistItems[eventId];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, null).catch(() => {});
+      }
+    }
+
+    // 7. Audit Log
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Deleted Event & Payments',
+      module: 'events',
+      recordId: eventId,
+      details: `Permanently deleted event "${event.name}" (Date: ${event.date}, Final Amount: ₹${(Number(event.finalAmount) || 0).toLocaleString('en-IN')}) and removed ${paymentsToDelete.length} payment record(s) from payments dashboard.`,
+    });
+
+    // 8. Save updated state and notify
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
   // --- UPDATE EVENT DETAILS (Change Banquet Venue & Salesperson) ---
   public updateEventDetails(
     currentUser: UserProfile,
