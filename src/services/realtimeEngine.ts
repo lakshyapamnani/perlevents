@@ -64,6 +64,7 @@ import {
   isFirebaseConfigured,
   writeRealtimeNode,
   listenToRealtimeNode,
+  fetchRealtimeState,
 } from './firebase';
 
 const STORAGE_KEY_PREFIX = 'pearlexperiences_clean_v1_';
@@ -126,144 +127,217 @@ class RealtimeDatabaseEngine {
     // Connect Realtime Database live sync if configured
     if (typeof window !== 'undefined' && isFirebaseConfigured()) {
       this.isLiveFirebase = true;
+      // 1. Proactively fetch the latest state from Firebase Realtime Database
+      this.syncFromFirebase();
+
+      // 2. Keep continuous live WebSocket listener active
       listenToRealtimeNode('pearlexperiences/state', (remoteState) => {
         if (remoteState && typeof remoteState === 'object') {
-          const remoteEvents = remoteState.events && typeof remoteState.events === 'object'
-            ? remoteState.events
-            : null;
-          const remoteSales = remoteState.sales && typeof remoteState.sales === 'object'
-            ? remoteState.sales
-            : null;
-          const remoteBanquets = remoteState.banquets && typeof remoteState.banquets === 'object'
-            ? remoteState.banquets
-            : null;
-          const remoteClients = remoteState.clients && typeof remoteState.clients === 'object'
-            ? remoteState.clients
-            : null;
-          const remoteSlots = remoteState.bookingSlots && typeof remoteState.bookingSlots === 'object'
-            ? remoteState.bookingSlots
-            : null;
-          const remoteChecklist = remoteState.checklistItems && typeof remoteState.checklistItems === 'object'
-            ? remoteState.checklistItems
-            : null;
-
-          // Merge: adopt remote records while preserving any freshly created local records not yet echoed
-          const mergedEvents = remoteEvents
-            ? { ...remoteEvents, ...this.state.events }
-            : { ...this.state.events };
-          const mergedSales = remoteSales
-            ? { ...remoteSales, ...this.state.sales }
-            : { ...this.state.sales };
-          const mergedBanquets = remoteBanquets
-            ? { ...this.state.banquets, ...remoteBanquets }
-            : { ...this.state.banquets };
-          const mergedClients = remoteClients
-            ? { ...this.state.clients, ...remoteClients }
-            : { ...this.state.clients };
-          const mergedSlots = remoteSlots
-            ? { ...remoteSlots, ...this.state.bookingSlots }
-            : { ...this.state.bookingSlots };
-          const mergedChecklist = remoteChecklist
-            ? { ...remoteChecklist, ...this.state.checklistItems }
-            : { ...this.state.checklistItems };
-
-          // If remote RTDB is missing records that exist locally, push them to remote to guarantee sync
-          if (!remoteBanquets && Object.keys(mergedBanquets).length > 0) {
-            writeRealtimeNode('pearlexperiences/state/banquets', mergedBanquets).catch(() => {});
-          }
-          if (!remoteEvents && Object.keys(mergedEvents).length > 0) {
-            writeRealtimeNode('pearlexperiences/state/events', mergedEvents).catch(() => {});
-          }
-          if (!remoteSales && Object.keys(mergedSales).length > 0) {
-            writeRealtimeNode('pearlexperiences/state/sales', mergedSales).catch(() => {});
-          }
-          if (!remoteClients && Object.keys(mergedClients).length > 0) {
-            writeRealtimeNode('pearlexperiences/state/clients', mergedClients).catch(() => {});
-          }
-
-          this.state = {
-            ...this.state,
-            settings: { ...this.state.settings, ...(remoteState.settings || {}) },
-            users: { ...this.state.users, ...(remoteState.users || {}) },
-            banquets: mergedBanquets,
-            clients: mergedClients,
-            leads: remoteState.leads && typeof remoteState.leads === 'object'
-              ? { ...this.state.leads, ...remoteState.leads }
-              : this.state.leads,
-            leadFollowUps: remoteState.leadFollowUps && typeof remoteState.leadFollowUps === 'object'
-              ? { ...this.state.leadFollowUps, ...remoteState.leadFollowUps }
-              : this.state.leadFollowUps,
-            events: mergedEvents,
-            bookingSlots: mergedSlots,
-            vendors: remoteState.vendors && typeof remoteState.vendors === 'object'
-              ? { ...this.state.vendors, ...remoteState.vendors }
-              : this.state.vendors,
-            vendorCategories: Array.isArray(remoteState.vendorCategories) && remoteState.vendorCategories.length > 0
-              ? remoteState.vendorCategories
-              : this.state.vendorCategories,
-            checklistTemplates: { ...this.state.checklistTemplates, ...(remoteState.checklistTemplates || {}) },
-            checklistItems: mergedChecklist,
-            sales: mergedSales,
-            invoices: remoteState.invoices && typeof remoteState.invoices === 'object'
-              ? { ...this.state.invoices, ...remoteState.invoices }
-              : this.state.invoices,
-            payments: remoteState.payments && typeof remoteState.payments === 'object'
-              ? { ...this.state.payments, ...remoteState.payments }
-              : this.state.payments,
-            activityLogs: Array.isArray(remoteState.activityLogs) && remoteState.activityLogs.length > 0
-              ? remoteState.activityLogs
-              : this.state.activityLogs,
-            targets: remoteState.targets && typeof remoteState.targets === 'object'
-              ? { ...this.state.targets, ...remoteState.targets }
-              : this.state.targets,
-          };
-
-          if (this.state.events) {
-            Object.values(this.state.events).forEach((e) => {
-              if (e && !Array.isArray(e.vendorAssignments)) {
-                e.vendorAssignments = [];
-              }
-              if (e && !Array.isArray(e.referencePhotos)) {
-                e.referencePhotos = [];
-              }
-            });
-          }
-
-          if (this.state.users) {
-            // Remove legacy dummy accounts with old domain
-            Object.values(this.state.users).forEach((u) => {
-              if (!u || typeof u !== 'object') return;
-              const email = (u.email || '').toLowerCase();
-              if (
-                email === 'rahul.sales@perlevents.com' ||
-                email === 'priya.manager@perlevents.com'
-              ) {
-                delete this.state.users[u.uid];
-              }
-              if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
-                u.fullName = 'Executive Management';
-              }
-            });
-
-            // Guarantee standard active role accounts exist
-            initialUsers.forEach((u) => {
-              if (!this.state.users[u.uid]) {
-                this.state.users[u.uid] = { ...u };
-              }
-            });
-          }
-          if (this.state.settings?.authorizedSignatoryName && this.state.settings.authorizedSignatoryName.toLowerCase().includes('lakshya')) {
-            this.state.settings.authorizedSignatoryName = 'Authorized Signatory';
-          }
-
-          try {
-            localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(this.state));
-          } catch (_) {}
-
-          this.notify();
+          this.applyRemoteState(remoteState);
         }
       });
     }
+  }
+
+  /**
+   * Proactively synchronizes the full state from Firebase Realtime Database
+   * via both WebSocket SDK get() and HTTPS REST fallback.
+   */
+  public async syncFromFirebase(): Promise<void> {
+    if (!isFirebaseConfigured()) return;
+    try {
+      const remoteState = await fetchRealtimeState();
+      if (remoteState && typeof remoteState === 'object') {
+        this.applyRemoteState(remoteState);
+      }
+    } catch (e) {
+      console.warn('Realtime Database initial sync notice:', e);
+    }
+  }
+
+  /**
+   * Merges remote Firebase state into the local engine, updating localStorage
+   * and notifying all subscribed React components across all tabs.
+   */
+  public applyRemoteState(remoteState: any): void {
+    if (!remoteState || typeof remoteState !== 'object') return;
+
+    const remoteEvents = remoteState.events && typeof remoteState.events === 'object'
+      ? remoteState.events
+      : null;
+    const remoteSales = remoteState.sales && typeof remoteState.sales === 'object'
+      ? remoteState.sales
+      : null;
+    const remoteBanquets = remoteState.banquets && typeof remoteState.banquets === 'object'
+      ? remoteState.banquets
+      : null;
+    const remoteClients = remoteState.clients && typeof remoteState.clients === 'object'
+      ? remoteState.clients
+      : null;
+    const remoteSlots = remoteState.bookingSlots && typeof remoteState.bookingSlots === 'object'
+      ? remoteState.bookingSlots
+      : null;
+    const remoteChecklist = remoteState.checklistItems && typeof remoteState.checklistItems === 'object'
+      ? remoteState.checklistItems
+      : null;
+    const remoteInvoices = remoteState.invoices && typeof remoteState.invoices === 'object'
+      ? remoteState.invoices
+      : null;
+    const remotePayments = remoteState.payments && typeof remoteState.payments === 'object'
+      ? remoteState.payments
+      : null;
+    const remoteLeads = remoteState.leads && typeof remoteState.leads === 'object'
+      ? remoteState.leads
+      : null;
+    const remoteTargets = remoteState.targets && typeof remoteState.targets === 'object'
+      ? remoteState.targets
+      : null;
+
+    // Merge: adopt remote records while preserving any locally modified records
+    const mergedEvents: Record<string, EventRecord> = remoteEvents
+      ? { ...this.state.events, ...remoteEvents }
+      : { ...this.state.events };
+    const mergedSales: Record<string, Sale> = remoteSales
+      ? { ...this.state.sales, ...remoteSales }
+      : { ...this.state.sales };
+    const mergedBanquets: Record<string, Banquet> = remoteBanquets
+      ? { ...this.state.banquets, ...remoteBanquets }
+      : { ...this.state.banquets };
+    const mergedClients: Record<string, Client> = remoteClients
+      ? { ...this.state.clients, ...remoteClients }
+      : { ...this.state.clients };
+    const mergedSlots: Record<string, BookingSlot> = remoteSlots
+      ? { ...this.state.bookingSlots, ...remoteSlots }
+      : { ...this.state.bookingSlots };
+    const mergedChecklist: Record<string, ChecklistItem[]> = remoteChecklist
+      ? { ...this.state.checklistItems, ...remoteChecklist }
+      : { ...this.state.checklistItems };
+    const mergedInvoices: Record<string, Invoice> = remoteInvoices
+      ? { ...this.state.invoices, ...remoteInvoices }
+      : { ...this.state.invoices };
+    const mergedPayments: Record<string, Payment> = remotePayments
+      ? { ...this.state.payments, ...remotePayments }
+      : { ...this.state.payments };
+    const mergedLeads: Record<string, Lead> = remoteLeads
+      ? { ...this.state.leads, ...remoteLeads }
+      : { ...this.state.leads };
+    const mergedTargets: Record<string, SalesTarget> = remoteTargets
+      ? { ...this.state.targets, ...remoteTargets }
+      : { ...this.state.targets };
+
+    // Auto-generate booking slots for any booked/tentative events so Calendar and Availability always reflect them
+    Object.values(mergedEvents).forEach((evt) => {
+      if (!evt || !evt.id || !evt.date || !evt.banquetId) return;
+      if (evt.status === 'cancelled') return;
+      const existingSlot = Object.values(mergedSlots).find((s) => s && s.eventId === evt.id);
+      if (!existingSlot) {
+        const slotId = `slot_${evt.id}`;
+        mergedSlots[slotId] = {
+          id: slotId,
+          banquetId: evt.banquetId,
+          date: evt.date,
+          startTime: evt.startTime || '18:00',
+          endTime: evt.endTime || '23:30',
+          bufferStartTime: evt.startTime || '17:00',
+          bufferEndTime: evt.endTime || '23:59',
+          eventId: evt.id,
+          eventName: evt.name,
+          status: evt.status === 'confirmed' ? 'confirmed' : 'tentative',
+          organizationId: 'org_pearlexperiences',
+          createdAt: evt.createdAt || new Date().toISOString(),
+        };
+      }
+    });
+
+    // If remote RTDB is missing records that exist locally, push them to remote to guarantee sync
+    if (!remoteBanquets && Object.keys(mergedBanquets).length > 0) {
+      writeRealtimeNode('pearlexperiences/state/banquets', mergedBanquets).catch(() => {});
+    }
+    if (!remoteEvents && Object.keys(mergedEvents).length > 0) {
+      writeRealtimeNode('pearlexperiences/state/events', mergedEvents).catch(() => {});
+    }
+    if (!remoteSales && Object.keys(mergedSales).length > 0) {
+      writeRealtimeNode('pearlexperiences/state/sales', mergedSales).catch(() => {});
+    }
+    if (!remoteClients && Object.keys(mergedClients).length > 0) {
+      writeRealtimeNode('pearlexperiences/state/clients', mergedClients).catch(() => {});
+    }
+    if (!remoteSlots && Object.keys(mergedSlots).length > 0) {
+      writeRealtimeNode('pearlexperiences/state/bookingSlots', mergedSlots).catch(() => {});
+    }
+
+    this.state = {
+      ...this.state,
+      settings: { ...this.state.settings, ...(remoteState.settings || {}) },
+      users: { ...this.state.users, ...(remoteState.users || {}) },
+      banquets: mergedBanquets,
+      clients: mergedClients,
+      leads: mergedLeads,
+      leadFollowUps: remoteState.leadFollowUps && typeof remoteState.leadFollowUps === 'object'
+        ? { ...this.state.leadFollowUps, ...remoteState.leadFollowUps }
+        : this.state.leadFollowUps,
+      events: mergedEvents,
+      bookingSlots: mergedSlots,
+      vendors: remoteState.vendors && typeof remoteState.vendors === 'object'
+        ? { ...this.state.vendors, ...remoteState.vendors }
+        : this.state.vendors,
+      vendorCategories: Array.isArray(remoteState.vendorCategories) && remoteState.vendorCategories.length > 0
+        ? remoteState.vendorCategories
+        : this.state.vendorCategories,
+      checklistTemplates: { ...this.state.checklistTemplates, ...(remoteState.checklistTemplates || {}) },
+      checklistItems: mergedChecklist,
+      sales: mergedSales,
+      invoices: mergedInvoices,
+      payments: mergedPayments,
+      activityLogs: Array.isArray(remoteState.activityLogs) && remoteState.activityLogs.length > 0
+        ? remoteState.activityLogs
+        : this.state.activityLogs,
+      targets: mergedTargets,
+    };
+
+    if (this.state.events) {
+      Object.values(this.state.events).forEach((e) => {
+        if (e && !Array.isArray(e.vendorAssignments)) {
+          e.vendorAssignments = [];
+        }
+        if (e && !Array.isArray(e.referencePhotos)) {
+          e.referencePhotos = [];
+        }
+      });
+    }
+
+    if (this.state.users) {
+      // Remove legacy dummy accounts with old domain
+      Object.values(this.state.users).forEach((u) => {
+        if (!u || typeof u !== 'object') return;
+        const email = (u.email || '').toLowerCase();
+        if (
+          email === 'rahul.sales@perlevents.com' ||
+          email === 'priya.manager@perlevents.com'
+        ) {
+          delete this.state.users[u.uid];
+        }
+        if (u.fullName && u.fullName.toLowerCase().includes('lakshya')) {
+          u.fullName = 'Executive Management';
+        }
+      });
+
+      // Guarantee standard active role accounts exist
+      initialUsers.forEach((u) => {
+        if (!this.state.users[u.uid]) {
+          this.state.users[u.uid] = { ...u };
+        }
+      });
+    }
+    if (this.state.settings?.authorizedSignatoryName && this.state.settings.authorizedSignatoryName.toLowerCase().includes('lakshya')) {
+      this.state.settings.authorizedSignatoryName = 'Authorized Signatory';
+    }
+
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(this.state));
+    } catch (_) {}
+
+    this.notify();
   }
 
   private loadInitialState(): DatabaseState {
@@ -389,7 +463,9 @@ class RealtimeDatabaseEngine {
       targets: initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {}),
     };
 
-    this.saveState(defaultState);
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(defaultState));
+    } catch (_) {}
     return defaultState;
   }
 

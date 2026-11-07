@@ -532,21 +532,21 @@ export function downloadEventInvoicePDF({
     const items = invoice?.items && invoice.items.length > 0
       ? invoice.items
       : [
-          {
-            id: 'it_1',
-            description: `Banquet Venue Hire & Services (${event.banquetName || 'Venue'})`,
-            quantity: 1,
-            unitPrice: event.finalAmount ? Math.round(event.finalAmount * 0.6) : 100000,
-            total: event.finalAmount ? Math.round(event.finalAmount * 0.6) : 100000,
-          },
-          {
-            id: 'it_2',
-            description: `Catering & Event Coordination (${event.eventType})`,
-            quantity: event.guestCount || 100,
-            unitPrice: event.guestCount ? Math.round((event.finalAmount ? event.finalAmount * 0.4 : 50000) / event.guestCount) : 500,
-            total: event.finalAmount ? Math.round(event.finalAmount * 0.4) : 50000,
-          },
-        ];
+        {
+          id: 'it_1',
+          description: `Banquet Venue Hire & Services (${event.banquetName || 'Venue'})`,
+          quantity: 1,
+          unitPrice: event.finalAmount ? Math.round(event.finalAmount * 0.6) : 100000,
+          total: event.finalAmount ? Math.round(event.finalAmount * 0.6) : 100000,
+        },
+        {
+          id: 'it_2',
+          description: `Catering & Event Coordination (${event.eventType})`,
+          quantity: event.guestCount || 100,
+          unitPrice: event.guestCount ? Math.round((event.finalAmount ? event.finalAmount * 0.4 : 50000) / event.guestCount) : 500,
+          total: event.finalAmount ? Math.round(event.finalAmount * 0.4) : 50000,
+        },
+      ];
 
     items.forEach((it, idx) => {
       doc.rect(margin, y, contentWidth, 7);

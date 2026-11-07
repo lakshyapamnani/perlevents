@@ -210,6 +210,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [dbState, setDbState] = useState(realtimeEngine.getState());
 
   useEffect(() => {
+    realtimeEngine.syncFromFirebase();
     const unsub = realtimeEngine.subscribe(() => {
       setDbState(realtimeEngine.getState());
     });
