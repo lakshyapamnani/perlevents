@@ -261,13 +261,24 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
               >
                 <option value="">-- No specific salesperson (All salespersons can sell) --</option>
-                {users
-                  .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin'))
-                  .map((s) => (
-                    <option key={s.uid} value={s.uid}>
-                      {s.fullName} ({s.role === 'admin' ? 'Admin' : 'Salesperson'})
-                    </option>
-                  ))}
+                <optgroup label="Sales Executives">
+                  {users
+                    .filter((u) => u.isActive && u.role === 'salesperson')
+                    .map((s) => (
+                      <option key={s.uid} value={s.uid}>
+                        {s.fullName} (Salesperson)
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="Executive Management / Admins">
+                  {users
+                    .filter((u) => u.isActive && u.role === 'admin')
+                    .map((s) => (
+                      <option key={s.uid} value={s.uid}>
+                        {s.fullName} (Admin)
+                      </option>
+                    ))}
+                </optgroup>
               </select>
               <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
                 Restricts this banquet so that only this salesperson can view and sell it.
@@ -284,13 +295,24 @@ export const BanquetModal: React.FC<BanquetModalProps> = ({
                 className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
               >
                 <option value="">-- No specific manager (Visible to all managers) --</option>
-                {users
-                  .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
-                  .map((m) => (
-                    <option key={m.uid} value={m.uid}>
-                      {m.fullName} ({m.role === 'admin' ? 'Admin' : 'Operations Manager'})
-                    </option>
-                  ))}
+                <optgroup label="Operations Managers">
+                  {users
+                    .filter((u) => u.isActive && u.role === 'manager')
+                    .map((m) => (
+                      <option key={m.uid} value={m.uid}>
+                        {m.fullName} (Manager)
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="Executive Management / Admins">
+                  {users
+                    .filter((u) => u.isActive && u.role === 'admin')
+                    .map((m) => (
+                      <option key={m.uid} value={m.uid}>
+                        {m.fullName} (Admin)
+                      </option>
+                    ))}
+                </optgroup>
               </select>
             </div>
 
