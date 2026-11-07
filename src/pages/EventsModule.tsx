@@ -26,11 +26,13 @@ import {
   FileCheck,
   RotateCcw,
   Sparkles,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
 import { BookingStatus, EventRecord } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { EventFinanceModal } from '../components/modals/EventFinanceModal';
-import { downloadEventInvoicePDF } from '../utils/pdfReceiptGenerator';
+import { downloadEventInvoicePDF, sendInvoiceOnWhatsApp } from '../utils/pdfReceiptGenerator';
 
 interface EventsModuleProps {
   onOpenDirectSale: () => void;
@@ -610,9 +612,9 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                       </div>
                     </div>
 
-                    {/* Actions: Direct Invoice Download & Manage Finance */}
+                    {/* Actions: Download Icon & WhatsApp Button */}
                     <div className="pt-2 flex items-center justify-between gap-2">
-                      {/* Direct Invoice Download Button */}
+                      {/* Direct Invoice Download Icon Button */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -627,24 +629,32 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                             settings,
                           });
                         }}
-                        className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-semibold rounded-xl border border-stone-200 dark:border-stone-700 flex items-center gap-1.5 transition-colors"
-                        title="Download Tax Invoice & Receipt PDF"
+                        className="p-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center transition-colors shadow-xs"
+                        title="Download Tax Invoice & Fee Receipt PDF"
                       >
-                        <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Download Invoice</span>
+                        <Download className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
                       </button>
 
-                      {/* Manage Financials / Details button */}
+                      {/* WhatsApp Button: Sends PDF & Receipt to Client's WhatsApp Number */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedFinanceEventId(evt.id);
+                          const linkedInv = invoices.find((i) => i.eventId === evt.id);
+                          const client = clients.find((c) => c.id === evt.clientId);
+                          sendInvoiceOnWhatsApp({
+                            event: evt,
+                            client,
+                            invoice: linkedInv,
+                            payments,
+                            settings,
+                          });
                         }}
-                        className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1 shadow-sm transition-colors"
+                        className="flex-1 py-1.5 px-3 bg-[#25D366] hover:bg-[#20ba59] active:bg-[#1da850] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5"
+                        title="Send PDF & Billing Details to Client on WhatsApp"
                       >
-                        <span>Finance & Pay</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <MessageCircle className="w-3.5 h-3.5 fill-white text-[#25D366]" />
+                        <span>WhatsApp PDF</span>
                       </button>
                     </div>
                   </div>

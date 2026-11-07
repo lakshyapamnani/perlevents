@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { PEARL_LOGO_BASE64 } from '../assets/logoBase64';
 import { EventRecord, Client, Payment, Invoice, OrganizationSettings, Attachment } from '../types';
-import { formatDate } from './formatters';
+import { formatDate, generateWhatsAppUrl } from './formatters';
 
 interface GenerateInvoiceParams {
   event: EventRecord;
@@ -1135,4 +1135,69 @@ export function openPrintableInvoiceWindow({
       printWindow.print();
     }, 400);
   }
+}
+
+/**
+ * Downloads the official Tax Invoice & Receipt PDF and sends it directly
+ * to the client's WhatsApp number with pre-filled billing details.
+ */
+export async function sendInvoiceOnWhatsApp({
+  event,
+  client,
+  invoice,
+  payments = [],
+  settings,
+}: GenerateInvoiceParams) {
+  const clientName = client?.fullName || event.clientName || 'Valued Client';
+  const clientPhone = client?.whatsApp || client?.primaryPhone || event.clientWhatsApp || event.clientPhone || '';
+  const invNumber = invoice?.invoiceNumber || `PX-INV-2026-${event.id.slice(-4).toUpperCase()}`;
+
+  const finalTotal = invoice?.finalTotal || event.finalAmount || 0;
+  const eventPayments = payments.filter((p) => p.eventId === event.id && p.type !== 'refund');
+  const totalPaid = eventPayments.length > 0
+    ? eventPayments.reduce((s, p) => s + p.amount, 0)
+    : (invoice?.actualAdvanceReceived || event.advanceReceived || 0);
+  const remaining = Math.max(0, finalTotal - totalPaid);
+
+  // 1. Download the PDF directly for the user
+  try {
+    downloadEventInvoicePDF({
+      event,
+      client,
+      invoice,
+      payments,
+      settings,
+    });
+  } catch (e) {
+    console.error('Failed to trigger PDF download before WhatsApp send:', e);
+  }
+
+  // 2. Prepare official WhatsApp message text
+  const message = [
+    `*PEARL EXPERIENCES - OFFICIAL BOOKING INVOICE & RECEIPT*`,
+    ``,
+    `Dear *${clientName}*,`,
+    `Greetings from Pearl Experiences! 💐`,
+    ``,
+    `Please find the invoice & fee breakdown for your event:`,
+    `🎉 *Event:* ${event.name} (${event.eventType})`,
+    `🏛 *Venue:* ${event.banquetName || 'Pearl Banquet'}`,
+    `📅 *Date:* ${formatDate(event.date)} (${event.startTime} - ${event.endTime})`,
+    `🔖 *Invoice No:* ${invNumber}`,
+    ``,
+    `💰 *Total Package:* ₹${finalTotal.toLocaleString('en-IN')}`,
+    `✅ *Advance Paid / Cleared:* ₹${totalPaid.toLocaleString('en-IN')}`,
+    `⏳ *Balance Remaining:* ₹${remaining.toLocaleString('en-IN')}`,
+    ``,
+    `📄 *Your official Tax Invoice & Receipt PDF has been prepared and downloaded.*`,
+    `For any queries, please contact us at ${settings.phone || '+91 98765 43210'}.`,
+    ``,
+    `Thank you for choosing *Pearl Experiences*!`,
+  ].join('\n');
+
+  // 3. Open WhatsApp Web or App with pre-filled message
+  const waUrl = generateWhatsAppUrl(clientPhone, message);
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+  return { success: true };
 }
