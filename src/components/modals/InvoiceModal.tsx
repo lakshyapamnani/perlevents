@@ -12,10 +12,12 @@ import {
   FileText,
   DollarSign,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { Invoice, InvoiceItem, Attachment } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { ImageUploadArea } from '../common/ImageUploadArea';
+import { downloadEventInvoicePDF } from '../../utils/pdfReceiptGenerator';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -32,7 +34,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   preselectedEventId,
   onOpenRecordPayment,
 }) => {
-  const { events, clients, banquets, settings, saveInvoice } = useData();
+  const { events, clients, banquets, settings, saveInvoice, payments } = useData();
   const { currentUser } = useAuth();
 
   const isViewingExisting = Boolean(invoiceToView);
@@ -223,6 +225,57 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 <span>Record Payment</span>
               </button>
             )}
+            <button
+              onClick={() => {
+                if (currentEvent) {
+                  downloadEventInvoicePDF({
+                    event: currentEvent,
+                    client: currentClient,
+                    invoice: invoiceToView || {
+                      id: `inv_${Date.now()}`,
+                      invoiceNumber: `${settings.invoiceNumberPrefix || 'PX-INV-2026-'}${settings.nextInvoiceSequence || 105}`,
+                      invoiceDate,
+                      clientId: currentEvent.clientId,
+                      clientName: currentEvent.clientName,
+                      clientPhone: currentEvent.clientPhone,
+                      clientEmail: currentClient?.email,
+                      clientAddress: currentClient?.address,
+                      eventId: currentEvent.id,
+                      eventName: currentEvent.name,
+                      eventType: currentEvent.eventType,
+                      banquetName: currentEvent.banquetName,
+                      eventDate: currentEvent.date,
+                      eventTime: `${currentEvent.startTime} - ${currentEvent.endTime}`,
+                      items,
+                      subtotal,
+                      discount,
+                      taxAmount: 0,
+                      finalTotal,
+                      advancePaymentRequired: advanceRequested > 0,
+                      advanceRequested,
+                      actualAdvanceReceived,
+                      remainingBalance,
+                      paymentTerms,
+                      notes,
+                      status: remainingBalance <= 0 ? 'paid' : actualAdvanceReceived > 0 ? 'partially_paid' : 'issued',
+                      includePhotosInPdf: includePhotos,
+                      attachments,
+                      createdBy: currentUser?.uid || '',
+                      createdByName: currentUser?.fullName || '',
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    },
+                    payments: payments.filter((p) => p.eventId === currentEvent.id),
+                    settings,
+                  });
+                }
+              }}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white flex items-center gap-1.5 shadow-sm transition-colors"
+              title="Download Tax Invoice & Receipt PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF</span>
+            </button>
             <button
               onClick={() => setPrintMode(!printMode)}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center gap-1.5"

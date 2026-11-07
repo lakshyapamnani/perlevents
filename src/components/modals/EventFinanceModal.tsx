@@ -19,6 +19,11 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
 import { PaymentMethod } from '../../types';
+import {
+  downloadEventInvoicePDF,
+  downloadPaymentReceiptPDF,
+  openPrintableInvoiceWindow,
+} from '../../utils/pdfReceiptGenerator';
 
 interface EventFinanceModalProps {
   isOpen: boolean;
@@ -35,7 +40,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
   onOpenInvoice,
   onInspectEvent,
 }) => {
-  const { events, payments, banquets, clients, recordPayment, invoices } = useData();
+  const { events, payments, banquets, clients, recordPayment, invoices, settings } = useData();
   const { currentUser } = useAuth();
 
   const event = events.find((e) => e.id === eventId);
@@ -106,10 +111,44 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
     });
 
     if (res.success) {
-      setSuccessMsg(`Successfully recorded ₹${numericAmount.toLocaleString('en-IN')}! Balance updated.`);
+      const createdPayment = res.payment || {
+        id: `pay_${Date.now()}`,
+        clientId: event.clientId,
+        clientName: event.clientName,
+        eventId: event.id,
+        invoiceId: linkedInvoice?.id,
+        amount: numericAmount,
+        type: 'payment' as const,
+        paymentDate,
+        paymentMethod: paymentMode,
+        referenceNumber: receiptNo.trim() || `PX-${480 + (eventPayments.length || 0) + 1}`,
+        notes: paymentNotes.trim(),
+        recordedBy: currentUser.uid,
+        recordedByName: currentUser.fullName,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Automatically download the official payment receipt voucher PDF with logo and client name
+      try {
+        downloadPaymentReceiptPDF({
+          payment: createdPayment,
+          event,
+          client,
+          settings,
+          totalFees,
+          totalPaid: totalPaid + numericAmount,
+          remainingBalance: Math.max(0, remaining - numericAmount),
+        });
+      } catch (e) {
+        console.error('Failed to trigger automatic receipt PDF download', e);
+      }
+
+      setSuccessMsg(
+        `Successfully recorded ₹${numericAmount.toLocaleString('en-IN')}! Official Receipt #${receiptNo} downloaded.`
+      );
       setAmountToAdd('');
       setReceiptNo(`PX-${480 + (eventPayments.length + 1) + 1}`);
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setTimeout(() => setSuccessMsg(null), 5000);
     } else {
       setFormError(res.error || 'Failed to record payment.');
     }
@@ -149,17 +188,41 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {onOpenInvoice && (
-              <button
-                type="button"
-                onClick={() => onOpenInvoice(event.id)}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold border border-stone-700 transition-colors"
-                title="View & Download Invoice"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Invoice PDF</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                downloadEventInvoicePDF({
+                  event,
+                  client,
+                  invoice: linkedInvoice,
+                  payments: eventPayments,
+                  settings,
+                });
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+              title="Download Full Tax Invoice & Receipt PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Invoice PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                openPrintableInvoiceWindow({
+                  event,
+                  client,
+                  invoice: linkedInvoice,
+                  payments: eventPayments,
+                  settings,
+                });
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl text-xs font-semibold border border-stone-700 transition-colors"
+              title="Print / Save As PDF"
+            >
+              <Printer className="w-3.5 h-3.5 text-stone-400" />
+              <span>Print</span>
+            </button>
 
             {onInspectEvent && (
               <button
@@ -169,7 +232,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                 title="Open Event Detail Page"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
-                <span>Event Operations</span>
+                <span>Event Ops</span>
               </button>
             )}
 
@@ -403,25 +466,43 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                           {isRefund ? '-' : '+'}{formatCurrency(p.amount)}
                         </span>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => window.print()}
+                            onClick={() => {
+                              downloadPaymentReceiptPDF({
+                                payment: p,
+                                event,
+                                client,
+                                settings,
+                                totalFees,
+                                totalPaid,
+                                remainingBalance: remaining,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/80 rounded-lg transition-colors border border-emerald-800/60 text-[11px] font-semibold"
+                            title="Download Official Receipt Voucher PDF"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Receipt</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openPrintableInvoiceWindow({
+                                event,
+                                client,
+                                invoice: linkedInvoice,
+                                payments: eventPayments,
+                                settings,
+                              });
+                            }}
                             className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-stone-800 rounded-lg transition-colors"
-                            title="Print Payment Voucher"
+                            title="Print Document"
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          {onOpenInvoice && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenInvoice(event.id)}
-                              className="p-1.5 text-stone-400 hover:text-emerald-400 hover:bg-stone-800 rounded-lg transition-colors"
-                              title="Download Full Invoice"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -518,3 +599,4 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
     </div>
   );
 };
+

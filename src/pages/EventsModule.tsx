@@ -30,6 +30,7 @@ import {
 import { BookingStatus, EventRecord } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { EventFinanceModal } from '../components/modals/EventFinanceModal';
+import { downloadEventInvoicePDF } from '../utils/pdfReceiptGenerator';
 
 interface EventsModuleProps {
   onOpenDirectSale: () => void;
@@ -42,7 +43,7 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
   onSelectEvent,
   onOpenInvoice,
 }) => {
-  const { events, banquets, payments, invoices } = useData();
+  const { events, banquets, payments, invoices, clients, settings } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -611,20 +612,26 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
 
                     {/* Actions: Direct Invoice Download & Manage Finance */}
                     <div className="pt-2 flex items-center justify-between gap-2">
-                      {/* Direct Invoice Download / View Button */}
+                      {/* Direct Invoice Download Button */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onOpenInvoice) {
-                            onOpenInvoice(evt.id);
-                          }
+                          const linkedInv = invoices.find((i) => i.eventId === evt.id);
+                          const client = clients.find((c) => c.id === evt.clientId);
+                          downloadEventInvoicePDF({
+                            event: evt,
+                            client,
+                            invoice: linkedInv,
+                            payments,
+                            settings,
+                          });
                         }}
                         className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-semibold rounded-xl border border-stone-200 dark:border-stone-700 flex items-center gap-1.5 transition-colors"
-                        title="Download / Print Invoice PDF"
+                        title="Download Tax Invoice & Receipt PDF"
                       >
                         <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Invoice</span>
+                        <span>Download Invoice</span>
                       </button>
 
                       {/* Manage Financials / Details button */}
