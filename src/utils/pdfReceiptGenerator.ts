@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { PEARL_LOGO_BASE64 } from '../assets/logoBase64';
 import { EventRecord, Client, Payment, Invoice, OrganizationSettings, Attachment } from '../types';
-import { formatDate, generateWhatsAppUrl } from './formatters';
+import { formatDate, generateWhatsAppUrl, cleanPhoneForWhatsApp } from './formatters';
 
 interface GenerateInvoiceParams {
   event: EventRecord;
@@ -718,7 +718,7 @@ export function downloadEventInvoicePDF({
     const safeFileName = `PearlExperience_Invoice_${invNumber}_${safeClient}.pdf`;
     doc.save(safeFileName);
 
-    return { success: true, fileName: safeFileName };
+    return { success: true, fileName: safeFileName, doc };
   } catch (error: any) {
     console.error('Failed to generate Invoice PDF:', error);
     return { success: false, error: error.message || 'Invoice Generation failed' };
@@ -1138,8 +1138,9 @@ export function openPrintableInvoiceWindow({
 }
 
 /**
- * Downloads the official Tax Invoice & Receipt PDF and sends it directly
- * to the client's WhatsApp number with pre-filled billing details.
+ * Directly shares/sends the Tax Invoice & Receipt PDF on WhatsApp to the client's number.
+ * Uses native Web Share API with the actual PDF file so the document is sent directly,
+ * and opens WhatsApp to the client's number without any text message.
  */
 export async function sendInvoiceOnWhatsApp({
   event,
@@ -1150,53 +1151,45 @@ export async function sendInvoiceOnWhatsApp({
 }: GenerateInvoiceParams) {
   const clientName = client?.fullName || event.clientName || 'Valued Client';
   const clientPhone = client?.whatsApp || client?.primaryPhone || event.clientWhatsApp || event.clientPhone || '';
+  const cleanPhone = cleanPhoneForWhatsApp(clientPhone);
   const invNumber = invoice?.invoiceNumber || `PX-INV-2026-${event.id.slice(-4).toUpperCase()}`;
+  const safeClient = clientName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const fileName = `PearlExperience_Invoice_${invNumber}_${safeClient}.pdf`;
 
-  const finalTotal = invoice?.finalTotal || event.finalAmount || 0;
-  const eventPayments = payments.filter((p) => p.eventId === event.id && p.type !== 'refund');
-  const totalPaid = eventPayments.length > 0
-    ? eventPayments.reduce((s, p) => s + p.amount, 0)
-    : (invoice?.actualAdvanceReceived || event.advanceReceived || 0);
-  const remaining = Math.max(0, finalTotal - totalPaid);
+  // 1. Generate the PDF
+  const res = downloadEventInvoicePDF({
+    event,
+    client,
+    invoice,
+    payments,
+    settings,
+  });
 
-  // 1. Download the PDF directly for the user
-  try {
-    downloadEventInvoicePDF({
-      event,
-      client,
-      invoice,
-      payments,
-      settings,
-    });
-  } catch (e) {
-    console.error('Failed to trigger PDF download before WhatsApp send:', e);
+  // 2. Direct native PDF document share (Mobile WhatsApp / Tablets / Desktop PWA)
+  // Sends the PDF file directly without text message
+  if (res.doc && typeof navigator !== 'undefined' && navigator.canShare) {
+    try {
+      const pdfBlob = res.doc.output('blob');
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      if (navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: `Invoice - ${event.name}`,
+        });
+        return { success: true };
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        return { success: true };
+      }
+      console.warn('Native PDF file share skipped/fallback:', err);
+    }
   }
 
-  // 2. Prepare official WhatsApp message text
-  const message = [
-    `*PEARL EXPERIENCES - OFFICIAL BOOKING INVOICE & RECEIPT*`,
-    ``,
-    `Dear *${clientName}*,`,
-    `Greetings from Pearl Experiences! 💐`,
-    ``,
-    `Please find the invoice & fee breakdown for your event:`,
-    `🎉 *Event:* ${event.name} (${event.eventType})`,
-    `🏛 *Venue:* ${event.banquetName || 'Pearl Banquet'}`,
-    `📅 *Date:* ${formatDate(event.date)} (${event.startTime} - ${event.endTime})`,
-    `🔖 *Invoice No:* ${invNumber}`,
-    ``,
-    `💰 *Total Package:* ₹${finalTotal.toLocaleString('en-IN')}`,
-    `✅ *Advance Paid / Cleared:* ₹${totalPaid.toLocaleString('en-IN')}`,
-    `⏳ *Balance Remaining:* ₹${remaining.toLocaleString('en-IN')}`,
-    ``,
-    `📄 *Your official Tax Invoice & Receipt PDF has been prepared and downloaded.*`,
-    `For any queries, please contact us at ${settings.phone || '+91 98765 43210'}.`,
-    ``,
-    `Thank you for choosing *Pearl Experiences*!`,
-  ].join('\n');
-
-  // 3. Open WhatsApp Web or App with pre-filled message
-  const waUrl = generateWhatsAppUrl(clientPhone, message);
+  // 3. Fallback: Open WhatsApp directly to the client's number WITHOUT any text message
+  // (The PDF file is downloaded in step 1 directly to the user's downloads)
+  const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : 'https://web.whatsapp.com';
   window.open(waUrl, '_blank', 'noopener,noreferrer');
 
   return { success: true };
