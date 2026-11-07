@@ -31,6 +31,7 @@ import { Invoice, Lead } from './types';
 
 const MainLayout: React.FC = () => {
   const { currentUser } = useAuth();
+  const { invoices } = useData();
 
   // Navigation State - First screen defaults to Calendar with Occupancy schedule
   const [adminTab, setAdminTab] = useState<AdminTab>('calendar');
@@ -68,6 +69,14 @@ const MainLayout: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [selectedInvoiceToView, setSelectedInvoiceToView] = useState<Invoice | null>(null);
+  const [selectedInvoiceEventId, setSelectedInvoiceEventId] = useState<string | undefined>(undefined);
+
+  const handleOpenEventInvoice = (eventId: string) => {
+    const inv = invoices.find((i) => i.eventId === eventId);
+    setSelectedInvoiceToView(inv || null);
+    setSelectedInvoiceEventId(eventId);
+    setIsInvoiceModalOpen(true);
+  };
 
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
@@ -186,6 +195,7 @@ const MainLayout: React.FC = () => {
                     <EventsModule
                       onOpenDirectSale={() => setIsDirectSaleOpen(true)}
                       onSelectEvent={(id) => setSelectedEventId(id)}
+                      onOpenInvoice={handleOpenEventInvoice}
                     />
                   )}
                   {adminTab === 'calendar' && (
@@ -410,8 +420,10 @@ const MainLayout: React.FC = () => {
           onClose={() => {
             setIsInvoiceModalOpen(false);
             setSelectedInvoiceToView(null);
+            setSelectedInvoiceEventId(undefined);
           }}
           invoiceToView={selectedInvoiceToView}
+          preselectedEventId={selectedInvoiceEventId}
           onOpenRecordPayment={handleOpenPayment}
         />
       )}

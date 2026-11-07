@@ -764,13 +764,24 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                         onChange={(e) => setSalespersonId(e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
                       >
-                        {users
-                          .filter((u) => u.isActive && (u.role === 'salesperson' || u.role === 'admin' || u.role === 'manager'))
-                          .map((u) => (
-                            <option key={u.uid} value={u.uid}>
-                              {u.fullName} ({u.role})
-                            </option>
-                          ))}
+                        <optgroup label="Sales Executives">
+                          {users
+                            .filter((u) => u.isActive && u.role === 'salesperson')
+                            .map((u) => (
+                              <option key={u.uid} value={u.uid}>
+                                {u.fullName} (Salesperson)
+                              </option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Management / Admins">
+                          {users
+                            .filter((u) => u.isActive && (u.role === 'admin' || u.role === 'manager'))
+                            .map((u) => (
+                              <option key={u.uid} value={u.uid}>
+                                {u.fullName} ({u.role === 'admin' ? 'Admin' : 'Manager'})
+                              </option>
+                            ))}
+                        </optgroup>
                       </select>
                     </div>
 
@@ -784,13 +795,24 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                         className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-semibold"
                       >
                         <option value="">-- No specific manager (Visible to All) --</option>
-                        {users
-                          .filter((u) => u.isActive && (u.role === 'manager' || u.role === 'admin'))
-                          .map((u) => (
-                            <option key={u.uid} value={u.uid}>
-                              {u.fullName} ({u.role === 'admin' ? 'Admin' : 'Operations Manager'})
-                            </option>
-                          ))}
+                        <optgroup label="Operations Managers">
+                          {users
+                            .filter((u) => u.isActive && u.role === 'manager')
+                            .map((u) => (
+                              <option key={u.uid} value={u.uid}>
+                                {u.fullName} (Operations Manager)
+                              </option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Management / Admins">
+                          {users
+                            .filter((u) => u.isActive && u.role === 'admin')
+                            .map((u) => (
+                              <option key={u.uid} value={u.uid}>
+                                {u.fullName} (Admin)
+                              </option>
+                            ))}
+                        </optgroup>
                       </select>
                     </div>
                   </div>

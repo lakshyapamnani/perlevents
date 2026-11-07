@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../types';
 import { realtimeEngine } from '../services/realtimeEngine';
-import { DEFAULT_USER_CREDENTIALS } from '../services/seedData';
+import { DEFAULT_USER_CREDENTIALS, initialUsers } from '../services/seedData';
 import {
   authenticateWithFirebase,
   signOutFromFirebase,
@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUid, setCurrentUid] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pearlexperiences_active_uid');
-      if (saved && dbState?.users && dbState.users[saved] && dbState.users[saved].isActive) return saved;
+      if (saved) return saved;
     }
     return null; // Show single login screen if not authenticated
   });
@@ -59,12 +59,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
-  const allUsersList = Object.values(dbState?.users || {}).filter(
-    (u): u is UserProfile => Boolean(u && typeof u === 'object' && u.uid)
+  const allUsersMap: Record<string, UserProfile> = {
+    ...initialUsers.reduce((acc, u) => ({ ...acc, [u.uid]: u }), {}),
+    ...(dbState?.users || {}),
+  };
+  const allUsersList = Object.values(allUsersMap).filter(
+    (u): u is UserProfile => Boolean(u && typeof u === 'object' && 'uid' in u && u.isActive !== false)
   );
   const currentUser: UserProfile | null =
-    currentUid && dbState?.users && dbState.users[currentUid] && dbState.users[currentUid].isActive
-      ? dbState.users[currentUid]
+    currentUid && allUsersMap[currentUid] && allUsersMap[currentUid].isActive !== false
+      ? allUsersMap[currentUid]
       : null;
 
   /**

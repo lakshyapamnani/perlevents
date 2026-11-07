@@ -11,9 +11,11 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  Download,
 } from 'lucide-react';
 import { Invoice, InvoiceStatus } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { downloadEventInvoicePDF } from '../utils/pdfReceiptGenerator';
 
 interface InvoicesModuleProps {
   onOpenCreateInvoice: () => void;
@@ -26,7 +28,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   onViewInvoice,
   onOpenRecordPayment,
 }) => {
-  const { invoices } = useData();
+  const { invoices, events, clients, payments, settings } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -165,11 +167,60 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                       )}
 
                       <button
+                        onClick={() => {
+                          const ev = events.find((e) => e.id === inv.eventId) || {
+                            id: inv.eventId,
+                            name: inv.eventName,
+                            eventType: inv.eventType,
+                            clientId: inv.clientId,
+                            clientName: inv.clientName,
+                            clientPhone: inv.clientPhone,
+                            clientWhatsApp: inv.clientPhone,
+                            banquetId: '',
+                            banquetName: inv.banquetName,
+                            date: inv.eventDate,
+                            startTime: inv.eventTime.split('-')[0]?.trim() || '18:00',
+                            endTime: inv.eventTime.split('-')[1]?.trim() || '23:30',
+                            guestCount: 200,
+                            requirements: '',
+                            status: 'confirmed' as const,
+                            salespersonId: '',
+                            salespersonName: '',
+                            quotedAmount: inv.finalTotal,
+                            discount: inv.discount,
+                            finalAmount: inv.finalTotal,
+                            advanceRequested: inv.advanceRequested,
+                            advanceReceived: inv.actualAdvanceReceived,
+                            remainingBalance: inv.remainingBalance,
+                            paymentTerms: inv.paymentTerms,
+                            referencePhotos: [],
+                            vendorAssignments: [],
+                            createdAt: inv.createdAt,
+                            updatedAt: inv.updatedAt,
+                            createdBy: inv.createdBy,
+                          };
+                          const cl = clients.find((c) => c.id === inv.clientId);
+                          downloadEventInvoicePDF({
+                            event: ev,
+                            client: cl,
+                            invoice: inv,
+                            payments,
+                            settings,
+                          });
+                        }}
+                        className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-semibold flex items-center gap-1 border border-stone-200 dark:border-stone-700 transition-colors"
+                        title="Download Tax Invoice PDF"
+                      >
+                        <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Download</span>
+                      </button>
+
+                      <button
                         onClick={() => onViewInvoice(inv)}
                         className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm"
                       >
                         <FileText className="w-3.5 h-3.5" />
-                        <span>View / Print PDF</span>
+                        <span>View</span>
                       </button>
                     </div>
                   </div>
