@@ -26,6 +26,7 @@ import {
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
 import { Attachment, EventRecord } from '../../types';
 import { ImageUploadArea } from '../common/ImageUploadArea';
+import { DEFAULT_EVENT_SETUP_PHOTOS } from '../../assets/sampleEventPhotos';
 
 interface DirectSaleModalProps {
   isOpen: boolean;
@@ -115,7 +116,9 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
       ? currentUser.uid
       : (users.find((u) => u.role === 'salesperson')?.uid || currentUser?.uid || '')
   );
-  const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([]);
+  const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([
+    ...DEFAULT_EVENT_SETUP_PHOTOS,
+  ]);
 
   // Financials - STRICTLY OPTIONAL
   const [quotedAmount, setQuotedAmount] = useState<number | ''>('');

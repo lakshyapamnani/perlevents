@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { PEARL_LOGO_BASE64 } from '../assets/logoBase64';
+import { DEFAULT_EVENT_SETUP_PHOTOS } from '../assets/sampleEventPhotos';
 import { EventRecord, Client, Payment, Invoice, OrganizationSettings, Attachment } from '../types';
 import { formatDate, generateWhatsAppUrl, cleanPhoneForWhatsApp } from './formatters';
 
@@ -330,13 +331,54 @@ export function downloadPaymentReceiptPDF({
     );
 
     // 6. "AND IF IMAGE ADD BELOW IT"
-    // Collect reference photos from event or client
-    const photos: Attachment[] = [
+    // Collect reference photos from event, client, or default luxury setup gallery
+    const userPhotos: Attachment[] = [
       ...(event.referencePhotos || []),
       ...(client?.referencePhotos || []),
     ];
+    const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
+    // Render 2 setup photos directly below the receipt on Page 1
     if (photos.length > 0) {
+      y += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`ATTACHED EVENT SETUP & REFERENCE PHOTOS (${photos.length})`, margin, y);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Official setup specifications for ${event.name} (${clientName})`, margin, y + 4.5);
+
+      y += 7;
+      const page1Photos = photos.slice(0, 2);
+      const cardW = (contentWidth - 6) / 2;
+      const cardH = 46;
+
+      page1Photos.forEach((photo, idx) => {
+        const cardX = margin + idx * (cardW + 6);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cardX, y, cardW, cardH, 2, 2, 'FD');
+
+        try {
+          if (photo.url && photo.url.startsWith('data:image')) {
+            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(photo.url, fmt, cardX + 2, y + 2, cardW - 4, cardH - 10);
+          }
+        } catch {
+          // fallback
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(15, 23, 42);
+        doc.text((photo.caption || photo.name || `Photo #${idx + 1}`).slice(0, 38), cardX + 3, y + cardH - 3);
+      });
+    }
+
+    if (photos.length > 2) {
       doc.addPage();
       let photoY = 16;
 
@@ -352,7 +394,7 @@ export function downloadPaymentReceiptPDF({
 
       photoY += 12;
 
-      photos.slice(0, 4).forEach((photo, idx) => {
+      photos.slice(2, 6).forEach((photo, idx) => {
         const col = idx % 2;
         const row = Math.floor(idx / 2);
         const cardW = (contentWidth - 8) / 2;
@@ -365,8 +407,9 @@ export function downloadPaymentReceiptPDF({
         doc.roundedRect(cardX, cardY, cardW, cardH, 2, 2, 'FD');
 
         try {
-          if (photo.url && (photo.url.startsWith('data:image') || photo.url.startsWith('http'))) {
-            doc.addImage(photo.url, 'JPEG', cardX + 3, cardY + 3, cardW - 6, cardH - 16);
+          if (photo.url && photo.url.startsWith('data:image')) {
+            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(photo.url, fmt, cardX + 3, cardY + 3, cardW - 6, cardH - 16);
           }
         } catch {
           doc.setFont('helvetica', 'italic');
@@ -378,7 +421,7 @@ export function downloadPaymentReceiptPDF({
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         doc.setTextColor(15, 23, 42);
-        doc.text((photo.caption || photo.name || `Photo #${idx + 1}`).slice(0, 35), cardX + 4, cardY + cardH - 5);
+        doc.text((photo.caption || photo.name || `Photo #${idx + 3}`).slice(0, 35), cardX + 4, cardY + cardH - 5);
       });
     }
 
@@ -665,13 +708,55 @@ export function downloadEventInvoicePDF({
       { align: 'center' }
     );
 
-    // If photos exist, add below
-    const photos: Attachment[] = [
+    // If photos exist, add below (from invoice attachments, event photos, client photos, or default luxury setup gallery)
+    const userPhotos: Attachment[] = [
+      ...(invoice?.attachments || []),
       ...(event.referencePhotos || []),
       ...(client?.referencePhotos || []),
     ];
+    const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
+    // Render 2 setup photos directly below the invoice on Page 1
     if (photos.length > 0) {
+      y += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`ATTACHED EVENT SETUP & REFERENCE PHOTOS (${photos.length})`, margin, y);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Verified setup decor & arrangements for ${event.name}`, margin, y + 4.5);
+
+      y += 7;
+      const page1Photos = photos.slice(0, 2);
+      const cardW = (contentWidth - 6) / 2;
+      const cardH = 46;
+
+      page1Photos.forEach((photo, idx) => {
+        const cardX = margin + idx * (cardW + 6);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cardX, y, cardW, cardH, 2, 2, 'FD');
+
+        try {
+          if (photo.url && photo.url.startsWith('data:image')) {
+            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(photo.url, fmt, cardX + 2, y + 2, cardW - 4, cardH - 10);
+          }
+        } catch (imgErr) {
+          console.warn('Could not draw invoice photo on Page 1', imgErr);
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(15, 23, 42);
+        doc.text((photo.caption || photo.name || `Setup Photo #${idx + 1}`).slice(0, 38), cardX + 3, y + cardH - 3);
+      });
+    }
+
+    if (photos.length > 2) {
       doc.addPage();
       let photoY = 16;
 
@@ -687,7 +772,7 @@ export function downloadEventInvoicePDF({
 
       photoY += 12;
 
-      photos.slice(0, 4).forEach((photo, idx) => {
+      photos.slice(2, 6).forEach((photo, idx) => {
         const col = idx % 2;
         const row = Math.floor(idx / 2);
         const cardW = (contentWidth - 8) / 2;
@@ -700,8 +785,9 @@ export function downloadEventInvoicePDF({
         doc.roundedRect(cardX, cardY, cardW, cardH, 2, 2, 'FD');
 
         try {
-          if (photo.url && (photo.url.startsWith('data:image') || photo.url.startsWith('http'))) {
-            doc.addImage(photo.url, 'JPEG', cardX + 3, cardY + 3, cardW - 6, cardH - 16);
+          if (photo.url && photo.url.startsWith('data:image')) {
+            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(photo.url, fmt, cardX + 3, cardY + 3, cardW - 6, cardH - 16);
           }
         } catch {
           // ignore
@@ -710,7 +796,7 @@ export function downloadEventInvoicePDF({
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         doc.setTextColor(15, 23, 42);
-        doc.text((photo.caption || photo.name || `Photo #${idx + 1}`).slice(0, 35), cardX + 4, cardY + cardH - 5);
+        doc.text((photo.caption || photo.name || `Photo #${idx + 3}`).slice(0, 35), cardX + 4, cardY + cardH - 5);
       });
     }
 
@@ -748,10 +834,12 @@ export function openPrintableInvoiceWindow({
     : (invoice?.actualAdvanceReceived || event.advanceReceived || 2000);
   const remaining = Math.max(0, finalTotal - totalPaid);
 
-  const photos: Attachment[] = [
+  const userPhotos: Attachment[] = [
+    ...(invoice?.attachments || []),
     ...(event.referencePhotos || []),
     ...(client?.referencePhotos || []),
   ];
+  const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
   const html = `
 <!DOCTYPE html>
