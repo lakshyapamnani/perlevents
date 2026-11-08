@@ -18,7 +18,6 @@ import { Invoice, InvoiceItem, Attachment } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { ImageUploadArea } from '../common/ImageUploadArea';
 import { downloadEventInvoicePDF } from '../../utils/pdfReceiptGenerator';
-import { DEFAULT_EVENT_SETUP_PHOTOS } from '../../assets/sampleEventPhotos';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -495,14 +494,14 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 {settings.invoiceFooter}
               </div>
 
-              {/* Attached Photos & Documents in PDF / Modal Preview */}
+              {/* Attached Photos & Documents in PDF / Modal Preview - ONLY if uploaded */}
               {includePhotos && (() => {
-                const combined = [
+                const photosToDisplay = [
                   ...(attachments || []),
                   ...(currentEvent?.referencePhotos || []),
                   ...(currentClient?.referencePhotos || []),
                 ];
-                const photosToDisplay = combined.length > 0 ? combined : DEFAULT_EVENT_SETUP_PHOTOS;
+                if (photosToDisplay.length === 0) return null;
 
                 return (
                   <div className="pt-8 border-t border-stone-300 print-page-break space-y-4">

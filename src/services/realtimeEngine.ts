@@ -357,6 +357,64 @@ class RealtimeDatabaseEngine {
       }
     });
 
+    // Auto-generate invoice for EVERY booking that is NOT deleted
+    Object.values(mergedEvents).forEach((evt) => {
+      if (!evt || !evt.id || !evt.date) return;
+      if (evt.status === 'cancelled') return;
+      if (mergedDeletedIds[evt.id]) return;
+      const existingInv = Object.values(mergedInvoices).find((i) => i && i.eventId === evt.id);
+      if (!existingInv) {
+        const invId = `inv_${evt.id}`;
+        const finalTot = evt.finalAmount || evt.quotedAmount || 0;
+        const advRec = evt.advanceReceived || 0;
+        const remBal = Math.max(0, finalTot - advRec);
+        mergedInvoices[invId] = {
+          id: invId,
+          invoiceNumber: `PX-INV-2026-${evt.id.slice(-4).toUpperCase()}`,
+          invoiceDate: evt.date || evt.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+          clientId: evt.clientId,
+          clientName: evt.clientName,
+          clientPhone: evt.clientPhone || evt.clientWhatsApp || '',
+          clientEmail: '',
+          clientAddress: '',
+          eventId: evt.id,
+          eventName: evt.name,
+          eventType: evt.eventType,
+          banquetName: evt.banquetName,
+          eventDate: evt.date,
+          eventTime: `${evt.startTime} - ${evt.endTime}`,
+          items: [
+            {
+              id: `it_${evt.id}_1`,
+              description: `${evt.banquetName || 'Venue'} Booking & Facilities (${evt.guestCount || 100} Pax)`,
+              quantity: 1,
+              unitPrice: finalTot,
+              total: finalTot,
+            },
+          ],
+          subtotal: finalTot,
+          discount: evt.discount || 0,
+          taxAmount: 0,
+          finalTotal: finalTot,
+          advancePaymentRequired: (evt.advanceRequested || 0) > 0,
+          advanceRequested: evt.advanceRequested || advRec,
+          actualAdvanceReceived: advRec,
+          remainingBalance: remBal,
+          paymentTerms: evt.paymentTerms || 'Standard payment terms apply.',
+          status: remBal <= 0 && finalTot > 0 ? 'paid' : advRec > 0 ? 'partially_paid' : 'issued',
+          attachments: evt.referencePhotos || [],
+          includePhotosInPdf: Boolean(evt.referencePhotos && evt.referencePhotos.length > 0),
+          createdBy: evt.createdBy || 'system',
+          createdByName: evt.salespersonName || 'Sales Executive',
+          createdAt: evt.createdAt || new Date().toISOString(),
+          updatedAt: evt.updatedAt || new Date().toISOString(),
+        };
+      } else if ((!existingInv.attachments || existingInv.attachments.length === 0) && evt.referencePhotos && evt.referencePhotos.length > 0) {
+        existingInv.attachments = evt.referencePhotos;
+        existingInv.includePhotosInPdf = true;
+      }
+    });
+
     this.state = {
       ...this.state,
       deletedRecordIds: mergedDeletedIds,
@@ -1290,11 +1348,11 @@ class RealtimeDatabaseEngine {
       this.state.payments[paymentId] = newPayment;
     }
 
-    // 9. Create Invoice if requested
+    // 9. Create Invoice for booking (Every booking should show in invoices as an invoice)
     let createdInvoice: Invoice | undefined;
-    if (data.createInvoice) {
+    if (data.createInvoice !== false) {
       const invSeq = this.state.settings.nextInvoiceSequence || 105;
-      const invoiceNumber = `${this.state.settings.invoiceNumberPrefix || 'PE-INV-2026-'}${invSeq}`;
+      const invoiceNumber = `${this.state.settings.invoiceNumberPrefix || 'PX-INV-2026-'}${invSeq}`;
       this.state.settings.nextInvoiceSequence = invSeq + 1;
 
       const invId = `inv_${Date.now()}`;
@@ -1318,11 +1376,11 @@ class RealtimeDatabaseEngine {
             id: `it_${Date.now()}_1`,
             description: `${banquet.name} Venue Booking & Facilities (${newEvent.guestCount} Pax)`,
             quantity: 1,
-            unitPrice: quoted,
-            total: quoted,
+            unitPrice: quoted || finalAmount || 1,
+            total: quoted || finalAmount || 1,
           },
         ],
-        subtotal: quoted,
+        subtotal: quoted || finalAmount || 1,
         discount: disc,
         taxAmount: 0,
         finalTotal: finalAmount,
@@ -1332,7 +1390,8 @@ class RealtimeDatabaseEngine {
         remainingBalance: remainingBal,
         paymentTerms: data.financials?.paymentTerms || 'Standard terms apply.',
         status: advanceRec >= finalAmount && finalAmount > 0 ? 'paid' : advanceRec > 0 ? 'partially_paid' : 'issued',
-        includePhotosInPdf: false,
+        attachments: data.event.referencePhotos || [],
+        includePhotosInPdf: Boolean(data.event.referencePhotos && data.event.referencePhotos.length > 0),
         createdBy: currentUser.uid,
         createdByName: currentUser.fullName,
         createdAt: new Date().toISOString(),

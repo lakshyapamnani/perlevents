@@ -22,11 +22,11 @@ import {
   ExternalLink,
   Tag,
   ArrowRight,
+  Camera,
 } from 'lucide-react';
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
 import { Attachment, EventRecord } from '../../types';
 import { ImageUploadArea } from '../common/ImageUploadArea';
-import { DEFAULT_EVENT_SETUP_PHOTOS } from '../../assets/sampleEventPhotos';
 
 interface DirectSaleModalProps {
   isOpen: boolean;
@@ -116,9 +116,7 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
       ? currentUser.uid
       : (users.find((u) => u.role === 'salesperson')?.uid || currentUser?.uid || '')
   );
-  const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([
-    ...DEFAULT_EVENT_SETUP_PHOTOS,
-  ]);
+  const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([]);
 
   // Financials - STRICTLY OPTIONAL
   const [quotedAmount, setQuotedAmount] = useState<number | ''>('');
@@ -1067,11 +1065,39 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                 )}
               </div>
 
-              {/* SECTION D: FINANCIALS (ALL OPTIONAL) */}
+              {/* SECTION D: DECORATION & EVENT SETUP PHOTOS (FOR INVOICE) */}
+              <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      <span>Section D: Decoration Pictures (Shown in Invoice)</span>
+                    </h3>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                      Upload decoration pictures (stage, mandap, floral decor, lighting theme). These will appear directly on the booking invoice.
+                    </p>
+                  </div>
+                  {referencePhotos.length > 0 && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                      {referencePhotos.length} photo{referencePhotos.length > 1 ? 's' : ''} uploaded
+                    </span>
+                  )}
+                </div>
+
+                <ImageUploadArea
+                  label="Upload Event Decoration Pictures"
+                  description="Upload pictures from your computer or phone, or paste image URLs to include in the client's invoice."
+                  attachments={referencePhotos}
+                  onChange={setReferencePhotos}
+                  maxPhotos={8}
+                />
+              </div>
+
+              {/* SECTION E: FINANCIALS (ALL OPTIONAL) */}
               <div className="space-y-3 pb-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                    Section D: Financials & Payments
+                    Section E: Financials & Payments
                   </h3>
                   <span className="text-[11px] text-stone-500 font-medium">
                     (All financial fields are optional)
@@ -1139,8 +1165,9 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                     onChange={(e) => setCreateInvoice(e.target.checked)}
                     className="w-4 h-4 rounded text-emerald-800 focus:ring-emerald-700"
                   />
-                  <label htmlFor="create-invoice-toggle" className="text-xs text-stone-700 dark:text-stone-300 cursor-pointer">
-                    Automatically generate official Pearlexperiences booking invoice
+                  <label htmlFor="create-invoice-toggle" className="text-xs text-stone-700 dark:text-stone-300 cursor-pointer flex items-center gap-1.5 font-medium">
+                    <Receipt className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                    <span>Automatically generate official Pearlexperiences booking invoice with decoration pictures</span>
                   </label>
                 </div>
               </div>
