@@ -308,10 +308,89 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [dbState.sales]);
 
   const invoices = useMemo(() => {
-    return Object.values(dbState.invoices || {}).filter(
+    const rawInvoices = Object.values(dbState.invoices || {}).filter(
       (i): i is Invoice => Boolean(i && typeof i === 'object' && i.id)
     );
-  }, [dbState.invoices]);
+
+    // Link decoration photos from event to invoice if not already populated
+    const existingInvoices = rawInvoices.map((inv) => {
+      const linkedEvent = dbState.events?.[inv.eventId];
+      if (
+        (!inv.attachments || inv.attachments.length === 0) &&
+        linkedEvent?.referencePhotos &&
+        linkedEvent.referencePhotos.length > 0
+      ) {
+        return {
+          ...inv,
+          attachments: linkedEvent.referencePhotos,
+          includePhotosInPdf: true,
+        };
+      }
+      return inv;
+    });
+
+    const existingEventIds = new Set(existingInvoices.map((inv) => inv.eventId));
+
+    // Guarantee that EVERY booking in events is shown in invoices as an invoice
+    const autoInvoices: Invoice[] = [];
+    const allEvents = Object.values(dbState.events || {}).filter(
+      (e): e is EventRecord => Boolean(e && typeof e === 'object' && e.id && e.status !== 'cancelled')
+    );
+
+    for (const evt of allEvents) {
+      if (!existingEventIds.has(evt.id)) {
+        const finalTot = evt.finalAmount || evt.quotedAmount || 0;
+        const advRec = evt.advanceReceived || 0;
+        const remBal = Math.max(0, finalTot - advRec);
+        const inv: Invoice = {
+          id: `inv_${evt.id}`,
+          invoiceNumber: `PX-INV-2026-${evt.id.slice(-4).toUpperCase()}`,
+          invoiceDate: evt.date || evt.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+          clientId: evt.clientId,
+          clientName: evt.clientName,
+          clientPhone: evt.clientPhone || evt.clientWhatsApp || '',
+          clientEmail: '',
+          clientAddress: '',
+          eventId: evt.id,
+          eventName: evt.name,
+          eventType: evt.eventType,
+          banquetName: evt.banquetName,
+          eventDate: evt.date,
+          eventTime: `${evt.startTime} - ${evt.endTime}`,
+          items: [
+            {
+              id: `it_${evt.id}_1`,
+              description: `${evt.banquetName || 'Venue'} Booking & Facilities (${evt.guestCount || 100} Pax)`,
+              quantity: 1,
+              unitPrice: finalTot,
+              total: finalTot,
+            },
+          ],
+          subtotal: finalTot,
+          discount: evt.discount || 0,
+          taxAmount: 0,
+          finalTotal: finalTot,
+          advancePaymentRequired: (evt.advanceRequested || 0) > 0,
+          advanceRequested: evt.advanceRequested || advRec,
+          actualAdvanceReceived: advRec,
+          remainingBalance: remBal,
+          paymentTerms: evt.paymentTerms || 'Standard payment terms apply.',
+          status: remBal <= 0 && finalTot > 0 ? 'paid' : advRec > 0 ? 'partially_paid' : 'issued',
+          attachments: evt.referencePhotos || [],
+          includePhotosInPdf: Boolean(evt.referencePhotos && evt.referencePhotos.length > 0),
+          createdBy: evt.createdBy || 'system',
+          createdByName: evt.salespersonName || 'Sales Executive',
+          createdAt: evt.createdAt || new Date().toISOString(),
+          updatedAt: evt.updatedAt || new Date().toISOString(),
+        };
+        autoInvoices.push(inv);
+      }
+    }
+
+    return [...existingInvoices, ...autoInvoices].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [dbState.invoices, dbState.events]);
 
   const payments = useMemo(() => {
     return Object.values(dbState.payments || {}).filter(

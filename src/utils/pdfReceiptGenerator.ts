@@ -1,6 +1,5 @@
 import { jsPDF } from 'jspdf';
 import { PEARL_LOGO_BASE64 } from '../assets/logoBase64';
-import { DEFAULT_EVENT_SETUP_PHOTOS } from '../assets/sampleEventPhotos';
 import { EventRecord, Client, Payment, Invoice, OrganizationSettings, Attachment } from '../types';
 import { formatDate, generateWhatsAppUrl, cleanPhoneForWhatsApp } from './formatters';
 
@@ -331,12 +330,11 @@ export function downloadPaymentReceiptPDF({
     );
 
     // 6. "AND IF IMAGE ADD BELOW IT"
-    // Collect reference photos from event, client, or default luxury setup gallery
-    const userPhotos: Attachment[] = [
+    // Only show photos if uploaded by user
+    const photos: Attachment[] = [
       ...(event.referencePhotos || []),
       ...(client?.referencePhotos || []),
     ];
-    const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
     // Render 2 setup photos directly below the receipt on Page 1
     if (photos.length > 0) {
@@ -708,13 +706,12 @@ export function downloadEventInvoicePDF({
       { align: 'center' }
     );
 
-    // If photos exist, add below (from invoice attachments, event photos, client photos, or default luxury setup gallery)
-    const userPhotos: Attachment[] = [
+    // If photos exist, add below (ONLY if uploaded)
+    const photos: Attachment[] = [
       ...(invoice?.attachments || []),
       ...(event.referencePhotos || []),
       ...(client?.referencePhotos || []),
     ];
-    const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
     // Render 2 setup photos directly below the invoice on Page 1
     if (photos.length > 0) {
@@ -834,12 +831,11 @@ export function openPrintableInvoiceWindow({
     : (invoice?.actualAdvanceReceived || event.advanceReceived || 2000);
   const remaining = Math.max(0, finalTotal - totalPaid);
 
-  const userPhotos: Attachment[] = [
+  const photos: Attachment[] = [
     ...(invoice?.attachments || []),
     ...(event.referencePhotos || []),
     ...(client?.referencePhotos || []),
   ];
-  const photos: Attachment[] = userPhotos.length > 0 ? userPhotos : DEFAULT_EVENT_SETUP_PHOTOS;
 
   const html = `
 <!DOCTYPE html>
