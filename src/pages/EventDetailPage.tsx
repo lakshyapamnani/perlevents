@@ -81,6 +81,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     toggleChecklistItem,
     addEventPhoto,
     updateEventDetails,
+    deleteEvent,
   } = useData();
   const { currentUser, allUsersList: users } = useAuth();
 
@@ -266,6 +267,33 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             >
               <Pencil className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
               <span>Change Venue / Salesperson</span>
+            </button>
+          )}
+
+          {(currentUser?.role === 'admin' ||
+            currentUser?.role === 'manager' ||
+            event.salespersonId === currentUser?.uid ||
+            event.createdBy === currentUser?.uid) && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Are you sure you want to permanently delete event "${event.name}"?\n\nThis will remove the event, delete its booking slot, and remove its ₹${(Number(event.finalAmount) || 0).toLocaleString('en-IN')} billing amount & all recorded payment history from the payments dashboard.`
+                  )
+                ) {
+                  const res = deleteEvent(event.id);
+                  if (res.success) {
+                    onBack();
+                  } else {
+                    alert(res.error || 'Failed to delete event.');
+                  }
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-semibold border border-red-200 dark:border-red-800/60 shadow-xs transition-colors"
+              title="Delete Event & Remove from Payments Dashboard"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Event</span>
             </button>
           )}
 
