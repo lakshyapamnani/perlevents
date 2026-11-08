@@ -18,6 +18,7 @@ import { Invoice, InvoiceItem, Attachment } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { ImageUploadArea } from '../common/ImageUploadArea';
 import { downloadEventInvoicePDF } from '../../utils/pdfReceiptGenerator';
+import { DEFAULT_EVENT_SETUP_PHOTOS } from '../../assets/sampleEventPhotos';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     invoiceToView?.notes || 'Thank you for choosing PerlEvents for your milestone celebration.'
   );
   const [includePhotos, setIncludePhotos] = useState(
-    invoiceToView?.includePhotosInPdf || false
+    invoiceToView?.includePhotosInPdf !== undefined ? invoiceToView.includePhotosInPdf : true
   );
   const [attachments, setAttachments] = useState<Attachment[]>(
     invoiceToView?.attachments || []
@@ -494,39 +495,46 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 {settings.invoiceFooter}
               </div>
 
-              {/* Attached Photos & Documents in PDF */}
-              {((attachments && attachments.length > 0) || (includePhotos && currentEvent?.referencePhotos && currentEvent.referencePhotos.length > 0)) && (
-                <div className="pt-8 border-t border-stone-300 print-page-break space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-800">
-                      Appendix: Attached Photos & Reference Documents ({((attachments?.length || 0) + (includePhotos && currentEvent?.referencePhotos ? currentEvent.referencePhotos.length : 0))})
-                    </h4>
-                    <span className="text-[10px] text-stone-600">PerlEvents Verified Documentation</span>
+              {/* Attached Photos & Documents in PDF / Modal Preview */}
+              {includePhotos && (() => {
+                const combined = [
+                  ...(attachments || []),
+                  ...(currentEvent?.referencePhotos || []),
+                  ...(currentClient?.referencePhotos || []),
+                ];
+                const photosToDisplay = combined.length > 0 ? combined : DEFAULT_EVENT_SETUP_PHOTOS;
+
+                return (
+                  <div className="pt-8 border-t border-stone-300 print-page-break space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-2">
+                        <span>Event Setup & Reference Photos</span>
+                        <span className="text-[11px] font-normal text-stone-500">({photosToDisplay.length})</span>
+                      </h4>
+                      <span className="text-[10px] text-stone-600">PerlEvents Verified Documentation</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {photosToDisplay.map((p, idx) => (
+                        <div key={p.id || idx} className="border border-stone-200 rounded-lg p-2 bg-stone-50 text-left shadow-sm">
+                          <img
+                            src={p.url}
+                            alt={p.name}
+                            className="w-full h-28 object-cover rounded bg-stone-200"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="text-[11px] font-bold text-stone-900 mt-1.5 truncate">{p.name || 'Setup Photo'}</div>
+                          {p.caption && <div className="text-[10px] text-stone-600 truncate">{p.caption}</div>}
+                          {p.category && (
+                            <span className="inline-block mt-1 text-[9px] uppercase font-semibold text-stone-600 bg-stone-200 px-1.5 py-0.5 rounded">
+                              {p.category}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      ...(attachments || []),
-                      ...(includePhotos && currentEvent?.referencePhotos ? currentEvent.referencePhotos : []),
-                    ].map((p, idx) => (
-                      <div key={p.id || idx} className="border border-stone-200 rounded-lg p-2 bg-stone-50 text-left">
-                        <img
-                          src={p.url}
-                          alt={p.name}
-                          className="w-full h-32 object-cover rounded bg-stone-200"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="text-[11px] font-bold text-stone-900 mt-1 truncate">{p.name || 'Attachment'}</div>
-                        {p.caption && <div className="text-[10px] text-stone-600 truncate">{p.caption}</div>}
-                        {p.category && (
-                          <span className="inline-block mt-1 text-[9px] uppercase font-semibold text-stone-600 bg-stone-200 px-1.5 py-0.5 rounded">
-                            {p.category}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           ) : (
             /* EDIT FORM VIEW */

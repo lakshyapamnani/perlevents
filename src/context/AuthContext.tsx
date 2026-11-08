@@ -98,6 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cleanEmail = 'manager@perlexperiences.com';
     } else if (cleanEmail === 'admin') {
       cleanEmail = 'admin@perlexperiences.com';
+    } else if (cleanEmail === 'rohan') {
+      cleanEmail = 'jeswani_rohan@yahoo.com';
     }
 
     // 1. Attempt Firebase Authentication if credentials are configured
@@ -154,11 +156,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userByEmail) {
         // Expected passwords
         const expectedPwd =
-          userByEmail.role === 'admin'
-            ? 'admin123'
-            : userByEmail.role === 'salesperson'
-              ? 'sales123'
-              : 'manager123';
+          cleanEmail === 'jeswani_rohan@yahoo.com'
+            ? 'Waheguru@24'
+            : userByEmail.role === 'admin'
+              ? 'admin123'
+              : userByEmail.role === 'salesperson'
+                ? 'sales123'
+                : 'manager123';
         if (cleanPassword === expectedPwd || cleanPassword === (userByEmail as any).initialPassword) {
           matchedUser = userByEmail;
         }

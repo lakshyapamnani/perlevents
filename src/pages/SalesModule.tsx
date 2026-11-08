@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import {
   BadgeDollarSign,
   Plus,
@@ -33,6 +34,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
   onOpenRecordPayment,
 }) => {
   const { sales, banquets, deleteSale } = useData();
+  const { currentUser } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [banquetFilter, setBanquetFilter] = useState('all');
@@ -93,35 +95,37 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
         </div>
       </div>
 
-      {/* Financial Overview Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-            Total Contracted Sales ({filteredSales.length})
-          </span>
-          <span className="text-lg font-extrabold text-stone-900 dark:text-stone-100 tabular-nums">
-            {formatCurrency(totalContracted)}
-          </span>
-        </div>
+      {/* Financial Overview Stats Bar (Hidden for Salespersons) */}
+      {currentUser?.role !== 'salesperson' && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
+              Total Contracted Sales ({filteredSales.length})
+            </span>
+            <span className="text-lg font-extrabold text-stone-900 dark:text-stone-100 tabular-nums">
+              {formatCurrency(totalContracted)}
+            </span>
+          </div>
 
-        <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
-            Total Payments Received
-          </span>
-          <span className="text-lg font-extrabold text-emerald-800 dark:text-emerald-400 tabular-nums">
-            {formatCurrency(totalReceived)}
-          </span>
-        </div>
+          <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
+              Total Payments Received
+            </span>
+            <span className="text-lg font-extrabold text-emerald-800 dark:text-emerald-400 tabular-nums">
+              {formatCurrency(totalReceived)}
+            </span>
+          </div>
 
-        <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 block">
-            Total Pending Balance
-          </span>
-          <span className="text-lg font-extrabold text-amber-700 dark:text-amber-400 tabular-nums">
-            {formatCurrency(totalPending)}
-          </span>
+          <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 block">
+              Total Pending Balance
+            </span>
+            <span className="text-lg font-extrabold text-amber-700 dark:text-amber-400 tabular-nums">
+              {formatCurrency(totalPending)}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filter / Search Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xs">

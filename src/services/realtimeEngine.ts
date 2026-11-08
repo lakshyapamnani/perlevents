@@ -80,6 +80,7 @@ export interface FirebaseConfigOptions {
 }
 
 export interface DatabaseState {
+  deletedRecordIds?: Record<string, number>;
   settings: OrganizationSettings;
   users: Record<string, UserProfile>;
   banquets: Record<string, Banquet>;
@@ -136,6 +137,21 @@ class RealtimeDatabaseEngine {
           this.applyRemoteState(remoteState);
         }
       });
+
+      // 3. Proactively sync on window focus & tab visibility change
+      window.addEventListener('focus', () => {
+        this.syncFromFirebase();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.syncFromFirebase();
+        }
+      });
+
+      // 4. Periodic background sync every 10 seconds to catch any missed updates
+      setInterval(() => {
+        this.syncFromFirebase();
+      }, 10000);
     }
   }
 
@@ -161,6 +177,14 @@ class RealtimeDatabaseEngine {
    */
   public applyRemoteState(remoteState: any): void {
     if (!remoteState || typeof remoteState !== 'object') return;
+
+    // Merge deleted IDs from remote and local
+    const mergedDeletedIds: Record<string, number> = {
+      ...(this.state.deletedRecordIds || {}),
+      ...(remoteState.deletedRecordIds && typeof remoteState.deletedRecordIds === 'object'
+        ? remoteState.deletedRecordIds
+        : {}),
+    };
 
     const remoteEvents = remoteState.events && typeof remoteState.events === 'object'
       ? remoteState.events
@@ -193,31 +217,114 @@ class RealtimeDatabaseEngine {
       ? remoteState.targets
       : null;
 
-    // Merge: adopt remote records while preserving any locally modified records
-    const mergedEvents: Record<string, EventRecord> = remoteEvents
-      ? { ...this.state.events, ...remoteEvents }
-      : { ...this.state.events };
-    const mergedSales: Record<string, Sale> = remoteSales
-      ? { ...this.state.sales, ...remoteSales }
-      : { ...this.state.sales };
+    // 1. Events: Adopt remote events from Firebase as source of truth; never resurrect deleted events
+    let mergedEvents: Record<string, EventRecord> = {};
+    if (remoteEvents) {
+      Object.entries(remoteEvents).forEach(([id, evt]) => {
+        if (evt && typeof evt === 'object' && !mergedDeletedIds[id]) {
+          mergedEvents[id] = evt as EventRecord;
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      // Only keep local if remoteState was completely empty (fresh initialization)
+      Object.entries(this.state.events || {}).forEach(([id, evt]) => {
+        if (evt && !mergedDeletedIds[id]) {
+          mergedEvents[id] = evt;
+        }
+      });
+    }
+
+    // 2. Sales: Adopt remote sales; purge any deleted sales or sales for deleted events
+    let mergedSales: Record<string, Sale> = {};
+    if (remoteSales) {
+      Object.entries(remoteSales).forEach(([id, rawS]) => {
+        const s = rawS as Sale;
+        if (s && typeof s === 'object' && !mergedDeletedIds[id] && (!s.eventId || (!mergedDeletedIds[s.eventId] && mergedEvents[s.eventId]))) {
+          mergedSales[id] = s;
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      Object.entries(this.state.sales || {}).forEach(([id, s]) => {
+        if (s && !mergedDeletedIds[id] && (!s.eventId || (!mergedDeletedIds[s.eventId] && mergedEvents[s.eventId]))) {
+          mergedSales[id] = s;
+        }
+      });
+    }
+
+    // 3. Payments: Adopt remote payments; purge any deleted payments or payments for deleted events
+    let mergedPayments: Record<string, Payment> = {};
+    if (remotePayments) {
+      Object.entries(remotePayments).forEach(([id, rawP]) => {
+        const p = rawP as Payment;
+        if (p && typeof p === 'object' && !mergedDeletedIds[id] && (!p.eventId || (!mergedDeletedIds[p.eventId] && mergedEvents[p.eventId]))) {
+          mergedPayments[id] = p;
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      Object.entries(this.state.payments || {}).forEach(([id, p]) => {
+        if (p && !mergedDeletedIds[id] && (!p.eventId || (!mergedDeletedIds[p.eventId] && mergedEvents[p.eventId]))) {
+          mergedPayments[id] = p;
+        }
+      });
+    }
+
+    // 4. Invoices: Adopt remote invoices; purge any deleted invoices or invoices for deleted events
+    let mergedInvoices: Record<string, Invoice> = {};
+    if (remoteInvoices) {
+      Object.entries(remoteInvoices).forEach(([id, rawInv]) => {
+        const inv = rawInv as Invoice;
+        if (inv && typeof inv === 'object' && !mergedDeletedIds[id] && (!inv.eventId || (!mergedDeletedIds[inv.eventId] && mergedEvents[inv.eventId]))) {
+          mergedInvoices[id] = inv;
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      Object.entries(this.state.invoices || {}).forEach(([id, inv]) => {
+        if (inv && !mergedDeletedIds[id] && (!inv.eventId || (!mergedDeletedIds[inv.eventId] && mergedEvents[inv.eventId]))) {
+          mergedInvoices[id] = inv;
+        }
+      });
+    }
+
+    // 5. BookingSlots: Adopt remote slots; purge any deleted slots or slots for deleted events
+    let mergedSlots: Record<string, BookingSlot> = {};
+    if (remoteSlots) {
+      Object.entries(remoteSlots).forEach(([id, rawSlot]) => {
+        const slot = rawSlot as BookingSlot;
+        if (slot && typeof slot === 'object' && !mergedDeletedIds[id] && (!slot.eventId || (!mergedDeletedIds[slot.eventId] && mergedEvents[slot.eventId]))) {
+          mergedSlots[id] = slot;
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      Object.entries(this.state.bookingSlots || {}).forEach(([id, slot]) => {
+        if (slot && !mergedDeletedIds[id] && (!slot.eventId || (!mergedDeletedIds[slot.eventId] && mergedEvents[slot.eventId]))) {
+          mergedSlots[id] = slot;
+        }
+      });
+    }
+
+    // 6. Checklist: Strip any checklist for deleted events
+    let mergedChecklist: Record<string, ChecklistItem[]> = {};
+    if (remoteChecklist) {
+      Object.entries(remoteChecklist).forEach(([eventId, items]) => {
+        if (!mergedDeletedIds[eventId] && mergedEvents[eventId]) {
+          mergedChecklist[eventId] = items as ChecklistItem[];
+        }
+      });
+    } else if (!remoteState.banquets && !remoteState.users) {
+      Object.entries(this.state.checklistItems || {}).forEach(([eventId, items]) => {
+        if (!mergedDeletedIds[eventId] && mergedEvents[eventId]) {
+          mergedChecklist[eventId] = items;
+        }
+      });
+    }
+
+    // 7. Banquets, Clients, Leads, Targets
     const mergedBanquets: Record<string, Banquet> = remoteBanquets
       ? { ...this.state.banquets, ...remoteBanquets }
       : { ...this.state.banquets };
     const mergedClients: Record<string, Client> = remoteClients
       ? { ...this.state.clients, ...remoteClients }
       : { ...this.state.clients };
-    const mergedSlots: Record<string, BookingSlot> = remoteSlots
-      ? { ...this.state.bookingSlots, ...remoteSlots }
-      : { ...this.state.bookingSlots };
-    const mergedChecklist: Record<string, ChecklistItem[]> = remoteChecklist
-      ? { ...this.state.checklistItems, ...remoteChecklist }
-      : { ...this.state.checklistItems };
-    const mergedInvoices: Record<string, Invoice> = remoteInvoices
-      ? { ...this.state.invoices, ...remoteInvoices }
-      : { ...this.state.invoices };
-    const mergedPayments: Record<string, Payment> = remotePayments
-      ? { ...this.state.payments, ...remotePayments }
-      : { ...this.state.payments };
     const mergedLeads: Record<string, Lead> = remoteLeads
       ? { ...this.state.leads, ...remoteLeads }
       : { ...this.state.leads };
@@ -225,10 +332,11 @@ class RealtimeDatabaseEngine {
       ? { ...this.state.targets, ...remoteTargets }
       : { ...this.state.targets };
 
-    // Auto-generate booking slots for any booked/tentative events so Calendar and Availability always reflect them
+    // Auto-generate booking slots ONLY for active events that are NOT deleted
     Object.values(mergedEvents).forEach((evt) => {
       if (!evt || !evt.id || !evt.date || !evt.banquetId) return;
       if (evt.status === 'cancelled') return;
+      if (mergedDeletedIds[evt.id]) return;
       const existingSlot = Object.values(mergedSlots).find((s) => s && s.eventId === evt.id);
       if (!existingSlot) {
         const slotId = `slot_${evt.id}`;
@@ -249,25 +357,9 @@ class RealtimeDatabaseEngine {
       }
     });
 
-    // If remote RTDB is missing records that exist locally, push them to remote to guarantee sync
-    if (!remoteBanquets && Object.keys(mergedBanquets).length > 0) {
-      writeRealtimeNode('pearlexperiences/state/banquets', mergedBanquets).catch(() => {});
-    }
-    if (!remoteEvents && Object.keys(mergedEvents).length > 0) {
-      writeRealtimeNode('pearlexperiences/state/events', mergedEvents).catch(() => {});
-    }
-    if (!remoteSales && Object.keys(mergedSales).length > 0) {
-      writeRealtimeNode('pearlexperiences/state/sales', mergedSales).catch(() => {});
-    }
-    if (!remoteClients && Object.keys(mergedClients).length > 0) {
-      writeRealtimeNode('pearlexperiences/state/clients', mergedClients).catch(() => {});
-    }
-    if (!remoteSlots && Object.keys(mergedSlots).length > 0) {
-      writeRealtimeNode('pearlexperiences/state/bookingSlots', mergedSlots).catch(() => {});
-    }
-
     this.state = {
       ...this.state,
+      deletedRecordIds: mergedDeletedIds,
       settings: { ...this.state.settings, ...(remoteState.settings || {}) },
       users: { ...this.state.users, ...(remoteState.users || {}) },
       banquets: mergedBanquets,
@@ -373,6 +465,9 @@ class RealtimeDatabaseEngine {
         if (!parsed.checklistItems || typeof parsed.checklistItems !== 'object') {
           parsed.checklistItems = {};
         }
+        if (!parsed.deletedRecordIds || typeof parsed.deletedRecordIds !== 'object') {
+          parsed.deletedRecordIds = {};
+        }
 
         // Sync Pearlexperiences organization details
         parsed.settings.name = 'Pearl Experience';
@@ -444,6 +539,7 @@ class RealtimeDatabaseEngine {
 
     // Default Seed State
     const defaultState: DatabaseState = {
+      deletedRecordIds: {},
       settings: initialSettings,
       users: initialUsers.reduce((acc, u) => ({ ...acc, [u.uid]: u }), {}),
       banquets: initialBanquets.reduce((acc, b) => ({ ...acc, [b.id]: b }), {}),
@@ -471,6 +567,7 @@ class RealtimeDatabaseEngine {
 
   private getEmptyState(): DatabaseState {
     return {
+      deletedRecordIds: {},
       settings: initialSettings,
       users: {},
       banquets: {},
@@ -1314,8 +1411,14 @@ class RealtimeDatabaseEngine {
       };
     }
 
+    if (!this.state.deletedRecordIds) {
+      this.state.deletedRecordIds = {};
+    }
+    this.state.deletedRecordIds[saleId] = Date.now();
+
     delete this.state.sales[saleId];
     if (isFirebaseConfigured()) {
+      writeRealtimeNode('pearlexperiences/state/deletedRecordIds', this.state.deletedRecordIds).catch(() => {});
       writeRealtimeNode(`pearlexperiences/state/sales/${saleId}`, null).catch(() => {});
     }
 
@@ -1356,54 +1459,63 @@ class RealtimeDatabaseEngine {
       };
     }
 
+    if (!this.state.deletedRecordIds) {
+      this.state.deletedRecordIds = {};
+    }
+    this.state.deletedRecordIds[eventId] = Date.now();
+
     // 1. Remove Event
     delete this.state.events[eventId];
-    if (isFirebaseConfigured()) {
-      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, null).catch(() => {});
-    }
 
     // 2. Remove associated Payments so amounts are deducted from payments dashboard
     const paymentsToDelete = Object.values(this.state.payments).filter((p) => p && p.eventId === eventId);
     paymentsToDelete.forEach((p) => {
+      this.state.deletedRecordIds![p.id] = Date.now();
       delete this.state.payments[p.id];
-      if (isFirebaseConfigured()) {
-        writeRealtimeNode(`pearlexperiences/state/payments/${p.id}`, null).catch(() => {});
-      }
     });
 
     // 3. Remove associated Sales records
     const salesToDelete = Object.values(this.state.sales).filter((s) => s && s.eventId === eventId);
     salesToDelete.forEach((s) => {
+      this.state.deletedRecordIds![s.id] = Date.now();
       delete this.state.sales[s.id];
-      if (isFirebaseConfigured()) {
-        writeRealtimeNode(`pearlexperiences/state/sales/${s.id}`, null).catch(() => {});
-      }
     });
 
     // 4. Remove associated Invoices
     const invoicesToDelete = Object.values(this.state.invoices).filter((i) => i && i.eventId === eventId);
     invoicesToDelete.forEach((i) => {
+      this.state.deletedRecordIds![i.id] = Date.now();
       delete this.state.invoices[i.id];
-      if (isFirebaseConfigured()) {
-        writeRealtimeNode(`pearlexperiences/state/invoices/${i.id}`, null).catch(() => {});
-      }
     });
 
     // 5. Remove associated BookingSlots
     const slotsToDelete = Object.values(this.state.bookingSlots).filter((slot) => slot && slot.eventId === eventId);
     slotsToDelete.forEach((slot) => {
+      this.state.deletedRecordIds![slot.id] = Date.now();
       delete this.state.bookingSlots[slot.id];
-      if (isFirebaseConfigured()) {
-        writeRealtimeNode(`pearlexperiences/state/bookingSlots/${slot.id}`, null).catch(() => {});
-      }
     });
 
     // 6. Remove Checklist Items
     if (this.state.checklistItems && this.state.checklistItems[eventId]) {
       delete this.state.checklistItems[eventId];
-      if (isFirebaseConfigured()) {
-        writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, null).catch(() => {});
-      }
+    }
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode('pearlexperiences/state/deletedRecordIds', this.state.deletedRecordIds).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/events/${eventId}`, null).catch(() => {});
+      paymentsToDelete.forEach((p) => {
+        writeRealtimeNode(`pearlexperiences/state/payments/${p.id}`, null).catch(() => {});
+      });
+      salesToDelete.forEach((s) => {
+        writeRealtimeNode(`pearlexperiences/state/sales/${s.id}`, null).catch(() => {});
+      });
+      invoicesToDelete.forEach((i) => {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${i.id}`, null).catch(() => {});
+      });
+      slotsToDelete.forEach((slot) => {
+        writeRealtimeNode(`pearlexperiences/state/bookingSlots/${slot.id}`, null).catch(() => {});
+      });
+      writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, null).catch(() => {});
     }
 
     // 7. Audit Log
@@ -1631,8 +1743,19 @@ class RealtimeDatabaseEngine {
     const lead = this.state.leads[leadId];
     if (!lead) return { success: false, error: 'Lead not found.' };
 
+    if (!this.state.deletedRecordIds) {
+      this.state.deletedRecordIds = {};
+    }
+    this.state.deletedRecordIds[leadId] = Date.now();
+
     delete this.state.leads[leadId];
     delete this.state.leadFollowUps[leadId];
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode('pearlexperiences/state/deletedRecordIds', this.state.deletedRecordIds).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/leads/${leadId}`, null).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/leadFollowUps/${leadId}`, null).catch(() => {});
+    }
 
     this.logActivity({
       actorId: currentUser.uid,
@@ -2318,7 +2441,16 @@ class RealtimeDatabaseEngine {
 
     if (this.state.targets && this.state.targets[targetId]) {
       const target = this.state.targets[targetId];
+      if (!this.state.deletedRecordIds) {
+        this.state.deletedRecordIds = {};
+      }
+      this.state.deletedRecordIds[targetId] = Date.now();
       delete this.state.targets[targetId];
+
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode('pearlexperiences/state/deletedRecordIds', this.state.deletedRecordIds).catch(() => {});
+        writeRealtimeNode(`pearlexperiences/state/targets/${targetId}`, null).catch(() => {});
+      }
 
       this.logActivity({
         actorId: currentUser.uid,
