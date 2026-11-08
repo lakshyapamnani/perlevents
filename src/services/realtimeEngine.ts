@@ -45,6 +45,7 @@ import {
   initialUsers,
   initialVendors,
   initialTargets,
+  DEFAULT_USER_CREDENTIALS,
 } from './seedData';
 
 export const DEFAULT_VENDOR_CATEGORIES: string[] = [
@@ -785,6 +786,7 @@ class RealtimeDatabaseEngine {
       phone?: string;
       role?: 'salesperson' | 'manager';
       assignedBanquetIds?: string[];
+      password?: string;
     }
   ): { success: boolean; user?: UserProfile; error?: string } {
     if (adminUser.role !== 'admin') {
@@ -805,6 +807,16 @@ class RealtimeDatabaseEngine {
         return { success: false, error: `Account with email ${emailNormalized} already exists.` };
       }
       user.email = emailNormalized;
+    }
+
+    if (data.password && data.password.trim()) {
+      const cleanPwd = data.password.trim();
+      user.password = cleanPwd;
+      user.initialPassword = cleanPwd;
+      const cleanEmail = user.email.toLowerCase();
+      if (DEFAULT_USER_CREDENTIALS[cleanEmail]) {
+        DEFAULT_USER_CREDENTIALS[cleanEmail].password = cleanPwd;
+      }
     }
 
     if (data.fullName) user.fullName = data.fullName.trim();
@@ -828,6 +840,10 @@ class RealtimeDatabaseEngine {
       });
     }
     user.updatedAt = new Date().toISOString();
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/users/${user.uid}`, user).catch(() => {});
+    }
 
     this.logActivity({
       actorId: adminUser.uid,
@@ -856,6 +872,10 @@ class RealtimeDatabaseEngine {
 
     user.isActive = !user.isActive;
     user.updatedAt = new Date().toISOString();
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/users/${user.uid}`, user).catch(() => {});
+    }
 
     this.logActivity({
       actorId: adminUser.uid,

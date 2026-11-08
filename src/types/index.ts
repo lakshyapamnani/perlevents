@@ -12,6 +12,8 @@ export interface UserProfile {
   createdBy: string;
   updatedAt: string;
   assignedBanquetIds?: string[];
+  initialPassword?: string;
+  password?: string;
 }
 
 export interface OrganizationSettings {

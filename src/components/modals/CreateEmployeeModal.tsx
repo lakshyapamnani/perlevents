@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { X, UserPlus, Shield, AlertCircle, CheckCircle2, KeyRound, Pencil, Building2, Save } from 'lucide-react';
+import { X, UserPlus, Shield, AlertCircle, CheckCircle2, KeyRound, Pencil, Building2, Save, Eye, EyeOff } from 'lucide-react';
 import { UserProfile, UserRole } from '../../types';
 
 interface CreateEmployeeModalProps {
@@ -27,6 +27,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [initialPassword, setInitialPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedBanquets, setSelectedBanquets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,13 +88,17 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
     }
 
     if (isEditing && employeeToEdit) {
+      setIsSubmitting(true);
+      setError(null);
       const res = updateEmployee(employeeToEdit.uid, {
         fullName: fullName.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
         role,
         assignedBanquetIds: selectedBanquets,
+        password: initialPassword.trim() || undefined,
       });
+      setIsSubmitting(false);
 
       if (res.success) {
         onClose();
@@ -278,30 +283,50 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               </div>
             </div>
 
-            {!isEditing && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-                    Initial Passcode / Secret
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleGeneratePassword}
-                    className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
-                  >
-                    <KeyRound className="w-3 h-3" />
-                    Generate
-                  </button>
-                </div>
+            {/* Password / Passcode Section */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                  <span>{isEditing ? 'Change Password / Passcode' : 'Initial Passcode / Secret'}</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGeneratePassword}
+                  className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Generate New</span>
+                </button>
+              </div>
+
+              <div className="relative">
                 <input
-                  type="text"
+                  type={showPassword ? 'text' : 'password'}
                   value={initialPassword}
                   onChange={(e) => setInitialPassword(e.target.value)}
-                  placeholder="Click Generate or enter secure password"
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-mono"
+                  placeholder={
+                    isEditing
+                      ? 'Leave blank to keep current password, or enter new password'
+                      : 'Click Generate or enter secure password (e.g. sales123)'
+                  }
+                  className="w-full pl-3 pr-10 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-mono"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 p-1"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-            )}
+              {isEditing && (
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Type a new password here to reset this salesperson's login password immediately.
+                </p>
+              )}
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">

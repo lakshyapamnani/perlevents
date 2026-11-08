@@ -34,6 +34,7 @@ interface AuthContextType {
       phone?: string;
       role?: 'salesperson' | 'manager';
       assignedBanquetIds?: string[];
+      password?: string;
     }
   ) => { success: boolean; user?: UserProfile; error?: string };
   toggleUserStatus: (uid: string) => { success: boolean; error?: string };
@@ -131,41 +132,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const creds = DEFAULT_USER_CREDENTIALS[cleanEmail];
     let matchedUser: UserProfile | undefined;
 
-    if (creds && creds.password === cleanPassword) {
-      matchedUser = dbState?.users?.[creds.uid] || allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
-      if (!matchedUser) {
-        matchedUser = {
-          uid: creds.uid,
-          fullName: creds.name,
-          email: creds.email,
-          phone: '',
-          role: creds.role,
-          organizationId: 'org_pearlexperiences',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          createdBy: 'system',
-          updatedAt: new Date().toISOString(),
-        };
-        if (dbState?.users) {
-          dbState.users[creds.uid] = matchedUser;
-        }
+    const userInDb = allUsersList.find((u) => u.email.toLowerCase() === cleanEmail) || (creds ? dbState?.users?.[creds.uid] : undefined);
+    const customPassword = userInDb?.password || userInDb?.initialPassword;
+
+    if (customPassword && cleanPassword === customPassword) {
+      matchedUser = userInDb;
+    } else if (creds && creds.password === cleanPassword) {
+      matchedUser = userInDb || {
+        uid: creds.uid,
+        fullName: creds.name,
+        email: creds.email,
+        phone: '',
+        role: creds.role,
+        organizationId: 'org_pearlexperiences',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: 'system',
+        updatedAt: new Date().toISOString(),
+      };
+      if (dbState?.users && !dbState.users[creds.uid]) {
+        dbState.users[creds.uid] = matchedUser;
       }
-    } else {
-      // Check if user exists in database and password matches default rule
-      const userByEmail = allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
-      if (userByEmail) {
-        // Expected passwords
-        const expectedPwd =
-          cleanEmail === 'jeswani_rohan@yahoo.com'
-            ? 'Waheguru@24'
-            : userByEmail.role === 'admin'
-              ? 'admin123'
-              : userByEmail.role === 'salesperson'
-                ? 'sales123'
-                : 'manager123';
-        if (cleanPassword === expectedPwd || cleanPassword === (userByEmail as any).initialPassword) {
-          matchedUser = userByEmail;
-        }
+    } else if (userInDb) {
+      // Check if password matches standard role fallback
+      const expectedPwd =
+        cleanEmail === 'jeswani_rohan@yahoo.com'
+          ? 'Waheguru@24'
+          : userInDb.role === 'admin'
+            ? 'admin123'
+            : userInDb.role === 'salesperson'
+              ? 'sales123'
+              : 'manager123';
+      if (cleanPassword === expectedPwd) {
+        matchedUser = userInDb;
       }
     }
 
@@ -267,6 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone?: string;
       role?: 'salesperson' | 'manager';
       assignedBanquetIds?: string[];
+      password?: string;
     }
   ) => {
     if (!currentUser || currentUser.role !== 'admin') {
