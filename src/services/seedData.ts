@@ -69,6 +69,13 @@ export const DEFAULT_USER_CREDENTIALS: Record<
     uid: 'usr_admin_02',
     name: 'Executive Management',
   },
+  'jeswani_rohan@yahoo.com': {
+    email: 'jeswani_rohan@yahoo.com',
+    password: 'Waheguru@24',
+    role: 'admin',
+    uid: 'usr_admin_rohan',
+    name: 'Rohan Jeswani',
+  },
   // Sales credentials
   'sales@perlexperiences.com': {
     email: 'sales@perlexperiences.com',
@@ -154,6 +161,18 @@ export const initialUsers: UserProfile[] = [
     fullName: 'Executive Management',
     email: 'Pearlexperiencespvt.ltd@gmail.com',
     phone: '+91 98111 22233',
+    role: 'admin',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    createdAt: '2026-01-10T09:00:00Z',
+    createdBy: 'system_root',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
+  {
+    uid: 'usr_admin_rohan',
+    fullName: 'Rohan Jeswani',
+    email: 'jeswani_rohan@yahoo.com',
+    phone: '',
     role: 'admin',
     organizationId: 'org_pearlexperiences',
     isActive: true,
