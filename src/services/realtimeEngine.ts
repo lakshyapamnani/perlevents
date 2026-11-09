@@ -717,7 +717,7 @@ class RealtimeDatabaseEngine {
       fullName: string;
       email: string;
       phone?: string;
-      role: 'salesperson' | 'manager';
+      role: 'salesperson' | 'manager' | 'partner';
       initialPassword?: string;
       customUid?: string;
       assignedBanquetIds?: string[];
@@ -785,7 +785,7 @@ class RealtimeDatabaseEngine {
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager';
+      role?: 'salesperson' | 'manager' | 'partner';
       assignedBanquetIds?: string[];
       password?: string;
     }

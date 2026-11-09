@@ -22,7 +22,7 @@ interface AuthContextType {
     fullName: string;
     email: string;
     phone?: string;
-    role: 'salesperson' | 'manager';
+    role: 'salesperson' | 'manager' | 'partner';
     initialPassword?: string;
     assignedBanquetIds?: string[];
   }) => Promise<{ success: boolean; user?: UserProfile; error?: string }>;
@@ -32,7 +32,7 @@ interface AuthContextType {
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager';
+      role?: 'salesperson' | 'manager' | 'partner';
       assignedBanquetIds?: string[];
       password?: string;
     }
@@ -162,7 +162,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? 'admin123'
             : userInDb.role === 'salesperson'
               ? 'sales123'
-              : 'manager123';
+              : userInDb.role === 'manager'
+                ? 'manager123'
+                : 'partner123';
       if (cleanPassword === expectedPwd) {
         matchedUser = userInDb;
       }
@@ -225,7 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fullName: string;
     email: string;
     phone?: string;
-    role: 'salesperson' | 'manager';
+    role: 'salesperson' | 'manager' | 'partner';
     initialPassword?: string;
     assignedBanquetIds?: string[];
   }) => {
@@ -233,7 +235,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Unauthorized: Only an Administrator can create accounts.' };
     }
 
-    const defaultPwd = data.role === 'salesperson' ? 'sales123' : 'manager123';
+    const defaultPwd =
+      data.role === 'salesperson'
+        ? 'sales123'
+        : data.role === 'manager'
+          ? 'manager123'
+          : 'partner123';
     const passwordToUse = data.initialPassword || defaultPwd;
 
     // Create user in live Firebase Auth
@@ -264,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager';
+      role?: 'salesperson' | 'manager' | 'partner';
       assignedBanquetIds?: string[];
       password?: string;
     }

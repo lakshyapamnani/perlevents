@@ -20,7 +20,7 @@ import { formatDate } from '../utils/formatters';
 import { CreateEmployeeModal } from '../components/modals/CreateEmployeeModal';
 
 interface UsersModuleProps {
-  filterRole?: 'salesperson' | 'manager';
+  filterRole?: 'salesperson' | 'manager' | 'partner';
 }
 
 export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
@@ -38,6 +38,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
     admin: { label: 'Admin', bg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300', text: '' },
     salesperson: { label: 'Salesperson', bg: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300', text: '' },
     manager: { label: 'Operations Manager', bg: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300', text: '' },
+    partner: { label: 'Banquet Partner', bg: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300', text: '' },
   };
 
   const handleToggle = (uid: string) => {
@@ -48,7 +49,14 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
   };
 
   const handleDeleteUser = (u: UserProfile) => {
-    const roleTitle = u.role === 'salesperson' ? 'Salesperson' : u.role === 'manager' ? 'Operations Manager' : 'Employee';
+    const roleTitle =
+      u.role === 'partner'
+        ? 'Partner'
+        : u.role === 'salesperson'
+        ? 'Salesperson'
+        : u.role === 'manager'
+        ? 'Operations Manager'
+        : 'Employee';
     if (window.confirm(`Are you sure you want to permanently delete ${roleTitle} "${u.fullName}" (${u.email})?\nThis action cannot be undone.`)) {
       const res = deleteEmployee(u.uid);
       if (!res.success) {
@@ -65,7 +73,9 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
           <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
             <Users className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
             <span>
-              {filterRole === 'salesperson'
+              {filterRole === 'partner'
+                ? 'Banquet Partners Directory'
+                : filterRole === 'salesperson'
                 ? 'Salespersons Directory'
                 : filterRole === 'manager'
                 ? 'Operations Managers Directory'
@@ -73,7 +83,9 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
             </span>
           </h1>
           <p className="text-xs text-stone-600 dark:text-stone-400">
-            Admin-controlled account provisioning. No public registration allowed.
+            {filterRole === 'partner'
+              ? 'Provision banquet partners and assign them to specific venues with exclusive access to their bookings & finances.'
+              : 'Admin-controlled account provisioning. No public registration allowed.'}
           </p>
         </div>
 
@@ -86,7 +98,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
             className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Provision New Employee</span>
+            <span>{filterRole === 'partner' ? 'Add New Partner' : 'Provision New Employee'}</span>
           </button>
         )}
       </div>
@@ -178,7 +190,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
                     >
                       <LogIn className="w-3.5 h-3.5" />
                       <span>
-                        Log in as {u.role === 'salesperson' ? 'Salesperson' : u.role === 'manager' ? 'Operations Manager' : 'User'}
+                        Log in as {u.role === 'partner' ? 'Partner' : u.role === 'salesperson' ? 'Salesperson' : u.role === 'manager' ? 'Operations Manager' : 'User'}
                       </span>
                     </button>
                   )}

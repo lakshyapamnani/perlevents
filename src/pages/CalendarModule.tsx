@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -25,6 +26,14 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
   onOpenDirectSaleWithDate,
 }) => {
   const { events, banquets } = useData();
+  const { currentUser } = useAuth();
+
+  const isPartner = currentUser?.role === 'partner';
+  const partnerBanquetIdSet = new Set(currentUser?.assignedBanquetIds || []);
+
+  const displayBanquets = isPartner
+    ? banquets.filter((b) => b && partnerBanquetIdSet.has(b.id))
+    : banquets;
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedBanquet, setSelectedBanquet] = useState('all');
@@ -42,12 +51,13 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
 
   const filteredEvents = events.filter((e) => {
     if (!e || !e.date) return false;
+    if (isPartner && !partnerBanquetIdSet.has(e.banquetId)) return false;
     const matchBanquet = selectedBanquet === 'all' || e.banquetId === selectedBanquet;
     const matchStatus = selectedStatus === 'all' || e.status === selectedStatus;
     return matchBanquet && matchStatus;
   });
 
-  const currentBanquetObj = selectedBanquet !== 'all' ? banquets.find((b) => b && b.id === selectedBanquet) : null;
+  const currentBanquetObj = selectedBanquet !== 'all' ? displayBanquets.find((b) => b && b.id === selectedBanquet) : null;
   const currentBanquetMaxDaily = currentBanquetObj?.maxBookingsPerDay || 2;
 
   // Monthly stats
@@ -116,8 +126,10 @@ export const CalendarModule: React.FC<CalendarModuleProps> = ({
             onChange={(e) => setSelectedBanquet(e.target.value)}
             className="px-3 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 font-medium"
           >
-            <option value="all">All Luxury Venues</option>
-            {banquets.map((b) => (
+            <option value="all">
+              {isPartner ? 'All My Partnered Venues' : 'All Luxury Venues'}
+            </option>
+            {displayBanquets.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
