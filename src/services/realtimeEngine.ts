@@ -8,6 +8,7 @@
 import {
   Banquet,
   BookingSlot,
+  BookingStatus,
   ChecklistItem,
   ChecklistTemplate,
   Client,
@@ -716,7 +717,7 @@ class RealtimeDatabaseEngine {
       fullName: string;
       email: string;
       phone?: string;
-      role: 'salesperson' | 'manager';
+      role: 'salesperson' | 'manager' | 'partner';
       initialPassword?: string;
       customUid?: string;
       assignedBanquetIds?: string[];
@@ -784,7 +785,7 @@ class RealtimeDatabaseEngine {
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager';
+      role?: 'salesperson' | 'manager' | 'partner';
       assignedBanquetIds?: string[];
       password?: string;
     }
@@ -1526,15 +1527,17 @@ class RealtimeDatabaseEngine {
       return { success: false, error: 'Event not found.' };
     }
 
-    if (
-      currentUser.role !== 'admin' &&
-      currentUser.role !== 'manager' &&
-      event.salespersonId !== currentUser.uid &&
-      event.createdBy !== currentUser.uid
-    ) {
+    if (currentUser.role === 'salesperson') {
       return {
         success: false,
-        error: 'Unauthorized: Only Admins, Managers, or the assigned Salesperson can delete this event.',
+        error: 'Unauthorized: Salespersons are not permitted to delete events.',
+      };
+    }
+
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+      return {
+        success: false,
+        error: 'Unauthorized: Only Administrators and Managers can delete events.',
       };
     }
 
@@ -1623,16 +1626,37 @@ class RealtimeDatabaseEngine {
       salespersonId?: string;
       managerId?: string;
       name?: string;
+      eventType?: string;
       guestCount?: number;
       date?: string;
       startTime?: string;
       endTime?: string;
+      clientName?: string;
+      clientPhone?: string;
+      clientWhatsApp?: string;
+      requirements?: string;
+      specialInstructions?: string;
+      status?: BookingStatus;
+      quotedAmount?: number;
+      discount?: number;
+      finalAmount?: number;
+      advanceRequested?: number;
+      advanceReceived?: number;
+      remainingBalance?: number;
+      paymentTerms?: string;
+      referencePhotos?: Attachment[];
     }
   ): { success: boolean; event?: EventRecord; error?: string } {
     const event = this.state.events[eventId];
     if (!event) return { success: false, error: 'Event not found.' };
 
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && event.salespersonId !== currentUser.uid) {
+    if (
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'manager' &&
+      currentUser.role !== 'salesperson' &&
+      event.salespersonId !== currentUser.uid &&
+      event.createdBy !== currentUser.uid
+    ) {
       return { success: false, error: 'Unauthorized to modify this event.' };
     }
 
@@ -1687,11 +1711,135 @@ class RealtimeDatabaseEngine {
       event.managerName = newManager?.fullName;
     }
 
-    if (data.name) event.name = data.name.trim();
-    if (data.guestCount) event.guestCount = data.guestCount;
-    if (data.date) event.date = data.date;
-    if (data.startTime) event.startTime = data.startTime;
-    if (data.endTime) event.endTime = data.endTime;
+    if (data.name) {
+      event.name = data.name.trim();
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) linkedSlot.eventName = event.name;
+      const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+      if (linkedSale) linkedSale.eventName = event.name;
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) linkedInvoice.eventName = event.name;
+    }
+
+    if (data.eventType) {
+      event.eventType = data.eventType;
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) linkedInvoice.eventType = data.eventType;
+    }
+
+    if (data.date) {
+      event.date = data.date;
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) linkedSlot.date = data.date;
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) linkedInvoice.eventDate = data.date;
+    }
+
+    if (data.startTime || data.endTime) {
+      if (data.startTime) event.startTime = data.startTime;
+      if (data.endTime) event.endTime = data.endTime;
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) {
+        if (data.startTime) linkedSlot.startTime = data.startTime;
+        if (data.endTime) linkedSlot.endTime = data.endTime;
+      }
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) {
+        linkedInvoice.eventTime = `${event.startTime} - ${event.endTime}`;
+      }
+    }
+
+    if (data.clientName) {
+      event.clientName = data.clientName.trim();
+      if (event.clientId && this.state.clients[event.clientId]) {
+        this.state.clients[event.clientId].fullName = event.clientName;
+      }
+      const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+      if (linkedSale) linkedSale.clientName = event.clientName;
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) linkedInvoice.clientName = event.clientName;
+    }
+
+    if (data.clientPhone) {
+      event.clientPhone = data.clientPhone.trim();
+      if (event.clientId && this.state.clients[event.clientId]) {
+        this.state.clients[event.clientId].primaryPhone = event.clientPhone;
+      }
+      const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoice) linkedInvoice.clientPhone = event.clientPhone;
+    }
+
+    if (data.clientWhatsApp) {
+      event.clientWhatsApp = data.clientWhatsApp.trim();
+      if (event.clientId && this.state.clients[event.clientId]) {
+        this.state.clients[event.clientId].whatsApp = event.clientWhatsApp;
+      }
+    }
+
+    if (data.guestCount !== undefined) event.guestCount = data.guestCount;
+    if (data.requirements !== undefined) event.requirements = data.requirements;
+    if (data.specialInstructions !== undefined) event.specialInstructions = data.specialInstructions;
+
+    if (data.status) {
+      event.status = data.status;
+      const linkedSlot = Object.values(this.state.bookingSlots).find((s) => s.eventId === eventId);
+      if (linkedSlot) linkedSlot.status = data.status === 'confirmed' ? 'confirmed' : 'tentative';
+      const linkedSale = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+      if (linkedSale) linkedSale.status = data.status === 'confirmed' ? 'confirmed' : 'cancelled';
+    }
+
+    // Financial updates
+    if (data.quotedAmount !== undefined) event.quotedAmount = data.quotedAmount;
+    if (data.discount !== undefined) event.discount = data.discount;
+    if (data.finalAmount !== undefined) {
+      event.finalAmount = data.finalAmount;
+    } else if (data.quotedAmount !== undefined || data.discount !== undefined) {
+      event.finalAmount = Math.max(0, (event.quotedAmount || 0) - (event.discount || 0));
+    }
+    if (data.advanceRequested !== undefined) event.advanceRequested = data.advanceRequested;
+    if (data.advanceReceived !== undefined) event.advanceReceived = data.advanceReceived;
+    if (data.remainingBalance !== undefined) {
+      event.remainingBalance = data.remainingBalance;
+    } else {
+      event.remainingBalance = Math.max(0, (event.finalAmount || 0) - (event.advanceReceived || 0));
+    }
+    if (data.paymentTerms !== undefined) event.paymentTerms = data.paymentTerms;
+
+    // Update linked sale financials
+    const linkedSaleObj = Object.values(this.state.sales).find((s) => s.eventId === eventId);
+    if (linkedSaleObj) {
+      linkedSaleObj.grossAmount = event.quotedAmount || 0;
+      linkedSaleObj.discount = event.discount || 0;
+      linkedSaleObj.finalSaleAmount = event.finalAmount || 0;
+      linkedSaleObj.advanceRequested = event.advanceRequested || 0;
+      linkedSaleObj.paymentsReceived = event.advanceReceived || 0;
+      linkedSaleObj.outstandingBalance = event.remainingBalance || 0;
+    }
+
+    // Update linked invoice financials & attachments
+    const linkedInvoiceObj = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+    if (linkedInvoiceObj) {
+      linkedInvoiceObj.subtotal = event.quotedAmount || event.finalAmount || 0;
+      linkedInvoiceObj.discount = event.discount || 0;
+      linkedInvoiceObj.finalTotal = event.finalAmount || 0;
+      linkedInvoiceObj.advanceRequested = event.advanceRequested || 0;
+      linkedInvoiceObj.actualAdvanceReceived = event.advanceReceived || 0;
+      linkedInvoiceObj.remainingBalance = event.remainingBalance || 0;
+      linkedInvoiceObj.paymentTerms = event.paymentTerms || linkedInvoiceObj.paymentTerms;
+      linkedInvoiceObj.status = event.remainingBalance <= 0 && event.finalAmount > 0
+        ? 'paid'
+        : event.advanceReceived > 0
+          ? 'partially_paid'
+          : 'issued';
+      if (data.referencePhotos) {
+        linkedInvoiceObj.attachments = data.referencePhotos;
+        linkedInvoiceObj.includePhotosInPdf = data.referencePhotos.length > 0;
+      }
+    }
+
+    if (data.referencePhotos !== undefined) {
+      event.referencePhotos = data.referencePhotos;
+    }
 
     event.updatedAt = new Date().toISOString();
 
@@ -1708,6 +1856,9 @@ class RealtimeDatabaseEngine {
       const linkedInvoice = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
       if (linkedInvoice) {
         writeRealtimeNode(`pearlexperiences/state/invoices/${linkedInvoice.id}`, linkedInvoice).catch(() => {});
+      }
+      if (event.clientId && this.state.clients[event.clientId]) {
+        writeRealtimeNode(`pearlexperiences/state/clients/${event.clientId}`, this.state.clients[event.clientId]).catch(() => {});
       }
     }
 

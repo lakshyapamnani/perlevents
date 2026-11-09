@@ -5,6 +5,7 @@ import {
   Shield,
   Briefcase,
   ClipboardList,
+  Handshake,
   PlusCircle,
   Menu,
   X,
@@ -55,6 +56,12 @@ export const Header: React.FC<HeaderProps> = ({
       bg: 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800',
       text: 'text-sky-800 dark:text-sky-300',
       icon: <ClipboardList className="w-3.5 h-3.5" />,
+    },
+    partner: {
+      label: 'Partner',
+      bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800',
+      text: 'text-purple-800 dark:text-purple-300',
+      icon: <Handshake className="w-3.5 h-3.5" />,
     },
   };
 

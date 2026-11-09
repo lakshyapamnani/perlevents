@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   X,
   Target,
+  Handshake,
 } from 'lucide-react';
 
 export type AdminTab =
@@ -31,6 +32,7 @@ export type AdminTab =
   | 'availability'
   | 'salespersons'
   | 'managers'
+  | 'partners'
   | 'vendors'
   | 'events'
   | 'leads'
@@ -99,6 +101,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: 'sales-reports', label: 'Sales Analytics', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'salespersons', label: 'Salespersons', icon: <Users className="w-4 h-4" />, category: 'People & Vendors' },
     { id: 'managers', label: 'Managers', icon: <UserCheck className="w-4 h-4" /> },
+    { id: 'partners', label: 'Partners', icon: <Handshake className="w-4 h-4" /> },
     { id: 'vendors', label: 'Vendors', icon: <Truck className="w-4 h-4" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" />, category: 'Configuration' },
   ];

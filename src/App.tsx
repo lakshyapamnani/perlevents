@@ -15,6 +15,8 @@ import { InvoicesModule } from './pages/InvoicesModule';
 import { SalesModule } from './pages/SalesModule';
 import { SalesReportsDashboard } from './pages/SalesReportsDashboard';
 import { UsersModule } from './pages/UsersModule';
+import { PartnersModule } from './pages/PartnersModule';
+import { PartnerDashboard } from './pages/PartnerDashboard';
 import { VendorsModule } from './pages/VendorsModule';
 import { ClientsModule } from './pages/ClientsModule';
 import { CalendarModule } from './pages/CalendarModule';
@@ -239,6 +241,9 @@ const MainLayout: React.FC = () => {
                   {adminTab === 'sales-reports' && <SalesReportsDashboard />}
                   {adminTab === 'salespersons' && <UsersModule filterRole="salesperson" />}
                   {adminTab === 'managers' && <UsersModule filterRole="manager" />}
+                  {adminTab === 'partners' && (
+                    <PartnersModule onSelectEvent={(id) => setSelectedEventId(id)} />
+                  )}
                   {adminTab === 'vendors' && <VendorsModule />}
                   {adminTab === 'settings' && <SettingsModule />}
                 </>
@@ -375,6 +380,28 @@ const MainLayout: React.FC = () => {
               />
             ) : (
               <ManagerDashboard onSelectEvent={(id) => setSelectedEventId(id)} />
+            )}
+          </main>
+        )}
+
+        {/* PARTNER ROLE VIEW */}
+        {currentRole === 'partner' && (
+          <main className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-6 lg:px-8 py-6">
+            {selectedEventId ? (
+              <EventDetailPage
+                eventId={selectedEventId}
+                onBack={() => setSelectedEventId(null)}
+                onOpenRecordPayment={handleOpenPayment}
+                onOpenCreateInvoice={() => {
+                  setSelectedInvoiceToView(null);
+                  setIsInvoiceModalOpen(true);
+                }}
+              />
+            ) : (
+              <PartnerDashboard
+                onSelectEvent={(id) => setSelectedEventId(id)}
+                onOpenInvoice={handleOpenEventInvoice}
+              />
             )}
           </main>
         )}

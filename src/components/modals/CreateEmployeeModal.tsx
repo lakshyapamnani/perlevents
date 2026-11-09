@@ -7,7 +7,7 @@ import { UserProfile, UserRole } from '../../types';
 interface CreateEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultRole?: 'salesperson' | 'manager';
+  defaultRole?: 'salesperson' | 'manager' | 'partner';
   employeeToEdit?: UserProfile | null;
 }
 
@@ -22,7 +22,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
 
   const isEditing = Boolean(employeeToEdit);
 
-  const [role, setRole] = useState<'salesperson' | 'manager'>(defaultRole);
+  const [role, setRole] = useState<'salesperson' | 'manager' | 'partner'>(defaultRole);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -39,7 +39,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
 
   useEffect(() => {
     if (employeeToEdit) {
-      setRole((employeeToEdit.role as 'salesperson' | 'manager') || defaultRole);
+      setRole((employeeToEdit.role as 'salesperson' | 'manager' | 'partner') || defaultRole);
       setFullName(employeeToEdit.fullName);
       setEmail(employeeToEdit.email);
       setPhone(employeeToEdit.phone || '');
@@ -124,7 +124,13 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
         setSuccessResult({
           email: res.user.email,
           role: res.user.role,
-          password: initialPassword || (res.user.role === 'salesperson' ? 'sales123' : 'manager123'),
+          password:
+            initialPassword ||
+            (res.user.role === 'salesperson'
+              ? 'sales123'
+              : res.user.role === 'manager'
+              ? 'manager123'
+              : 'partner123'),
         });
       } else {
         setError(res.error || 'Failed to provision account.');
@@ -149,8 +155,14 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
             )}
             <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100">
               {isEditing
-                ? `Edit ${role === 'salesperson' ? 'Salesperson' : 'Employee'} Profile & Assigned Venues`
-                : 'Provision Employee Account (Admin Only)'}
+                ? `Edit ${
+                    role === 'partner'
+                      ? 'Partner'
+                      : role === 'salesperson'
+                      ? 'Salesperson'
+                      : 'Operations Manager'
+                  } Profile & Assigned Venues`
+                : 'Provision Account (Admin Only)'}
             </h2>
           </div>
           <button
@@ -170,7 +182,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               Account Successfully Provisioned!
             </h3>
             <p className="text-xs text-stone-600 dark:text-stone-400">
-              Employee <strong>{successResult.email}</strong> is now registered as a{' '}
+              User <strong>{successResult.email}</strong> is now registered with role{' '}
               <strong className="uppercase">{successResult.role}</strong>.
             </p>
             <div className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-left text-xs space-y-1 font-mono">
@@ -207,13 +219,13 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
                 Account Role *
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setRole('salesperson')}
                   className={`p-3 rounded-xl border text-left text-xs font-semibold transition-colors ${
                     role === 'salesperson'
-                      ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
+                      ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-xs'
                       : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50'
                   }`}
                 >
@@ -228,13 +240,31 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
                   onClick={() => setRole('manager')}
                   className={`p-3 rounded-xl border text-left text-xs font-semibold transition-colors ${
                     role === 'manager'
-                      ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200'
+                      ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 shadow-xs'
                       : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50'
                   }`}
                 >
                   <div className="font-bold">Manager</div>
                   <div className="text-[11px] font-normal text-stone-500 mt-0.5">
-                    Operational checklists, event execution
+                    Checklists, operations & execution
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole('partner')}
+                  className={`p-3 rounded-xl border text-left text-xs font-semibold transition-colors ${
+                    role === 'partner'
+                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 shadow-xs ring-1 ring-purple-500'
+                      : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50'
+                  }`}
+                >
+                  <div className="font-bold text-purple-700 dark:text-purple-300 flex items-center justify-between">
+                    <span>Partner</span>
+                    <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-purple-200 dark:bg-purple-900/60 font-bold">New</span>
+                  </div>
+                  <div className="text-[11px] font-normal text-stone-500 mt-0.5">
+                    Access to their banquets, bookings & finances
                   </div>
                 </button>
               </div>
@@ -323,7 +353,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
               </div>
               {isEditing && (
                 <p className="text-[10px] text-stone-500 mt-1">
-                  Type a new password here to reset this salesperson's login password immediately.
+                  Type a new password here to reset this {role === 'partner' ? 'partner' : role === 'salesperson' ? 'salesperson' : 'manager'}'s login password immediately.
                 </p>
               )}
             </div>
@@ -331,7 +361,7 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-                  Assigned Banquet Venues ({selectedBanquets.length} of {banquets.length})
+                  {role === 'partner' ? 'Partnered Banquet Venues' : 'Assigned Banquet Venues'} ({selectedBanquets.length} of {banquets.length})
                 </label>
                 <button
                   type="button"
@@ -342,7 +372,9 @@ export const CreateEmployeeModal: React.FC<CreateEmployeeModalProps> = ({
                 </button>
               </div>
               <p className="text-[11px] text-stone-500 mb-2">
-                Check the banquets this salesperson is authorized to manage, view availability for, and sell.
+                {role === 'partner'
+                  ? 'Select which banquets this partner co-owns. The partner will only have access to view and review bookings, calendar, and finances for these selected banquets.'
+                  : 'Check the banquets this employee is authorized to manage, view availability for, and sell.'}
               </p>
               <div className="space-y-1.5 max-h-44 overflow-y-auto p-2.5 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/20 text-xs">
                 {banquets.map((b) => {

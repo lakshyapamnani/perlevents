@@ -30,10 +30,12 @@ import {
   Send,
   MessageCircle,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import { BookingStatus, EventRecord } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { EventFinanceModal } from '../components/modals/EventFinanceModal';
+import { EditEventModal } from '../components/modals/EditEventModal';
 import { downloadEventInvoicePDF, sendInvoiceOnWhatsApp } from '../utils/pdfReceiptGenerator';
 
 interface EventsModuleProps {
@@ -58,6 +60,9 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
 
   // Selected event for the Picture 1 Financial Management & WhatsApp Modal
   const [selectedFinanceEventId, setSelectedFinanceEventId] = useState<string | null>(null);
+
+  // Selected event for full editing (accessible to salespersons, managers, admins)
+  const [editingEvent, setEditingEvent] = useState<EventRecord | null>(null);
 
   // Month options for filter dropdown
   const monthOptions = useMemo(() => {
@@ -780,11 +785,22 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
                         <span>WhatsApp PDF</span>
                       </button>
 
-                      {/* Delete Event Button */}
-                      {(currentUser?.role === 'admin' ||
-                        currentUser?.role === 'manager' ||
-                        evt.salespersonId === currentUser?.uid ||
-                        evt.createdBy === currentUser?.uid) && (
+                      {/* Edit Event Button (accessible to salespersons, managers, admins) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingEvent(evt);
+                        }}
+                        className="p-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center transition-colors shadow-xs"
+                        title="Edit Event Details, Venue, Client, Pricing, or Pictures"
+                      >
+                        <Pencil className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      </button>
+
+                      {/* Delete Event Button - STRICTLY RESTRICTED TO ADMIN & MANAGER (NEVER SHOWN TO SALESPERSON) */}
+                      {currentUser?.role !== 'salesperson' &&
+                        (currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -823,6 +839,15 @@ export const EventsModule: React.FC<EventsModuleProps> = ({
             setSelectedFinanceEventId(null);
             onSelectEvent(id);
           }}
+        />
+      )}
+
+      {/* Comprehensive Edit Event Modal (Accessible to Salespersons, Managers, Admins) */}
+      {editingEvent && (
+        <EditEventModal
+          isOpen={Boolean(editingEvent)}
+          onClose={() => setEditingEvent(null)}
+          event={editingEvent}
         />
       )}
     </div>
