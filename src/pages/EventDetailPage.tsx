@@ -41,6 +41,7 @@ import {
   createVendorReminderMessage,
 } from '../utils/formatters';
 import { ImageUploadArea } from '../components/common/ImageUploadArea';
+import { EditEventModal } from '../components/modals/EditEventModal';
 
 interface EventDetailPageProps {
   eventId: string;
@@ -94,6 +95,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [editBanquetId, setEditBanquetId] = useState('');
   const [editSalespersonId, setEditSalespersonId] = useState('');
   const [editManagerId, setEditManagerId] = useState('');
+
+  // Comprehensive Event Edit Modal State (Accessible to salespersons, managers, admins)
+  const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
 
   // Vendor Assignment State
   const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
@@ -259,6 +263,16 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </button>
           )}
 
+          {/* Edit Event Button (Accessible to salespersons, managers, admins) */}
+          <button
+            onClick={() => setIsEditEventModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-semibold shadow-xs transition-colors"
+            title="Edit Event Details, Venue, Client, Pricing, or Pictures"
+          >
+            <Pencil className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Edit Event</span>
+          </button>
+
           {currentUser?.role === 'admin' && (
             <button
               onClick={handleOpenEditAssignment}
@@ -270,10 +284,9 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </button>
           )}
 
-          {(currentUser?.role === 'admin' ||
-            currentUser?.role === 'manager' ||
-            event.salespersonId === currentUser?.uid ||
-            event.createdBy === currentUser?.uid) && (
+          {/* Delete Event Button - STRICTLY RESTRICTED TO ADMIN & MANAGER (NEVER SHOWN TO SALESPERSON) */}
+          {currentUser?.role !== 'salesperson' &&
+            (currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
             <button
               onClick={() => {
                 if (
@@ -1469,6 +1482,15 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Comprehensive Edit Event Modal (Accessible to salespersons, managers, admins) */}
+      {isEditEventModalOpen && (
+        <EditEventModal
+          isOpen={isEditEventModalOpen}
+          onClose={() => setIsEditEventModalOpen(false)}
+          event={event}
+        />
       )}
     </div>
   );

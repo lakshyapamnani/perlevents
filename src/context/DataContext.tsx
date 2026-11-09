@@ -137,10 +137,25 @@ interface DataContextType {
       salespersonId?: string;
       managerId?: string;
       name?: string;
+      eventType?: string;
       guestCount?: number;
       date?: string;
       startTime?: string;
       endTime?: string;
+      clientName?: string;
+      clientPhone?: string;
+      clientWhatsApp?: string;
+      requirements?: string;
+      specialInstructions?: string;
+      status?: 'tentative' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+      quotedAmount?: number;
+      discount?: number;
+      finalAmount?: number;
+      advanceRequested?: number;
+      advanceReceived?: number;
+      remainingBalance?: number;
+      paymentTerms?: string;
+      referencePhotos?: Attachment[];
     }
   ) => { success: boolean; event?: EventRecord; error?: string };
 
@@ -561,10 +576,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       salespersonId?: string;
       managerId?: string;
       name?: string;
+      eventType?: string;
       guestCount?: number;
       date?: string;
       startTime?: string;
       endTime?: string;
+      clientName?: string;
+      clientPhone?: string;
+      clientWhatsApp?: string;
+      requirements?: string;
+      specialInstructions?: string;
+      status?: 'tentative' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+      quotedAmount?: number;
+      discount?: number;
+      finalAmount?: number;
+      advanceRequested?: number;
+      advanceReceived?: number;
+      remainingBalance?: number;
+      paymentTerms?: string;
+      referencePhotos?: Attachment[];
     }
   ) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
