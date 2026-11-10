@@ -276,15 +276,7 @@ export const initialBookingSlots: BookingSlot[] = [];
 export const initialLeads: Lead[] = [];
 export const initialLeadFollowUps: Record<string, LeadFollowUp[]> = {};
 
-export const initialChecklistTemplates: ChecklistTemplate[] = [
-  { id: 'ct_01', title: 'Banquet Hall Deep Cleaning & Sanitize', description: 'Ensure carpets vacuumed, chandeliers dusted, restrooms inspected and stocked.', category: 'Venue Readiness', isDefault: true },
-  { id: 'ct_02', title: 'Stage Decoration & Backdrop Inspection', description: 'Confirm floral setup matches client approved reference image.', category: 'Decoration', isDefault: true },
-  { id: 'ct_03', title: 'Acoustics & Microphones Sound Check', description: 'Test podium, cordless handhelds, and DJ sound level limiters.', category: 'Audio-Visual', isDefault: true },
-  { id: 'ct_04', title: 'HVAC Temperature Pre-Cooling', description: 'Set temperature to 22°C at least 90 minutes prior to guest arrival.', category: 'Operations', isDefault: true },
-  { id: 'ct_05', title: 'Catering Buffet Line & Warmer Check', description: 'Inspect chafing dishes, live counter burners, and serving spoons.', category: 'Catering', isDefault: true },
-  { id: 'ct_06', title: 'Valet Parking & Security Briefing', description: 'Confirm valet tags and safety team stationed at primary porch.', category: 'Security & Logistics', isDefault: true },
-  { id: 'ct_07', title: 'Final Manager Sign-off Walkthrough', description: 'Comprehensive check with Banquet Owner before client doors open.', category: 'Sign-off', isDefault: true },
-];
+export const initialChecklistTemplates: ChecklistTemplate[] = [];
 
 export const initialChecklistItems: Record<string, ChecklistItem[]> = {};
 export const initialSales: Sale[] = [];

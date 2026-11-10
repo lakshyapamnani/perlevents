@@ -23,6 +23,7 @@ import {
   Tag,
   ArrowRight,
   Camera,
+  CheckSquare,
 } from 'lucide-react';
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
 import { Attachment, EventRecord } from '../../types';
@@ -130,6 +131,30 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
 
   // Vendor Assignments state
   const [assignedVendors, setAssignedVendors] = useState<VendorAssignmentRow[]>([]);
+
+  // Manager Operational Checkboxes state (Custom Checkboxes added by sales/admin)
+  const [customChecklists, setCustomChecklists] = useState<Array<{ id: string; title: string; category: string }>>([]);
+  const [newCheckboxTitle, setNewCheckboxTitle] = useState('');
+  const [newCheckboxCategory, setNewCheckboxCategory] = useState('Decoration');
+
+  const handleAddCheckbox = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCheckboxTitle.trim();
+    if (!trimmed) return;
+    setCustomChecklists((prev) => [
+      ...prev,
+      {
+        id: `cst_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        title: trimmed,
+        category: newCheckboxCategory.trim() || 'Operations',
+      },
+    ]);
+    setNewCheckboxTitle('');
+  };
+
+  const handleRemoveCheckbox = (id: string) => {
+    setCustomChecklists((prev) => prev.filter((item) => item.id !== id));
+  };
 
   // Validation & status
   const [conflictError, setConflictError] = useState<string | null>(null);
@@ -319,6 +344,10 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
         paymentTerms,
       },
       vendorAssignments: formattedVendors,
+      customChecklists: customChecklists.map((cb) => ({
+        title: cb.title,
+        category: cb.category,
+      })),
       createInvoice,
       convertedFromLeadId: preselectedLead?.id,
     });
@@ -1065,13 +1094,151 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                 )}
               </div>
 
-              {/* SECTION D: DECORATION & EVENT SETUP PHOTOS (FOR INVOICE) */}
+              {/* SECTION D: MANAGER OPERATIONAL CHECKBOXES (SEEN BY MANAGER - NO DUMMY CHECKBOXES) */}
+              <div className="space-y-3.5 border-b border-stone-200 dark:border-stone-800 pb-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                      <CheckSquare className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      <span>Section D: Manager Operational Checkboxes</span>
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
+                        Seen by Manager
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                      All vendors added above directly appear as manager checkboxes (e.g. <strong>Decoration by &quot;Vendor Name&quot;</strong>). Add additional custom checkboxes below. No dummy checkboxes.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
+                    Total: {assignedVendors.length + customChecklists.length} Checkbox{assignedVendors.length + customChecklists.length === 1 ? '' : 'es'}
+                  </div>
+                </div>
+
+                {/* Auto-generated vendor checkboxes preview */}
+                {assignedVendors.length > 0 && (
+                  <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-2">
+                    <div className="text-[11px] font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                      <span>Auto-Generated Vendor Checkboxes for Manager ({assignedVendors.length}):</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {assignedVendors.map((av, idx) => (
+                        <div
+                          key={idx}
+                          className="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-800 text-stone-800 dark:text-stone-200 flex items-center gap-2 shadow-2xs"
+                        >
+                          <span className="w-4 h-4 rounded-md border border-emerald-600 bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                            ✓
+                          </span>
+                          <span>
+                            {av.category || 'General'} by &quot;{av.vendorName.trim() || `Vendor ${idx + 1}`}&quot;
+                          </span>
+                          {av.requirements && (
+                            <span className="text-[10px] text-stone-400 max-w-[120px] truncate">
+                              ({av.requirements})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Custom Checkbox Input Bar */}
+                <div className="p-3.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wide flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                      <span>Add Custom Checkboxes</span>
+                    </span>
+                    <span className="text-[10px] text-stone-500">
+                      Press Enter or click Add Checkbox
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Welcome drinks counter ready at entrance, Stage entry sparklers ready..."
+                      value={newCheckboxTitle}
+                      onChange={(e) => setNewCheckboxTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCheckbox();
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:border-emerald-600"
+                    />
+                    <input
+                      type="text"
+                      list="checkbox-category-list"
+                      placeholder="Category (e.g. Operations)"
+                      value={newCheckboxCategory}
+                      onChange={(e) => setNewCheckboxCategory(e.target.value)}
+                      className="w-full sm:w-36 px-3 py-2 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                    />
+                    <datalist id="checkbox-category-list">
+                      <option value="Decoration" />
+                      <option value="Stage Setup" />
+                      <option value="Audio-Visual" />
+                      <option value="Catering" />
+                      <option value="Operations" />
+                      <option value="Logistics" />
+                      <option value="Security" />
+                      <option value="Client Special" />
+                    </datalist>
+                    <button
+                      type="button"
+                      onClick={handleAddCheckbox}
+                      disabled={!newCheckboxTitle.trim()}
+                      className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-40 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Checkbox</span>
+                    </button>
+                  </div>
+
+                  {/* Custom Checkboxes Added List */}
+                  {customChecklists.length > 0 && (
+                    <div className="space-y-1.5 pt-1.5">
+                      <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                        Added Custom Checkboxes ({customChecklists.length}):
+                      </div>
+                      {customChecklists.map((cb) => (
+                        <div
+                          key={cb.id}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs shadow-2xs"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-4 h-4 rounded-md border-2 border-stone-400 dark:border-stone-500 flex items-center justify-center" />
+                            <span className="font-semibold text-stone-900 dark:text-stone-100">{cb.title}</span>
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+                              {cb.category}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCheckbox(cb.id)}
+                            className="text-stone-400 hover:text-red-600 p-1 rounded-md transition-colors"
+                            title="Remove checkbox"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION E: DECORATION & EVENT SETUP PHOTOS (FOR INVOICE) */}
               <div className="space-y-3 border-b border-stone-200 dark:border-stone-800 pb-5">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                      <span>Section D: Decoration Pictures (Shown in Invoice)</span>
+                      <span>Section E: Decoration Pictures (Shown in Invoice)</span>
                     </h3>
                     <p className="text-[11px] text-stone-600 dark:text-stone-400">
                       Upload decoration pictures (stage, mandap, floral decor, lighting theme). These will appear directly on the booking invoice.
@@ -1093,11 +1260,11 @@ export const DirectSaleModal: React.FC<DirectSaleModalProps> = ({
                 />
               </div>
 
-              {/* SECTION E: FINANCIALS (ALL OPTIONAL) */}
+              {/* SECTION F: FINANCIALS (ALL OPTIONAL) */}
               <div className="space-y-3 pb-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                    Section E: Financials & Payments
+                    Section F: Financials & Payments
                   </h3>
                   <span className="text-[11px] text-stone-500 font-medium">
                     (All financial fields are optional)

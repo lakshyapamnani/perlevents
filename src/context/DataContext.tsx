@@ -111,6 +111,7 @@ interface DataContextType {
       requirements?: string;
       quotedAmount?: number;
     }>;
+    customChecklists?: Array<{ title: string; category?: string; description?: string }>;
     createInvoice?: boolean;
     convertedFromLeadId?: string;
   }) => { success: boolean; event?: EventRecord; invoice?: Invoice; error?: string };
@@ -191,6 +192,11 @@ interface DataContextType {
     notes?: string,
     toggleStatus?: boolean
   ) => { success: boolean; error?: string };
+  addChecklistItem: (
+    eventId: string,
+    data: { title: string; category?: string; description?: string }
+  ) => { success: boolean; item?: ChecklistItem; error?: string };
+  deleteChecklistItem: (eventId: string, itemId: string) => { success: boolean; error?: string };
 
   addEventPhoto: (
     eventId: string,
@@ -661,6 +667,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.toggleChecklistItem(currentUser, eventId, itemId, notes, toggleStatus);
   };
 
+  const addChecklistItem = (
+    eventId: string,
+    data: { title: string; category?: string; description?: string }
+  ) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.addChecklistItem(currentUser, eventId, data);
+  };
+
+  const deleteChecklistItem = (eventId: string, itemId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.deleteChecklistItem(currentUser, eventId, itemId);
+  };
+
   const addEventPhoto = (eventId: string, photo: Attachment) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
     return realtimeEngine.addEventPhoto(currentUser, eventId, photo);
@@ -749,6 +768,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addVendorToEvent,
         removeVendorFromEvent,
         toggleChecklistItem,
+        addChecklistItem,
+        deleteChecklistItem,
         addEventPhoto,
         saveInvoice,
         recordPayment,

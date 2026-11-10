@@ -1142,6 +1142,7 @@ class RealtimeDatabaseEngine {
         requirements?: string;
         quotedAmount?: number;
       }>;
+      customChecklists?: Array<{ title: string; category?: string; description?: string }>;
       createInvoice?: boolean;
       convertedFromLeadId?: string;
     }
@@ -1310,16 +1311,45 @@ class RealtimeDatabaseEngine {
     };
     this.state.events[eventId] = newEvent;
 
-    // 6. Generate Default Manager Checklist for Event
-    const checklistItems: ChecklistItem[] = Object.values(this.state.checklistTemplates).map((tpl, i) => ({
-      id: `cli_${eventId}_${i + 1}`,
-      eventId,
-      title: tpl.title,
-      description: tpl.description,
-      category: tpl.category,
-      assignedManagerId: manager?.uid,
-      status: 'pending',
-    }));
+    // 6. Generate Manager Checklist strictly from Assigned Vendors & Custom Checkboxes (NO dummy checkboxes)
+    const checklistItems: ChecklistItem[] = [];
+
+    // A) Assigned Vendor Checkboxes (e.g. 'Decoration by "Vendor Name"')
+    assignments.forEach((va, idx) => {
+      checklistItems.push({
+        id: `cli_${eventId}_vnd_${idx + 1}`,
+        eventId,
+        title: `${va.category} by "${va.vendorName}"`,
+        description: va.requirements
+          ? `Deliverables: ${va.requirements}`
+          : `Vendor: ${va.vendorName} (${va.vendorPhone || 'Phone unassigned'})`,
+        category: va.category,
+        relatedVendorId: va.vendorId,
+        relatedVendorName: va.vendorName,
+        assignedManagerId: manager?.uid,
+        status: 'pending',
+      });
+    });
+
+    // B) Custom Checkboxes added by Sales or Admin in the form
+    if (Array.isArray(data.customChecklists)) {
+      data.customChecklists.forEach((cb: any, idx: number) => {
+        const rawTitle = typeof cb === 'string' ? cb : cb?.title;
+        const trimmedTitle = typeof rawTitle === 'string' ? rawTitle.trim() : '';
+        if (trimmedTitle) {
+          checklistItems.push({
+            id: `cli_${eventId}_cst_${idx + 1}`,
+            eventId,
+            title: trimmedTitle,
+            description: typeof cb === 'object' && cb?.description ? String(cb.description).trim() : '',
+            category: typeof cb === 'object' && cb?.category ? String(cb.category) : 'Operations',
+            assignedManagerId: manager?.uid,
+            status: 'pending',
+          });
+        }
+      });
+    }
+
     this.state.checklistItems[eventId] = checklistItems;
 
     // 7. Create Sale Entity
@@ -2162,6 +2192,29 @@ class RealtimeDatabaseEngine {
 
     event.vendorAssignments = [...(event.vendorAssignments || []), newAssignment];
 
+    // Directly add as a checklist checkbox for manager: e.g. Decoration by "Vendor Name" (No dummy checkboxes)
+    const vendorChecklistTitle = `${newAssignment.category} by "${newAssignment.vendorName}"`;
+    const existingChecklist = this.state.checklistItems[eventId] || [];
+    if (!existingChecklist.some((item) => item.title.toLowerCase() === vendorChecklistTitle.toLowerCase())) {
+      const newChecklistItem: ChecklistItem = {
+        id: `cli_${eventId}_${Date.now()}`,
+        eventId,
+        title: vendorChecklistTitle,
+        description: newAssignment.requirements
+          ? `Scope: ${newAssignment.requirements}`
+          : `Coordinate ${newAssignment.category} with ${newAssignment.vendorName} (${newAssignment.vendorPhone || 'Phone unassigned'})`,
+        category: newAssignment.category,
+        relatedVendorId: newAssignment.vendorId,
+        relatedVendorName: newAssignment.vendorName,
+        assignedManagerId: event.managerId,
+        status: 'pending',
+      };
+      this.state.checklistItems[eventId] = [...existingChecklist, newChecklistItem];
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, this.state.checklistItems[eventId]).catch(() => {});
+      }
+    }
+
     this.logActivity({
       actorId: currentUser.uid,
       actorName: currentUser.fullName,
@@ -2179,6 +2232,80 @@ class RealtimeDatabaseEngine {
     this.saveState(this.state);
     this.notify();
     return { success: true, assignment: newAssignment };
+  }
+
+  public addChecklistItem(
+    currentUser: UserProfile,
+    eventId: string,
+    data: { title: string; category?: string; description?: string }
+  ): { success: boolean; item?: ChecklistItem; error?: string } {
+    const title = data.title.trim();
+    if (!title) return { success: false, error: 'Checkbox title is required.' };
+
+    const event = this.state.events[eventId];
+    const currentList = this.state.checklistItems[eventId] || [];
+
+    const newItem: ChecklistItem = {
+      id: `cli_${eventId}_${Date.now()}`,
+      eventId,
+      title,
+      description: data.description?.trim() || '',
+      category: data.category || 'Operations',
+      assignedManagerId: event?.managerId,
+      status: 'pending',
+    };
+
+    const updatedList = [...currentList, newItem];
+    this.state.checklistItems[eventId] = updatedList;
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Added Checklist Checkbox',
+      module: 'checklists',
+      recordId: newItem.id,
+      details: `Added checkbox "${title}" (${newItem.category}) to event ${event?.name || eventId}.`,
+    });
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, updatedList).catch(() => {});
+    }
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true, item: newItem };
+  }
+
+  public deleteChecklistItem(
+    currentUser: UserProfile,
+    eventId: string,
+    itemId: string
+  ): { success: boolean; error?: string } {
+    const currentList = this.state.checklistItems[eventId] || [];
+    const itemToDelete = currentList.find((i) => i.id === itemId);
+    if (!itemToDelete) return { success: false, error: 'Checklist item not found.' };
+
+    const updatedList = currentList.filter((i) => i.id !== itemId);
+    this.state.checklistItems[eventId] = updatedList;
+
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Deleted Checklist Checkbox',
+      module: 'checklists',
+      recordId: itemId,
+      details: `Removed checkbox "${itemToDelete.title}" from event ${eventId}.`,
+    });
+
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode(`pearlexperiences/state/checklistItems/${eventId}`, updatedList).catch(() => {});
+    }
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
   }
 
   public removeVendorFromEvent(

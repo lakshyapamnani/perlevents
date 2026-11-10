@@ -80,6 +80,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     addVendorToEvent,
     removeVendorFromEvent,
     toggleChecklistItem,
+    addChecklistItem,
+    deleteChecklistItem,
     addEventPhoto,
     updateEventDetails,
     deleteEvent,
@@ -107,6 +109,10 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [newVendorPhone, setNewVendorPhone] = useState('');
   const [newVendorRequirements, setNewVendorRequirements] = useState('');
   const [newVendorQuoted, setNewVendorQuoted] = useState<number | ''>('');
+
+  // Inline Checklist Checkbox Creation
+  const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  const [newChecklistCategory, setNewChecklistCategory] = useState('Operations');
 
   const event = events.find((e) => e.id === eventId);
 
@@ -153,6 +159,29 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
       toggleChecklistItem(event.id, taskId, note, false);
       setSaveSuccessMsg('Note saved successfully!');
       setTimeout(() => setSaveSuccessMsg(null), 2500);
+    }
+  };
+
+  const handleAddNewTask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!event || !newChecklistTitle.trim()) return;
+    const res = addChecklistItem(event.id, {
+      title: newChecklistTitle.trim(),
+      category: newChecklistCategory.trim() || 'Operations',
+    });
+    if (res.success) {
+      setNewChecklistTitle('');
+      setSaveSuccessMsg('Checkbox added successfully!');
+      setTimeout(() => setSaveSuccessMsg(null), 2500);
+    } else {
+      alert(res.error || 'Failed to add checklist item.');
+    }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!event) return;
+    if (window.confirm('Are you sure you want to remove this checkbox?')) {
+      deleteChecklistItem(event.id, taskId);
     }
   };
 
@@ -205,9 +234,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 
   const tabs: Array<{ id: TabType; label: string; count?: number | string }> = [
     { id: 'overview', label: 'Overview' },
-    ...(!isSalesperson
-      ? [{ id: 'checklist' as TabType, label: 'Ops Checklist', count: `${completedCount}/${tasks.length}` }]
-      : []),
+    { id: 'checklist' as TabType, label: 'Ops Checklist', count: `${completedCount}/${tasks.length}` },
     { id: 'vendors', label: 'Vendors & Reminders', count: vendorAssignments.length },
     { id: 'financials', label: 'Financials & Invoices', count: eventInvoices.length },
     { id: 'photos', label: 'Photos & Moodboard', count: event.referencePhotos?.length || 0 },
@@ -718,16 +745,17 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         </div>
       )}
 
-      {/* 2. OPS CHECKLIST TAB (Hidden for Salesperson - replaced by Vendor Reminders) */}
-      {activeTab === 'checklist' && !isSalesperson && (
+      {/* 2. OPS CHECKLIST TAB (Visible to Managers, Admins, and Salespersons) */}
+      {activeTab === 'checklist' && (
         <div className="space-y-6">
           <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">
-                Operational Quality & Readiness Checklist
+              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+                <span>Operational Quality & Readiness Checklist</span>
               </h2>
               <p className="text-xs text-stone-500 mt-0.5">
-                Managers verify banquet setup, HVAC cooling, AV testing, and catering standards.
+                Vendor delivery checkboxes (e.g. <strong>Decoration by &quot;Vendor Name&quot;</strong>) and custom tasks added by Sales & Admin.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -740,10 +768,67 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </div>
           </div>
 
+          {/* Inline Add Checkbox Bar for Event */}
+          <div className="p-3.5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                <span>Add Checkbox to Event</span>
+              </span>
+              <span className="text-[10px] text-stone-500">Syncs immediately across all devices</span>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                placeholder="Enter new task or checkbox e.g. Bride entry sparklers ready..."
+                value={newChecklistTitle}
+                onChange={(e) => setNewChecklistTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddNewTask();
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:border-emerald-600"
+              />
+              <input
+                type="text"
+                list="event-detail-category-presets"
+                placeholder="Category"
+                value={newChecklistCategory}
+                onChange={(e) => setNewChecklistCategory(e.target.value)}
+                className="w-full sm:w-36 px-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+              />
+              <datalist id="event-detail-category-presets">
+                <option value="Decoration" />
+                <option value="Catering" />
+                <option value="Audio-Visual" />
+                <option value="Stage Setup" />
+                <option value="Operations" />
+                <option value="Logistics" />
+              </datalist>
+              <button
+                type="button"
+                onClick={handleAddNewTask}
+                disabled={!newChecklistTitle.trim()}
+                className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-40 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-1 shrink-0 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Checkbox</span>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-3">
             {tasks.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 text-xs text-stone-500">
-                No checklist tasks initialized for this event yet.
+              <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-2xl border border-dashed border-stone-300 dark:border-stone-800 text-xs text-stone-500 space-y-1">
+                <CheckSquare className="w-8 h-8 text-stone-400 mx-auto" />
+                <div className="font-semibold text-stone-800 dark:text-stone-200">
+                  No Checkboxes Initialized for This Event
+                </div>
+                <p>
+                  Use the bar above to add tasks, or assign vendors on the Vendors tab to automatically generate vendor checkboxes. No dummy checkboxes.
+                </p>
               </div>
             ) : (
               tasks.map((task) => {
@@ -757,7 +842,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                       }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3.5">
+                      <div className="flex items-start gap-3.5 flex-1">
                         <button
                           type="button"
                           onClick={() => handleToggle(task.id)}
@@ -770,22 +855,29 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                           <CheckCircle2 className={`w-5 h-5 ${isDone ? 'opacity-100' : 'opacity-0'}`} />
                         </button>
 
-                        <div>
-                          <h4
-                            className={`text-sm font-bold ${isDone
-                                ? 'line-through text-stone-400 dark:text-stone-500'
-                                : 'text-stone-900 dark:text-stone-100'
-                              }`}
-                          >
-                            {task.title}
-                          </h4>
+                        <div className="space-y-1 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4
+                              className={`text-sm font-bold ${isDone
+                                  ? 'line-through text-stone-400 dark:text-stone-500'
+                                  : 'text-stone-900 dark:text-stone-100'
+                                }`}
+                            >
+                              {task.title}
+                            </h4>
+                            {task.relatedVendorName && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                                Vendor Checkbox
+                              </span>
+                            )}
+                          </div>
                           {task.description && (
-                            <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">
+                            <p className="text-xs text-stone-600 dark:text-stone-400">
                               {task.description}
                             </p>
                           )}
                           {isDone && task.completedByName && (
-                            <div className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                            <div className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
                               <ShieldCheck className="w-3.5 h-3.5" />
                               <span>Verified by {task.completedByName} on {formatDateTime(task.completedAt || '')}</span>
                             </div>
@@ -793,9 +885,19 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 shrink-0">
-                        {task.category}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+                          {task.category}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-1 text-stone-400 hover:text-red-600 rounded transition-colors"
+                          title="Remove checkbox"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Operational Notes Entry */}
