@@ -13,6 +13,8 @@ import {
   Truck,
   MessageCircle,
   Sparkles,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { formatDate, formatDateTime, generateWhatsAppUrl, createVendorReminderMessage } from '../utils/formatters';
 import { VendorAssignment } from '../types';
@@ -22,11 +24,20 @@ interface ManagerDashboardProps {
 }
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEvent }) => {
-  const { events, checklistItems, toggleChecklistItem, updateVendorAssignmentStatus } = useData();
+  const {
+    events,
+    checklistItems,
+    toggleChecklistItem,
+    addChecklistItem,
+    deleteChecklistItem,
+    updateVendorAssignmentStatus,
+  } = useData();
   const { currentUser } = useAuth();
 
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
+  const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  const [newChecklistCategory, setNewChecklistCategory] = useState('Decoration');
 
   // Filter events assigned to this manager (or all if admin or no specific manager set)
   const assignedEvents = events.filter(
@@ -55,6 +66,27 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
     const note = taskNotes[taskId];
     if (note !== undefined) {
       toggleChecklistItem(currentEvent.id, taskId, note, false);
+    }
+  };
+
+  const handleAddNewTask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!currentEvent || !newChecklistTitle.trim()) return;
+    const res = addChecklistItem(currentEvent.id, {
+      title: newChecklistTitle.trim(),
+      category: newChecklistCategory.trim() || 'Operations',
+    });
+    if (res.success) {
+      setNewChecklistTitle('');
+    } else {
+      alert(res.error || 'Failed to add checklist item.');
+    }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!currentEvent) return;
+    if (window.confirm('Are you sure you want to remove this checkbox?')) {
+      deleteChecklistItem(currentEvent.id, taskId);
     }
   };
 
@@ -305,96 +337,185 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onSelectEven
             )}
           </div>
 
-          {/* Touch-Friendly Tasks List */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              Operational Quality & Readiness Checklist
-            </h3>
+          {/* Touch-Friendly Tasks List (Real Vendor Checkboxes & Custom Checkboxes - No Dummy Checkboxes) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800 gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <span>Operational Quality & Readiness Checklist ({currentTasks.length})</span>
+                </h3>
+                <p className="text-[11px] text-stone-500">
+                  Direct vendor checkboxes (e.g. <strong>Decoration by &quot;Vendor Name&quot;</strong>) and custom tasks added by Sales & Admin.
+                </p>
+              </div>
+              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                {completedCount} of {currentTasks.length} Completed ({percentComplete}%)
+              </div>
+            </div>
+
+            {/* Manager Inline Add Checkbox Bar */}
+            <div className="p-3 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wide flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                  <span>+ Add New Checkbox for Manager</span>
+                </span>
+                <span className="text-[10px] text-stone-500">Directly syncs to event checklist</span>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Stage floral backdrop check / Sound check with DJ / Restroom inspection..."
+                  value={newChecklistTitle}
+                  onChange={(e) => setNewChecklistTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddNewTask();
+                    }
+                  }}
+                  className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 outline-none focus:border-emerald-600"
+                />
+                <input
+                  type="text"
+                  list="manager-category-presets"
+                  placeholder="Category"
+                  value={newChecklistCategory}
+                  onChange={(e) => setNewChecklistCategory(e.target.value)}
+                  className="w-full sm:w-32 px-2.5 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100"
+                />
+                <datalist id="manager-category-presets">
+                  <option value="Decoration" />
+                  <option value="Catering" />
+                  <option value="Audio-Visual" />
+                  <option value="Stage" />
+                  <option value="Operations" />
+                  <option value="Logistics" />
+                </datalist>
+                <button
+                  type="button"
+                  onClick={handleAddNewTask}
+                  disabled={!newChecklistTitle.trim()}
+                  className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-40 text-white text-xs font-semibold rounded-lg shadow-2xs flex items-center justify-center gap-1 shrink-0 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Checkbox</span>
+                </button>
+              </div>
+            </div>
+
             {currentTasks.length === 0 ? (
-              <div className="p-6 text-center text-xs text-stone-500">
-                No checklist tasks initialized for this event.
+              <div className="p-8 text-center text-xs text-stone-500 bg-stone-50 dark:bg-stone-800/30 rounded-2xl border border-dashed border-stone-300 dark:border-stone-700 space-y-1.5">
+                <CheckSquare className="w-8 h-8 text-stone-400 mx-auto" />
+                <div className="font-semibold text-stone-700 dark:text-stone-300">
+                  No Checkboxes Added for This Event Yet
+                </div>
+                <p className="max-w-md mx-auto text-stone-500 text-[11px]">
+                  Use the bar above to add tasks, or assign vendors on the event page to automatically generate vendor readiness checkboxes (e.g. <em>Decoration by &quot;Vendor Name&quot;</em>). No dummy checkboxes.
+                </p>
               </div>
             ) : (
-              currentTasks.map((task) => {
-                const isDone = task.status === 'completed';
-                return (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isDone
-                        ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
-                        : 'bg-stone-50/60 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3.5">
-                        <button
-                          onClick={() => handleToggle(task.id)}
-                          className={`mt-0.5 w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors min-h-[44px] min-w-[44px] ${
-                            isDone
-                              ? 'bg-emerald-700 border-emerald-700 text-white'
-                              : 'border-stone-400 dark:border-stone-500 hover:border-emerald-600 bg-white dark:bg-stone-900'
-                          }`}
-                          aria-label={`Mark ${task.title} as ${isDone ? 'incomplete' : 'complete'}`}
-                        >
-                          {isDone ? (
-                            <CheckCircle2 className="w-5 h-5" />
-                          ) : (
-                            <CheckSquare className="w-5 h-5 text-transparent" />
-                          )}
-                        </button>
-
-                        <div>
-                          <h3
-                            className={`text-sm font-bold ${
+              <div className="space-y-3">
+                {currentTasks.map((task) => {
+                  const isDone = task.status === 'completed';
+                  return (
+                    <div
+                      key={task.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isDone
+                          ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                          : 'bg-stone-50/60 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3.5 flex-1">
+                          <button
+                            onClick={() => handleToggle(task.id)}
+                            className={`mt-0.5 w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors min-h-[44px] min-w-[44px] shrink-0 ${
                               isDone
-                                ? 'line-through text-stone-500 dark:text-stone-400'
-                                : 'text-stone-900 dark:text-stone-100'
+                                ? 'bg-emerald-700 border-emerald-700 text-white shadow-2xs'
+                                : 'border-stone-400 dark:border-stone-500 hover:border-emerald-600 bg-white dark:bg-stone-900'
                             }`}
+                            aria-label={`Mark ${task.title} as ${isDone ? 'incomplete' : 'complete'}`}
                           >
-                            {task.title}
-                          </h3>
-                          {task.description && (
-                            <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">
-                              {task.description}
-                            </p>
-                          )}
-                          {isDone && task.completedByName && (
-                            <div className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 mt-1">
-                              ✓ Verified by {task.completedByName} on{' '}
-                              {formatDateTime(task.completedAt || '')}
+                            {isDone ? (
+                              <CheckCircle2 className="w-5 h-5" />
+                            ) : (
+                              <CheckSquare className="w-5 h-5 text-transparent" />
+                            )}
+                          </button>
+
+                          <div className="space-y-1 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3
+                                className={`text-sm font-bold ${
+                                  isDone
+                                    ? 'line-through text-stone-500 dark:text-stone-400'
+                                    : 'text-stone-900 dark:text-stone-100'
+                                }`}
+                              >
+                                {task.title}
+                              </h3>
+                              {task.relatedVendorName && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                                  Vendor Assigned
+                                </span>
+                              )}
                             </div>
-                          )}
+
+                            {task.description && (
+                              <p className="text-xs text-stone-600 dark:text-stone-400">
+                                {task.description}
+                              </p>
+                            )}
+
+                            {isDone && task.completedByName && (
+                              <div className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
+                                <span>✓ Verified by {task.completedByName} on {formatDateTime(task.completedAt || '')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
+                            {task.category}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="p-1 text-stone-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
+                            title="Remove checkbox"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 shrink-0">
-                        {task.category}
-                      </span>
+                      {/* Operational completion notes */}
+                      <div className="mt-3 pt-3 border-t border-stone-200/60 dark:border-stone-700/60 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Add manager verification note..."
+                          value={taskNotes[task.id] !== undefined ? taskNotes[task.id] : task.notes || ''}
+                          onChange={(e) =>
+                            setTaskNotes({ ...taskNotes, [task.id]: e.target.value })
+                          }
+                          className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveNote(task.id)}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 hover:opacity-90 transition-opacity"
+                        >
+                          Save Note
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Operational completion notes */}
-                    <div className="mt-3 pt-3 border-t border-stone-200/60 dark:border-stone-700/60 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Add manager verification notes..."
-                        value={taskNotes[task.id] || task.notes || ''}
-                        onChange={(e) =>
-                          setTaskNotes({ ...taskNotes, [task.id]: e.target.value })
-                        }
-                        className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveNote(task.id)}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 hover:opacity-90 transition-opacity"
-                      >
-                        Save Note
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

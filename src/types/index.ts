@@ -355,19 +355,19 @@ export interface ActivityLog {
   actorRole: UserRole;
   action: string;
   module:
-    | 'leads'
-    | 'events'
-    | 'banquets'
-    | 'invoices'
-    | 'payments'
-    | 'checklists'
-    | 'vendors'
-    | 'users'
-    | 'settings'
-    | 'reminders'
-    | 'clients'
-    | 'targets'
-    | 'sales';
+  | 'leads'
+  | 'events'
+  | 'banquets'
+  | 'invoices'
+  | 'payments'
+  | 'checklists'
+  | 'vendors'
+  | 'users'
+  | 'settings'
+  | 'reminders'
+  | 'clients'
+  | 'targets'
+  | 'sales';
   recordId: string;
   details: string;
   timestamp: string;
