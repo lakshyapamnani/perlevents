@@ -146,9 +146,9 @@
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
     "liveLocations": {
-      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'partner')",
       "$uid": {
-        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.uid === $uid)",
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'partner' || auth.uid === $uid)",
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['userId', 'isSharing', 'lastUpdated']) && newData.child('userId').val() === $uid && (!newData.hasChild('latitude') || (newData.child('latitude').isNumber() && newData.child('latitude').val() >= -90 && newData.child('latitude').val() <= 90)) && (!newData.hasChild('longitude') || (newData.child('longitude').isNumber() && newData.child('longitude').val() >= -180 && newData.child('longitude').val() <= 180))"
       }
