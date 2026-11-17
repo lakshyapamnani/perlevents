@@ -220,28 +220,34 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
               </div>
 
               {isLocationSharing ? (
-                <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 dark:text-stone-400 mt-1">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                    Last updated:{' '}
-                    {lastLocationUpdate
-                      ? new Date(lastLocationUpdate).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })
-                      : 'Just now'}
-                  </span>
-                  {locationAccuracy !== undefined && (
+                <div className="space-y-1 mt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 dark:text-stone-400">
                     <span className="flex items-center gap-1">
-                      <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                      GPS Accuracy: ±{locationAccuracy}m
+                      <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                      Last updated:{' '}
+                      {lastLocationUpdate
+                        ? new Date(lastLocationUpdate).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })
+                        : 'Just now'}
                     </span>
-                  )}
+                    {locationAccuracy !== undefined && (
+                      <span className="flex items-center gap-1">
+                        <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                        GPS Accuracy: ±{locationAccuracy}m
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 dark:text-emerald-400 font-medium pt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>PWA Background Active: Tracks while minimized. Vibrates & sounds alert if removed from background.</span>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Share your live GPS coordinates with administration during field visits
+                  Share your live GPS coordinates with administration & partners during field visits
                 </p>
               )}
             </div>

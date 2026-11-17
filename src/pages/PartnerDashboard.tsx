@@ -23,18 +23,20 @@ import {
   MessageCircle,
   Eye,
   PieChart,
+  MapPin,
 } from 'lucide-react';
 import { EventRecord, Invoice, Payment } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { downloadEventInvoicePDF, sendInvoiceOnWhatsApp } from '../utils/pdfReceiptGenerator';
 import { CalendarModule } from './CalendarModule';
+import { LiveLocationsModule } from './LiveLocationsModule';
 
 interface PartnerDashboardProps {
   onSelectEvent: (eventId: string) => void;
   onOpenInvoice?: (eventId: string) => void;
 }
 
-type PartnerTab = 'overview' | 'banquets' | 'events' | 'finances' | 'calendar';
+type PartnerTab = 'overview' | 'banquets' | 'events' | 'finances' | 'calendar' | 'live-locations';
 
 export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   onSelectEvent,
@@ -188,6 +190,17 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               }`}
             >
               Calendar
+            </button>
+            <button
+              onClick={() => setActiveTab('live-locations')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'live-locations'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-stone-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Live Locations</span>
             </button>
           </div>
         </div>
@@ -836,6 +849,25 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           </div>
 
           <CalendarModule onSelectEvent={(id) => onSelectEvent(id)} />
+        </div>
+      )}
+
+      {/* TAB 6: LIVE LOCATIONS */}
+      {activeTab === 'live-locations' && (
+        <div className="space-y-4">
+          <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/60 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-purple-700 dark:text-purple-400" />
+                <span>Field Team Live GPS Locations</span>
+              </h2>
+              <p className="text-xs text-purple-800/80 dark:text-purple-300/80">
+                Live location tracking of sales executives visiting banquets and client meetings.
+              </p>
+            </div>
+          </div>
+
+          <LiveLocationsModule />
         </div>
       )}
     </div>
