@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -17,6 +17,9 @@ import {
   ChevronRight,
   Sparkles,
   Trash2,
+  Building2,
+  PackageCheck,
+  Layers,
 } from 'lucide-react';
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
 import { Payment, PaymentMethod } from '../../types';
@@ -25,6 +28,7 @@ import {
   downloadPaymentReceiptPDF,
   openPrintableInvoiceWindow,
   sendInvoiceOnWhatsApp,
+  getAllocatedItemsForEvent,
 } from '../../utils/pdfReceiptGenerator';
 
 interface EventFinanceModalProps {
@@ -74,6 +78,10 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
   const totalPaid = Number(event.advanceReceived) || 0;
   const remaining = Math.max(0, Number(event.remainingBalance) || (totalFees - totalPaid));
   const downPayment = eventPayments[0] ? Number(eventPayments[0].amount) || 0 : (totalPaid > 0 ? totalPaid : 0);
+
+  const allocatedItems = useMemo(() => {
+    return event ? getAllocatedItemsForEvent(event, linkedInvoice) : [];
+  }, [event, linkedInvoice]);
 
   // Generate prefilled WhatsApp message
   const getWhatsAppMessage = () => {
@@ -136,6 +144,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
           payment: createdPayment,
           event,
           client,
+          invoice: linkedInvoice,
           settings,
           totalFees,
           totalPaid: totalPaid + numericAmount,
@@ -304,6 +313,112 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                 {formatCurrency(remaining)}
               </div>
             </div>
+          </div>
+
+          {/* ALLOCATED ITEMS & VENUE BOOKING DETAILS */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100 dark:border-stone-800">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 flex items-center justify-center shrink-0 shadow-inner">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                      {event.banquetName || 'Booked Banquet Venue'}
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+                      Booked Venue
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                    {formatDate(event.date)} · {event.startTime || '12:00 PM'} – {event.endTime || '11:00 PM'} · {event.guestCount || 0} Guests (Pax) · Occasion: <span className="font-semibold text-stone-800 dark:text-stone-200">{event.name} ({event.eventType})</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Total Booking Tariff</span>
+                <span className="text-base font-extrabold text-stone-900 dark:text-stone-100">
+                  {formatCurrency(totalFees)}
+                </span>
+              </div>
+            </div>
+
+            {/* Itemized Allocated Services */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
+                  <PackageCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>Allocated Booking Items & Services ({allocatedItems.length})</span>
+                </div>
+                <span className="text-[11px] text-stone-500">
+                  Contract item breakdown
+                </span>
+              </div>
+
+              <div className="border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden divide-y divide-stone-100 dark:divide-stone-800/80 text-xs">
+                <div className="grid grid-cols-12 bg-stone-50 dark:bg-stone-950/60 px-3.5 py-2 font-bold text-stone-600 dark:text-stone-400 text-[11px]">
+                  <div className="col-span-1">#</div>
+                  <div className="col-span-6">Item / Service Allocation</div>
+                  <div className="col-span-2 text-center">Qty / Pax</div>
+                  <div className="col-span-3 text-right">Amount</div>
+                </div>
+
+                {allocatedItems.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    className="grid grid-cols-12 px-3.5 py-2.5 items-center hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors"
+                  >
+                    <div className="col-span-1 text-stone-400 font-medium">{idx + 1}</div>
+                    <div className="col-span-6 font-semibold text-stone-800 dark:text-stone-200">
+                      {item.description}
+                    </div>
+                    <div className="col-span-2 text-center text-stone-500">
+                      {item.quantity}
+                    </div>
+                    <div className="col-span-3 text-right font-bold text-stone-900 dark:text-stone-100">
+                      {formatCurrency(item.total)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Assigned Vendors & Requirements Scope */}
+            {((event.vendorAssignments && event.vendorAssignments.length > 0) || event.requirements) && (
+              <div className="pt-2 border-t border-stone-100 dark:border-stone-800 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {event.vendorAssignments && event.vendorAssignments.length > 0 && (
+                  <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/40 border border-stone-200/80 dark:border-stone-800 space-y-1.5">
+                    <span className="text-[11px] font-bold text-stone-600 dark:text-stone-400 uppercase tracking-wider block">
+                      Allocated Vendors
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {event.vendorAssignments.map((va, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 shadow-2xs"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <strong>{va.category}:</strong> {va.vendorName || 'Assigned'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {event.requirements && (
+                  <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-950/40 border border-stone-200/80 dark:border-stone-800 space-y-1">
+                    <span className="text-[11px] font-bold text-stone-600 dark:text-stone-400 uppercase tracking-wider block">
+                      Decor & Floor Setup Scope
+                    </span>
+                    <p className="text-stone-600 dark:text-stone-300 text-[11px] leading-relaxed line-clamp-2">
+                      {event.requirements}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Add Payment Amount Card */}
@@ -494,6 +609,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                                 payment: p,
                                 event,
                                 client,
+                                invoice: linkedInvoice,
                                 settings,
                                 totalFees,
                                 totalPaid,

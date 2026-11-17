@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { X, DollarSign, CheckCircle2, AlertCircle, PlusCircle, MinusCircle } from 'lucide-react';
+import { X, DollarSign, CheckCircle2, AlertCircle, PlusCircle, MinusCircle, Building2 } from 'lucide-react';
 import { PaymentMethod } from '../../types';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -187,6 +187,42 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Booked Banquet & Allocated Items details */}
+          {eventId && (() => {
+            const selectedEvent = events.find((e) => e.id === eventId);
+            if (!selectedEvent) return null;
+            return (
+              <div className="p-3 bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-purple-700 dark:text-purple-400" />
+                    <span>{selectedEvent.banquetName || 'Booked Banquet'}</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-200/70 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                    {selectedEvent.eventType}
+                  </span>
+                </div>
+                <div className="text-[11px] text-stone-600 dark:text-stone-300">
+                  Date: <strong>{formatDate(selectedEvent.date)}</strong> · {selectedEvent.guestCount || 0} Guests · Total Fees: <strong>{formatCurrency(selectedEvent.finalAmount || 0)}</strong>
+                </div>
+                {selectedEvent.vendorAssignments && selectedEvent.vendorAssignments.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1.5 border-t border-purple-200/60 dark:border-purple-800/40">
+                    {selectedEvent.vendorAssignments.map((va, idx) => (
+                      <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 border border-purple-200 dark:border-purple-800">
+                        {va.category}: {va.vendorName || 'Assigned'}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedEvent.requirements && (
+                  <div className="text-[10px] text-stone-500 italic pt-1">
+                    Scope: {selectedEvent.requirements}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
