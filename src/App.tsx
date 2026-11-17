@@ -165,8 +165,9 @@ const MainLayout: React.FC = () => {
                   eventId={selectedEventId}
                   onBack={() => setSelectedEventId(null)}
                   onOpenRecordPayment={handleOpenPayment}
-                  onOpenCreateInvoice={() => {
+                  onOpenCreateInvoice={(evtId?: string) => {
                     setSelectedInvoiceToView(null);
+                    setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                     setIsInvoiceModalOpen(true);
                   }}
                 />
@@ -261,8 +262,9 @@ const MainLayout: React.FC = () => {
                   eventId={selectedEventId}
                   onBack={() => setSelectedEventId(null)}
                   onOpenRecordPayment={handleOpenPayment}
-                  onOpenCreateInvoice={() => {
+                  onOpenCreateInvoice={(evtId?: string) => {
                     setSelectedInvoiceToView(null);
+                    setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                     setIsInvoiceModalOpen(true);
                   }}
                 />
@@ -373,8 +375,9 @@ const MainLayout: React.FC = () => {
                 eventId={selectedEventId}
                 onBack={() => setSelectedEventId(null)}
                 onOpenRecordPayment={handleOpenPayment}
-                onOpenCreateInvoice={() => {
+                onOpenCreateInvoice={(evtId?: string) => {
                   setSelectedInvoiceToView(null);
+                  setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                   setIsInvoiceModalOpen(true);
                 }}
               />
@@ -392,8 +395,9 @@ const MainLayout: React.FC = () => {
                 eventId={selectedEventId}
                 onBack={() => setSelectedEventId(null)}
                 onOpenRecordPayment={handleOpenPayment}
-                onOpenCreateInvoice={() => {
+                onOpenCreateInvoice={(evtId?: string) => {
                   setSelectedInvoiceToView(null);
+                  setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                   setIsInvoiceModalOpen(true);
                 }}
               />

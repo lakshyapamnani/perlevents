@@ -31,7 +31,7 @@ import {
   Pencil,
   Save,
 } from 'lucide-react';
-import { EventRecord, ReminderStatus, Attachment, VendorAssignment, Payment } from '../types';
+import { EventRecord, ReminderStatus, Attachment, VendorAssignment, Payment, Invoice } from '../types';
 import {
   formatCurrency,
   formatDate,
@@ -42,6 +42,8 @@ import {
 } from '../utils/formatters';
 import { ImageUploadArea } from '../components/common/ImageUploadArea';
 import { EditEventModal } from '../components/modals/EditEventModal';
+import { EventFinanceModal } from '../components/modals/EventFinanceModal';
+import { InvoiceModal } from '../components/modals/InvoiceModal';
 
 interface EventDetailPageProps {
   eventId: string;
@@ -92,6 +94,25 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [taskNotes, setTaskNotes] = useState<Record<string, string>>({});
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Financials & Payments Modals State (Identical to Events Tab)
+  const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [selectedInvoiceToView, setSelectedInvoiceToView] = useState<Invoice | null>(null);
+
+  const handleOpenFinanceModal = () => {
+    setIsFinanceModalOpen(true);
+  };
+
+  const handleOpenCreateInvoiceModal = () => {
+    setSelectedInvoiceToView(null);
+    setIsInvoiceModalOpen(true);
+  };
+
+  const handleViewInvoice = (inv: Invoice) => {
+    setSelectedInvoiceToView(inv);
+    setIsInvoiceModalOpen(true);
+  };
 
   // Edit Venue & Personnel Reassignment State
   const [isEditAssignmentModalOpen, setIsEditAssignmentModalOpen] = useState(false);
@@ -289,25 +310,27 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             </a>
           )}
 
-          {onOpenRecordPayment && event.remainingBalance > 0 && (
-            <button
-              onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-semibold hover:opacity-90 shadow-xs"
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>Record Payment</span>
-            </button>
-          )}
+          {/* Record Payment / Finance Popup (Identical to Events Tab) */}
+          <button
+            type="button"
+            onClick={handleOpenFinanceModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-semibold hover:opacity-90 shadow-xs transition-colors"
+            title="Open Event Payments & Financials Ledger"
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            <span>Record Payment</span>
+          </button>
 
-          {onOpenCreateInvoice && (
-            <button
-              onClick={() => onOpenCreateInvoice(event.id)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-semibold"
-            >
-              <Receipt className="w-3.5 h-3.5" />
-              <span>Create Invoice</span>
-            </button>
-          )}
+          {/* Create Invoice Popup (Pre-filled for this Event) */}
+          <button
+            type="button"
+            onClick={handleOpenCreateInvoiceModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-semibold shadow-xs transition-colors"
+            title="Generate & Print Invoice for this Event"
+          >
+            <Receipt className="w-3.5 h-3.5" />
+            <span>Create Invoice</span>
+          </button>
 
           {/* Edit Event Button (Accessible to salespersons, managers, admins) */}
           <button
@@ -1357,23 +1380,21 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 Invoices Linked to Event ({eventInvoices.length})
               </h3>
               <div className="flex items-center gap-2">
-                {onOpenRecordPayment && event.remainingBalance > 0 && (
-                  <button
-                    onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs"
-                  >
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>+ Record Client Payment</span>
-                  </button>
-                )}
-                {onOpenCreateInvoice && (
-                  <button
-                    onClick={() => onOpenCreateInvoice(event.id)}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700"
-                  >
-                    + Generate New Invoice
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleOpenFinanceModal}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs transition-colors"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>+ Record Client Payment</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenCreateInvoiceModal}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-2xs transition-colors"
+                >
+                  + Generate New Invoice
+                </button>
               </div>
             </div>
 
@@ -1382,12 +1403,22 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             ) : (
               <div className="divide-y divide-stone-100 dark:divide-stone-800">
                 {eventInvoices.map((inv) => (
-                  <div key={inv.id} className="py-3 flex items-center justify-between text-xs">
+                  <div
+                    key={inv.id}
+                    onClick={() => handleViewInvoice(inv)}
+                    className="py-3 px-3 rounded-xl flex items-center justify-between text-xs hover:bg-stone-50 dark:hover:bg-stone-800/60 cursor-pointer transition-colors group"
+                    title="Click to view and print invoice"
+                  >
                     <div>
-                      <div className="font-bold text-stone-900 dark:text-stone-100">{inv.invoiceNumber}</div>
+                      <div className="font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                        <span>{inv.invoiceNumber}</span>
+                        <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium group-hover:underline">
+                          View / Print Invoice →
+                        </span>
+                      </div>
                       <div className="text-stone-500 text-[11px]">Issued {formatDate(inv.invoiceDate)}</div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex items-center gap-2.5">
                       <div className="font-bold text-stone-900 dark:text-stone-100">{formatCurrency(inv.finalTotal)}</div>
                       <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
                         {inv.status}
@@ -1405,15 +1436,14 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
                 Payment & Deduction Ledger ({eventPayments.length})
               </h3>
-              {onOpenRecordPayment && (
-                <button
-                  onClick={() => onOpenRecordPayment(event.id, event.clientId, event.remainingBalance)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs"
-                >
-                  <DollarSign className="w-3.5 h-3.5" />
-                  <span>Record / Adjust Payment</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleOpenFinanceModal}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-800 text-white hover:bg-emerald-900 flex items-center gap-1 shadow-2xs transition-colors"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>+ Record / Adjust Payment</span>
+              </button>
             </div>
 
             {eventPayments.length === 0 ? (
@@ -1621,6 +1651,37 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           isOpen={isEditEventModalOpen}
           onClose={() => setIsEditEventModalOpen(false)}
           event={event}
+        />
+      )}
+
+      {/* Event Finance / Payments Popup (Identical to Events Tab) */}
+      {isFinanceModalOpen && (
+        <EventFinanceModal
+          isOpen={isFinanceModalOpen}
+          onClose={() => setIsFinanceModalOpen(false)}
+          eventId={event.id}
+          onOpenInvoice={() => {
+            setIsFinanceModalOpen(false);
+            setSelectedInvoiceToView(eventInvoices[0] || null);
+            setIsInvoiceModalOpen(true);
+          }}
+        />
+      )}
+
+      {/* Invoice Modal for Event */}
+      {isInvoiceModalOpen && (
+        <InvoiceModal
+          isOpen={isInvoiceModalOpen}
+          onClose={() => {
+            setIsInvoiceModalOpen(false);
+            setSelectedInvoiceToView(null);
+          }}
+          invoiceToView={selectedInvoiceToView}
+          preselectedEventId={event.id}
+          onOpenRecordPayment={() => {
+            setIsInvoiceModalOpen(false);
+            setIsFinanceModalOpen(true);
+          }}
         />
       )}
     </div>
