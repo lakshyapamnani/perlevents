@@ -2713,6 +2713,128 @@ class RealtimeDatabaseEngine {
     return { success: true, payment };
   }
 
+  // --- DELETE PAYMENT (Remove Payment Added by Mistake & Recalculate Balances) ---
+  public deletePayment(
+    currentUser: UserProfile,
+    paymentId: string
+  ): { success: boolean; error?: string } {
+    const payment = this.state.payments[paymentId];
+    if (!payment) {
+      return { success: false, error: 'Payment record not found.' };
+    }
+
+    const eventId = payment.eventId;
+    const invoiceId = payment.invoiceId;
+    const saleId = payment.saleId;
+
+    // 1. Mark as deleted in tombstone map to prevent ghost resurrects
+    if (!this.state.deletedRecordIds) {
+      this.state.deletedRecordIds = {};
+    }
+    this.state.deletedRecordIds[paymentId] = Date.now();
+
+    // 2. Remove payment from state
+    delete this.state.payments[paymentId];
+
+    // 3. Recalculate and update Event balance if linked
+    let updatedEvent: EventRecord | undefined;
+    if (eventId && this.state.events[eventId]) {
+      const evt = this.state.events[eventId];
+      const remainingEvtPayments = Object.values(this.state.payments).filter((p) => p && p.eventId === eventId);
+      const calculatedAdvanceReceived = remainingEvtPayments.reduce((acc, p) => {
+        const amt = Number(p.amount) || 0;
+        return p.type === 'refund' ? acc - amt : acc + amt;
+      }, 0);
+
+      evt.advanceReceived = Math.max(0, calculatedAdvanceReceived);
+      evt.remainingBalance = Math.max(0, (Number(evt.finalAmount) || 0) - evt.advanceReceived);
+      evt.updatedAt = new Date().toISOString();
+      updatedEvent = evt;
+    }
+
+    // 4. Recalculate and update Invoice balance if linked
+    let updatedInvoice: Invoice | undefined;
+    const targetInvoice = invoiceId && this.state.invoices[invoiceId]
+      ? this.state.invoices[invoiceId]
+      : eventId
+      ? Object.values(this.state.invoices).find((i) => i && i.eventId === eventId)
+      : undefined;
+
+    if (targetInvoice) {
+      const remainingInvPayments = Object.values(this.state.payments).filter(
+        (p) => p && (p.invoiceId === targetInvoice.id || (eventId && p.eventId === eventId))
+      );
+      const calculatedInvAdvance = remainingInvPayments.reduce((acc, p) => {
+        const amt = Number(p.amount) || 0;
+        return p.type === 'refund' ? acc - amt : acc + amt;
+      }, 0);
+
+      targetInvoice.actualAdvanceReceived = Math.max(0, calculatedInvAdvance);
+      targetInvoice.remainingBalance = Math.max(0, (Number(targetInvoice.finalTotal) || 0) - targetInvoice.actualAdvanceReceived);
+      if (targetInvoice.remainingBalance <= 0) {
+        targetInvoice.status = 'paid';
+      } else if (targetInvoice.actualAdvanceReceived > 0) {
+        targetInvoice.status = 'partially_paid';
+      } else {
+        targetInvoice.status = 'issued';
+      }
+      targetInvoice.updatedAt = new Date().toISOString();
+      updatedInvoice = targetInvoice;
+    }
+
+    // 5. Recalculate and update Sale balance if linked
+    let updatedSale: Sale | undefined;
+    const targetSale = saleId && this.state.sales[saleId]
+      ? this.state.sales[saleId]
+      : eventId
+      ? Object.values(this.state.sales).find((s) => s && s.eventId === eventId)
+      : undefined;
+
+    if (targetSale) {
+      const remainingSalePayments = Object.values(this.state.payments).filter(
+        (p) => p && (p.saleId === targetSale.id || (eventId && p.eventId === eventId))
+      );
+      const calculatedSalePaid = remainingSalePayments.reduce((acc, p) => {
+        const amt = Number(p.amount) || 0;
+        return p.type === 'refund' ? acc - amt : acc + amt;
+      }, 0);
+
+      targetSale.paymentsReceived = Math.max(0, calculatedSalePaid);
+      targetSale.outstandingBalance = Math.max(0, (Number(targetSale.finalSaleAmount) || 0) - targetSale.paymentsReceived);
+      updatedSale = targetSale;
+    }
+
+    // 6. Audit Log
+    this.logActivity({
+      actorId: currentUser.uid,
+      actorName: currentUser.fullName,
+      actorRole: currentUser.role,
+      action: 'Deleted Payment',
+      module: 'payments',
+      recordId: paymentId,
+      details: `Deleted payment receipt "${payment.referenceNumber || paymentId}" of ₹${(Number(payment.amount) || 0).toLocaleString('en-IN')} for ${payment.clientName || 'event'}. Balances recalculated.`,
+    });
+
+    // 7. Sync with Firebase Realtime Database
+    if (isFirebaseConfigured()) {
+      writeRealtimeNode('pearlexperiences/state/deletedRecordIds', this.state.deletedRecordIds).catch(() => {});
+      writeRealtimeNode(`pearlexperiences/state/payments/${paymentId}`, null).catch(() => {});
+      if (updatedEvent) {
+        writeRealtimeNode(`pearlexperiences/state/events/${updatedEvent.id}`, updatedEvent).catch(() => {});
+      }
+      if (updatedInvoice) {
+        writeRealtimeNode(`pearlexperiences/state/invoices/${updatedInvoice.id}`, updatedInvoice).catch(() => {});
+      }
+      if (updatedSale) {
+        writeRealtimeNode(`pearlexperiences/state/sales/${updatedSale.id}`, updatedSale).catch(() => {});
+      }
+    }
+
+    this.saveState(this.state);
+    this.notify();
+    return { success: true };
+  }
+
   // --- SETTINGS UPDATE ---
   public updateSettings(currentUser: UserProfile, settings: OrganizationSettings): { success: boolean; error?: string } {
     if (currentUser.role !== 'admin') {

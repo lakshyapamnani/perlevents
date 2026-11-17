@@ -207,6 +207,7 @@ interface DataContextType {
   recordPayment: (
     paymentData: Omit<Payment, 'id' | 'createdAt' | 'recordedBy' | 'recordedByName'> & { type?: 'payment' | 'refund' }
   ) => { success: boolean; payment?: Payment; error?: string };
+  deletePayment: (paymentId: string) => { success: boolean; error?: string };
   deleteSale: (saleId: string) => { success: boolean; error?: string };
 
   updateSettings: (settings: OrganizationSettings) => { success: boolean; error?: string };
@@ -695,6 +696,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.recordPayment(currentUser, paymentData);
   };
 
+  const deletePayment = (paymentId: string) => {
+    if (!currentUser) return { success: false, error: 'Not authenticated' };
+    return realtimeEngine.deletePayment(currentUser, paymentId);
+  };
+
   const deleteSale = (saleId: string) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };
     return realtimeEngine.deleteSale(currentUser, saleId);
@@ -773,6 +779,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addEventPhoto,
         saveInvoice,
         recordPayment,
+        deletePayment,
         deleteSale,
         updateSettings,
         saveTarget,

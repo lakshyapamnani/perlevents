@@ -15,6 +15,7 @@ import { InvoicesModule } from './pages/InvoicesModule';
 import { SalesModule } from './pages/SalesModule';
 import { SalesReportsDashboard } from './pages/SalesReportsDashboard';
 import { UsersModule } from './pages/UsersModule';
+import { LiveLocationsModule } from './pages/LiveLocationsModule';
 import { PartnersModule } from './pages/PartnersModule';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { VendorsModule } from './pages/VendorsModule';
@@ -165,8 +166,9 @@ const MainLayout: React.FC = () => {
                   eventId={selectedEventId}
                   onBack={() => setSelectedEventId(null)}
                   onOpenRecordPayment={handleOpenPayment}
-                  onOpenCreateInvoice={() => {
+                  onOpenCreateInvoice={(evtId?: string) => {
                     setSelectedInvoiceToView(null);
+                    setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                     setIsInvoiceModalOpen(true);
                   }}
                 />
@@ -240,6 +242,7 @@ const MainLayout: React.FC = () => {
                   )}
                   {adminTab === 'sales-reports' && <SalesReportsDashboard />}
                   {adminTab === 'salespersons' && <UsersModule filterRole="salesperson" />}
+                  {adminTab === 'live-locations' && <LiveLocationsModule />}
                   {adminTab === 'managers' && <UsersModule filterRole="manager" />}
                   {adminTab === 'partners' && (
                     <PartnersModule onSelectEvent={(id) => setSelectedEventId(id)} />
@@ -261,8 +264,9 @@ const MainLayout: React.FC = () => {
                   eventId={selectedEventId}
                   onBack={() => setSelectedEventId(null)}
                   onOpenRecordPayment={handleOpenPayment}
-                  onOpenCreateInvoice={() => {
+                  onOpenCreateInvoice={(evtId?: string) => {
                     setSelectedInvoiceToView(null);
+                    setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                     setIsInvoiceModalOpen(true);
                   }}
                 />
@@ -373,8 +377,9 @@ const MainLayout: React.FC = () => {
                 eventId={selectedEventId}
                 onBack={() => setSelectedEventId(null)}
                 onOpenRecordPayment={handleOpenPayment}
-                onOpenCreateInvoice={() => {
+                onOpenCreateInvoice={(evtId?: string) => {
                   setSelectedInvoiceToView(null);
+                  setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                   setIsInvoiceModalOpen(true);
                 }}
               />
@@ -392,8 +397,9 @@ const MainLayout: React.FC = () => {
                 eventId={selectedEventId}
                 onBack={() => setSelectedEventId(null)}
                 onOpenRecordPayment={handleOpenPayment}
-                onOpenCreateInvoice={() => {
+                onOpenCreateInvoice={(evtId?: string) => {
                   setSelectedInvoiceToView(null);
+                  setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                   setIsInvoiceModalOpen(true);
                 }}
               />
