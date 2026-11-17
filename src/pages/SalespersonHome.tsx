@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,9 +17,15 @@ import {
   Phone,
   Target,
   Award,
+  MapPin,
+  Radio,
+  AlertCircle,
+  Compass,
+  StopCircle,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { SalespersonTab } from '../components/common/SalespersonBottomNav';
+import { locationTracker } from '../services/locationService';
 
 interface SalespersonHomeProps {
   setActiveTab: (tab: SalespersonTab) => void;
@@ -72,6 +78,41 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
   const followUpsDueToday = activeLeads.filter((l) => Boolean(l && l.followUpDate && l.followUpDate <= today));
 
   const recentDirectSales = sales.slice(0, 3);
+
+  // Live Location Tracking state
+  const [isLocationSharing, setIsLocationSharing] = useState<boolean>(() => locationTracker.getIsSharing());
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<number | undefined>(undefined);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | undefined>(undefined);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isStartingLocation, setIsStartingLocation] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsub = locationTracker.subscribeStatus((status) => {
+      setIsLocationSharing(status.isSharing);
+      if (status.lastUpdated) setLastLocationUpdate(status.lastUpdated);
+      if (status.accuracy !== undefined) setLocationAccuracy(status.accuracy);
+      if (status.error !== undefined) setLocationError(status.error);
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
+
+  const handleStartSharing = async () => {
+    if (!currentUser) return;
+    setIsStartingLocation(true);
+    setLocationError(null);
+    const res = await locationTracker.startSharing(currentUser.uid, currentUser.fullName);
+    setIsStartingLocation(false);
+    if (!res.success && res.error) {
+      setLocationError(res.error);
+    }
+  };
+
+  const handleStopSharing = async () => {
+    await locationTracker.stopSharing();
+    setLocationError(null);
+  };
 
   return (
     <div className="space-y-5 pb-24 max-w-2xl mx-auto px-1 sm:px-4">
@@ -132,6 +173,120 @@ export const SalespersonHome: React.FC<SalespersonHomeProps> = ({
             <span>Invoice</span>
           </button>
         </div>
+      </div>
+
+      {/* LOCATION SHARING CARD */}
+      <div
+        className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+          isLocationSharing
+            ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 shadow-sm'
+            : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 shadow-sm'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                isLocationSharing
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400'
+                  : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'
+              }`}
+            >
+              {isLocationSharing ? (
+                <Radio className="w-5 h-5 animate-pulse" />
+              ) : (
+                <MapPin className="w-5 h-5" />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+                  Location Sharing
+                </h3>
+                {isLocationSharing ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Sharing Location
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+                    Status: Not Sharing
+                  </span>
+                )}
+              </div>
+
+              {isLocationSharing ? (
+                <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 dark:text-stone-400 mt-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                    Last updated:{' '}
+                    {lastLocationUpdate
+                      ? new Date(lastLocationUpdate).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })
+                      : 'Just now'}
+                  </span>
+                  {locationAccuracy !== undefined && (
+                    <span className="flex items-center gap-1">
+                      <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                      GPS Accuracy: ±{locationAccuracy}m
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  Share your live GPS coordinates with administration during field visits
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="sm:self-center">
+            {isLocationSharing ? (
+              <button
+                onClick={handleStopSharing}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 min-h-[42px]"
+              >
+                <StopCircle className="w-4 h-4" />
+                <span>Stop Sharing</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStartSharing}
+                disabled={isStartingLocation}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50 min-h-[42px]"
+              >
+                {isStartingLocation ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Acquiring GPS...</span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4" />
+                    <span>Start Sharing Location</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {locationError && (
+          <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Location Notice: </span>
+              <span>{locationError}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ASSIGNED SALES TARGET CARD */}
