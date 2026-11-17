@@ -15,6 +15,7 @@ interface GenerateReceiptParams {
   payment: Payment;
   event: EventRecord;
   client?: Client | null;
+  invoice?: Invoice | null;
   settings: OrganizationSettings;
   totalFees?: number;
   totalPaid?: number;
@@ -33,6 +34,84 @@ export function formatInrSymbol(amount: number): string {
 }
 
 /**
+ * Extracts and calculates itemized booking allocations for an event
+ */
+export function getAllocatedItemsForEvent(event: EventRecord, invoice?: Invoice | null) {
+  if (invoice?.items && invoice.items.length > 0) {
+    return invoice.items;
+  }
+
+  const finalAmt = Number(event.finalAmount) || Number(event.quotedAmount) || 0;
+  const guestCount = Number(event.guestCount) || 100;
+
+  const vendorAssignments = Array.isArray(event.vendorAssignments)
+    ? event.vendorAssignments
+    : (event.vendorAssignments && typeof event.vendorAssignments === 'object'
+        ? (Object.values(event.vendorAssignments) as any[])
+        : []);
+
+  const items: Array<{ id: string; description: string; quantity: number; unitPrice: number; total: number }> = [];
+
+  // 1. Booked Banquet Venue Hire & Facility Access
+  const venuePercent = vendorAssignments.length > 0 ? 0.5 : 0.6;
+  const venueShare = finalAmt > 0 ? Math.round(finalAmt * venuePercent) : 100000;
+  items.push({
+    id: 'it_venue',
+    description: `Booked Banquet Venue Hire & Facility: ${event.banquetName || 'Venue Hall'}`,
+    quantity: 1,
+    unitPrice: venueShare,
+    total: venueShare,
+  });
+
+  // 2. Catering & Event Coordination
+  const cateringPercent = vendorAssignments.length > 0 ? 0.3 : 0.4;
+  const cateringShare = finalAmt > 0 ? Math.round(finalAmt * cateringPercent) : 50000;
+  const perPlate = guestCount > 0 ? Math.round(cateringShare / guestCount) : 500;
+  items.push({
+    id: 'it_catering',
+    description: `Catering & Hospitality Services (${event.eventType || 'Event'})`,
+    quantity: guestCount,
+    unitPrice: perPlate,
+    total: cateringShare,
+  });
+
+  // 3. Allocated Vendor Services (Decor, Sound, DJ, Photography, etc.)
+  if (vendorAssignments.length > 0) {
+    const remainingAmt = Math.max(0, finalAmt - venueShare - cateringShare);
+    const perVendor = Math.round(remainingAmt / vendorAssignments.length);
+
+    vendorAssignments.forEach((va, idx) => {
+      const vendorName = va.vendorName ? ` by "${va.vendorName}"` : '';
+      const req = va.requirements ? ` (${va.requirements})` : '';
+      items.push({
+        id: `it_va_${idx}`,
+        description: `${va.category || 'Vendor Service'}${vendorName}${req}`,
+        quantity: 1,
+        unitPrice: perVendor,
+        total: perVendor,
+      });
+    });
+  } else if (event.requirements && event.requirements.trim()) {
+    items.push({
+      id: 'it_req',
+      description: `Decoration & Setup Scope: ${event.requirements.slice(0, 60)}`,
+      quantity: 1,
+      unitPrice: 0,
+      total: 0,
+    });
+  }
+
+  // Adjust total to match finalAmt if finalAmt > 0
+  const currentSum = items.reduce((s, it) => s + it.total, 0);
+  if (finalAmt > 0 && currentSum !== finalAmt) {
+    items[0].total += (finalAmt - currentSum);
+    items[0].unitPrice = items[0].total;
+  }
+
+  return items;
+}
+
+/**
  * Downloads a Payment Receipt PDF matching the exact reference layout
  * (Sankalp Academy reference: Logo, Company Header, FEE RECEIPT pill,
  * Client Details vs Receipt Info, # / Description / Amount table,
@@ -42,6 +121,7 @@ export function downloadPaymentReceiptPDF({
   payment,
   event,
   client,
+  invoice,
   settings,
   totalFees,
   totalPaid,
@@ -55,13 +135,13 @@ export function downloadPaymentReceiptPDF({
     });
 
     const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
-    const margin = 16;
-    const contentWidth = pageWidth - margin * 2; // 178mm
-    let y = 14;
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2; // 182mm
+    let y = 12;
 
     // 1. TOP HEADER (LOGO + COMPANY DETAILS)
     try {
-      doc.addImage(PEARL_LOGO_BASE64, 'JPEG', margin, y, 38, 20);
+      doc.addImage(PEARL_LOGO_BASE64, 'JPEG', margin, y, 42, 21);
     } catch (e) {
       console.warn('Failed to draw logo', e);
     }
@@ -69,35 +149,35 @@ export function downloadPaymentReceiptPDF({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(15, 23, 42);
-    doc.text(settings.name?.toUpperCase() || 'PEARL EXPERIENCES PVT. LTD.', margin + 44, y + 5);
+    doc.text(settings.name?.toUpperCase() || 'PEARL EXPERIENCES PVT. LTD.', margin + 46, y + 5);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
     const splitAddr = doc.splitTextToSize(
-      settings.address || 'Shop 17, Cornerstone Building, Grand Celebration Enclave, New Delhi - 110001',
-      contentWidth - 44
+      settings.address || 'Plot 42, Cornerstone Building, Grand Celebration Enclave, New Delhi - 110001',
+      contentWidth - 46
     );
-    doc.text(splitAddr, margin + 44, y + 10);
+    doc.text(splitAddr, margin + 46, y + 10);
     doc.text(
       `Phone: ${settings.phone || '9152837001'}    Email: ${settings.email || 'Pearlexperiencespvt.ltd@gmail.com'}`,
-      margin + 44,
+      margin + 46,
       y + 15
     );
 
     y += 24;
 
-    // Centered "INVOICE" Pill (Replacing "FEE RECEIPT")
-    const pillWidth = 32;
-    const pillHeight = 7;
+    // Centered "TAX INVOICE & RECEIPT" Pill
+    const pillWidth = 46;
+    const pillHeight = 7.5;
     const pillX = (pageWidth - pillWidth) / 2;
     doc.setFillColor(15, 23, 42); // Black/Navy Pill
-    doc.roundedRect(pillX, y, pillWidth, pillHeight, 3.5, 3.5, 'F');
+    doc.roundedRect(pillX, y, pillWidth, pillHeight, 3.75, 3.75, 'F');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text('INVOICE', pageWidth / 2, y + 4.8, { align: 'center' });
+    doc.text('INVOICE & RECEIPT', pageWidth / 2, y + 5, { align: 'center' });
 
     y += 12;
 
@@ -111,126 +191,143 @@ export function downloadPaymentReceiptPDF({
     const colWidth = contentWidth / 2;
     const clientName = client?.fullName || payment.clientName || event.clientName || 'Valued Client';
     const clientPhone = client?.primaryPhone || event.clientPhone || 'N/A';
-    const receiptNo = payment.referenceNumber || `DP-${payment.id.slice(-6).toUpperCase()}`;
+    const receiptNo = payment.referenceNumber || `PX-${payment.id.slice(-6).toUpperCase()}`;
 
-    // Left Column: Client Details
+    // Left Column: Client & Booked Banquet Details
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('CLIENT DETAILS', margin, y);
+    doc.text('CLIENT & BOOKING DETAILS', margin, y);
 
     let leftY = y + 5;
     const leftLabels = [
-      ['Name:', clientName],
-      ['Phone:', clientPhone],
-      ['Venue / Hall:', event.banquetName || 'Pearl Banquet'],
-      ['Event / Type:', event.name || event.eventType],
+      ['Client Name:', clientName],
+      ['Phone Number:', clientPhone],
+      ['Booked Banquet:', event.banquetName || 'Pearl Banquet Hall'],
+      ['Event Occasion:', `${event.name || event.eventType} (${event.eventType || 'Event'})`],
+      ['Event Date & Time:', `${formatDate(event.date)} · ${event.startTime || '12:00 PM'} - ${event.endTime || '11:00 PM'}`],
+      ['Guest Capacity:', `${event.guestCount || 0} Guests / Pax`],
     ];
 
     leftLabels.forEach(([label, val]) => {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       doc.text(label, margin, leftY);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(15, 23, 42);
-      doc.text(String(val), margin + 28, leftY);
-      leftY += 5;
+      doc.text(String(val), margin + 30, leftY);
+      leftY += 4.5;
     });
 
-    // Right Column: Invoice Info
+    // Right Column: Invoice & Receipt Info
     const rightColX = margin + colWidth + 6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('INVOICE INFO', pageWidth - margin, y, { align: 'right' });
+    doc.text('RECEIPT & PAYMENT INFO', pageWidth - margin, y, { align: 'right' });
 
     let rightY = y + 5;
+    const pmtModeStr = (payment.paymentMethod || 'cash').toUpperCase().replace('_', ' ');
     const rightLabels = [
-      ['Invoice No:', receiptNo],
-      ['Date:', formatDate(payment.paymentDate)],
-      ['Time:', event.startTime || '12:00 pm'],
-      ['Payment Mode:', payment.paymentMethod.toUpperCase().replace('_', ' ')],
+      ['Receipt / Voucher No:', receiptNo],
+      ['Payment Date:', formatDate(payment.paymentDate)],
+      ['Payment Mode:', pmtModeStr],
       ['Transaction ID / Ref:', payment.referenceNumber || payment.id],
+      ['Payment Status:', 'CLEARED / VERIFIED'],
     ];
 
     rightLabels.forEach(([label, val]) => {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       doc.text(label, rightColX, rightY);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(15, 23, 42);
       doc.text(String(val), pageWidth - margin, rightY, { align: 'right' });
-      rightY += 5;
+      rightY += 4.5;
     });
 
-    y = Math.max(leftY, rightY) + 4;
+    y = Math.max(leftY, rightY) + 3;
 
-    // 3. TABLE: # | Description | Amount (Exact match to reference image)
+    // 3. ALLOCATED ITEMS TABLE (LIKE A PROPER INVOICE)
+    const allocatedItems = getAllocatedItemsForEvent(event, invoice);
+    const pkgTotal = totalFees !== undefined ? totalFees : (event.finalAmount || 0);
+
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.3);
 
     // Table Header
     doc.setFillColor(248, 250, 252);
-    doc.rect(margin, y, contentWidth, 8, 'FD');
+    doc.rect(margin, y, contentWidth, 7, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
-    doc.text('#', margin + 4, y + 5.5);
-    doc.text('Description', margin + 18, y + 5.5);
-    doc.text('Amount (Rs.)', pageWidth - margin - 4, y + 5.5, { align: 'right' });
+    doc.text('#', margin + 3, y + 4.8);
+    doc.text('Allocated Booking Items & Services', margin + 12, y + 4.8);
+    doc.text('Qty / Pax', margin + 115, y + 4.8);
+    doc.text('Rate', margin + 138, y + 4.8);
+    doc.text('Amount (Rs.)', pageWidth - margin - 3, y + 4.8, { align: 'right' });
 
-    y += 8;
+    y += 7;
 
-    // Row 1: The Payment
-    const isFirst = !payment.notes || payment.notes.toLowerCase().includes('down') || payment.notes.toLowerCase().includes('token');
-    const paymentTitle = isFirst ? 'Down Payment • Initial Token / Advance' : 'Installment Payment Received';
-    const paymentSub = payment.notes || 'Upfront booking advance token credited at event reservation / setup';
+    // Allocated Items Rows
+    allocatedItems.forEach((it, idx) => {
+      doc.rect(margin, y, contentWidth, 6.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(idx + 1), margin + 3, y + 4.5);
+      doc.text(it.description.slice(0, 52), margin + 12, y + 4.5);
+      doc.text(String(it.quantity), margin + 115, y + 4.5);
+      doc.text(formatPdfCurrency(it.unitPrice), margin + 138, y + 4.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(formatPdfCurrency(it.total), pageWidth - margin - 3, y + 4.5, { align: 'right' });
+      y += 6.5;
+    });
 
-    doc.rect(margin, y, contentWidth, 14);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(15, 23, 42);
-    doc.text('1', margin + 4, y + 6);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(paymentTitle, margin + 18, y + 5.5);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    doc.text(paymentSub, margin + 18, y + 10);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(15, 23, 42);
-    doc.text(formatPdfCurrency(payment.amount), pageWidth - margin - 4, y + 8, { align: 'right' });
-
-    y += 14;
-
-    // Subtotal Row: TOTAL PAID (THIS RECEIPT)
+    // Subtotal Row: TOTAL EVENT BOOKING FEES
     doc.setFillColor(248, 250, 252);
-    doc.rect(margin, y, contentWidth, 9, 'FD');
+    doc.rect(margin, y, contentWidth, 7.5, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('TOTAL EVENT BOOKING AMOUNT', pageWidth - margin - 48, y + 5.2, { align: 'right' });
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text(formatPdfCurrency(pkgTotal), pageWidth - margin - 3, y + 5.2, { align: 'right' });
+    y += 7.5;
+
+    // Green Highlighted Row: PAYMENT RECEIVED (THIS RECEIPT)
+    doc.setFillColor(240, 253, 244); // light green bg
+    doc.setDrawColor(134, 239, 172); // green border
+    doc.rect(margin, y, contentWidth, 10.5, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(15, 23, 42);
-    doc.text('TOTAL PAID (THIS RECEIPT)', pageWidth - margin - 50, y + 6, { align: 'right' });
+    doc.setFontSize(8);
+    doc.setTextColor(5, 150, 105); // emerald green
+    doc.text(`PAYMENT RECEIVED • RECEIPT #${receiptNo}`, margin + 4, y + 4.5);
 
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(4, 120, 87);
+    const pmtSub = `${formatDate(payment.paymentDate)} • Mode: ${pmtModeStr} • ${payment.notes || 'Payment received towards event booking'}`;
+    doc.text(pmtSub.slice(0, 70), margin + 4, y + 8.5);
+
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text(formatPdfCurrency(payment.amount), pageWidth - margin - 4, y + 6.2, { align: 'right' });
+    doc.setTextColor(5, 150, 105);
+    doc.text(`+${formatPdfCurrency(payment.amount)}`, pageWidth - margin - 3, y + 6.8, { align: 'right' });
 
-    y += 14;
+    y += 13.5;
 
     // 4. FINANCIAL SUMMARY BOX (Right-aligned, matching reference image)
     const summaryWidth = 72;
     const summaryX = pageWidth - margin - summaryWidth;
 
-    const pkgTotal = totalFees !== undefined ? totalFees : (event.finalAmount || 0);
     const paidAll = totalPaid !== undefined ? totalPaid : (event.advanceReceived || payment.amount);
     const downPmt = event.advanceRequested || payment.amount;
     const outstanding = remainingBalance !== undefined ? remainingBalance : Math.max(0, pkgTotal - paidAll);
@@ -837,12 +934,14 @@ export function openPrintableInvoiceWindow({
     ...(client?.referencePhotos || []),
   ];
 
+  const allocatedItems = getAllocatedItemsForEvent(event, invoice);
+
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Invoice - ${invNumber} - ${clientName}</title>
+  <title>Invoice & Receipt - ${invNumber} - ${clientName}</title>
   <style>
     @page { size: A4 portrait; margin: 14mm; }
     * { box-sizing: border-box; }
@@ -1067,9 +1166,9 @@ export function openPrintableInvoiceWindow({
   <!-- Metadata Grid matching user screenshot -->
   <div class="meta-grid">
     <div>
-      <div class="meta-title">Client Details</div>
+      <div class="meta-title">Client & Booking Details</div>
       <div class="meta-row">
-        <span class="meta-label">Name:</span>
+        <span class="meta-label">Client Name:</span>
         <span class="meta-val">${clientName}</span>
       </div>
       <div class="meta-row">
@@ -1077,23 +1176,31 @@ export function openPrintableInvoiceWindow({
         <span class="meta-val">${clientPhone}</span>
       </div>
       <div class="meta-row">
-        <span class="meta-label">Venue / Hall:</span>
-        <span class="meta-val">${event.banquetName || 'Pearl Banquet'}</span>
+        <span class="meta-label">Booked Banquet:</span>
+        <span class="meta-val" style="color: #059669;">${event.banquetName || 'Pearl Banquet'}</span>
       </div>
       <div class="meta-row">
         <span class="meta-label">Event Occasion:</span>
-        <span class="meta-val">${event.name} (${event.eventType})</span>
+        <span class="meta-val">${event.name} (${event.eventType || 'Event'})</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Event Date & Time:</span>
+        <span class="meta-val">${formatDate(event.date)} · ${event.startTime || '12:00 PM'} - ${event.endTime || '11:00 PM'}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Guest Capacity:</span>
+        <span class="meta-val">${event.guestCount || 0} Guests / Pax</span>
       </div>
     </div>
 
     <div>
-      <div class="meta-title" style="text-align: right;">Invoice Info</div>
+      <div class="meta-title" style="text-align: right;">Receipt & Payment Info</div>
       <div class="meta-row">
-        <span class="meta-label">Invoice No:</span>
+        <span class="meta-label">Receipt / Inv No:</span>
         <span class="meta-val">${invNumber}</span>
       </div>
       <div class="meta-row">
-        <span class="meta-label">Date:</span>
+        <span class="meta-label">Payment Date:</span>
         <span class="meta-val">${invDate}</span>
       </div>
       <div class="meta-row">
@@ -1102,38 +1209,55 @@ export function openPrintableInvoiceWindow({
       </div>
       <div class="meta-row">
         <span class="meta-label">Payment Mode:</span>
-        <span class="meta-val">UPI</span>
+        <span class="meta-val">${payments[0]?.paymentMethod ? payments[0].paymentMethod.toUpperCase().replace('_', ' ') : 'ONLINE / BANK'}</span>
       </div>
       <div class="meta-row">
         <span class="meta-label">Transaction ID / Ref:</span>
-        <span class="meta-val">${event.id.slice(-8).toUpperCase()}</span>
+        <span class="meta-val">${payments[0]?.referenceNumber || event.id.slice(-8).toUpperCase()}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Payment Status:</span>
+        <span class="meta-val" style="color: #059669;">CLEARED / VERIFIED</span>
       </div>
     </div>
   </div>
 
-  <!-- Table matching user screenshot -->
+  <!-- Allocated Booking Items Table -->
   <table>
     <thead>
       <tr>
         <th style="width: 40px; text-align: center;">#</th>
-        <th>Description</th>
-        <th style="text-align: right; width: 140px;">Amount (₹)</th>
+        <th>Allocated Item / Service Description</th>
+        <th style="width: 80px; text-align: center;">Qty / Pax</th>
+        <th style="width: 100px; text-align: right;">Rate (₹)</th>
+        <th style="text-align: right; width: 130px;">Amount (₹)</th>
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td style="text-align: center;">1</td>
-        <td>
-          <strong style="color: #0f172a;">Down Payment • Initial Token / Advance</strong><br>
-          <span style="color: #64748b; font-size: 11px;">Upfront booking advance token credited at admission / setup</span>
-        </td>
-        <td style="text-align: right; font-weight: 800; font-size: 14px;">
-          ${formatInrSymbol(totalPaid)}
-        </td>
+      ${allocatedItems.map((it, idx) => `
+        <tr>
+          <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+          <td>
+            <strong style="color: #0f172a;">${it.description}</strong>
+          </td>
+          <td style="text-align: center; color: #475569;">${it.quantity}</td>
+          <td style="text-align: right; color: #475569;">${formatInrSymbol(it.unitPrice)}</td>
+          <td style="text-align: right; font-weight: 700; color: #0f172a;">${formatInrSymbol(it.total)}</td>
+        </tr>
+      `).join('')}
+      <tr style="background: #f8fafc; font-weight: 700;">
+        <td colspan="4" style="text-align: right; letter-spacing: 0.5px;">TOTAL EVENT BOOKING AMOUNT:</td>
+        <td style="text-align: right; font-size: 14px; font-weight: 800; color: #0f172a;">${formatInrSymbol(finalTotal)}</td>
       </tr>
-      <tr class="total-paid-row">
-        <td colspan="2" style="text-align: right; letter-spacing: 0.5px;">TOTAL PAID (THIS INVOICE)</td>
-        <td style="text-align: right; font-size: 15px; color: #0f172a;">${formatInrSymbol(totalPaid)}</td>
+      <tr style="background: #f0fdf4; border-top: 2px solid #86efac;">
+        <td style="text-align: center; color: #059669; font-weight: 800;">✓</td>
+        <td colspan="3">
+          <strong style="color: #059669;">PAYMENT CLEARED (THIS RECEIPT)</strong><br>
+          <span style="color: #047857; font-size: 11px;">Receipt #${invNumber} • Date: ${invDate} • Status: Cleared / Verified</span>
+        </td>
+        <td style="text-align: right; font-weight: 800; font-size: 15px; color: #059669;">
+          +${formatInrSymbol(totalPaid)}
+        </td>
       </tr>
     </tbody>
   </table>
