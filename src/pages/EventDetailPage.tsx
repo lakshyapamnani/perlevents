@@ -31,7 +31,7 @@ import {
   Pencil,
   Save,
 } from 'lucide-react';
-import { EventRecord, ReminderStatus, Attachment, VendorAssignment } from '../types';
+import { EventRecord, ReminderStatus, Attachment, VendorAssignment, Payment } from '../types';
 import {
   formatCurrency,
   formatDate,
@@ -85,6 +85,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     addEventPhoto,
     updateEventDetails,
     deleteEvent,
+    deletePayment,
   } = useData();
   const { currentUser, allUsersList: users } = useAuth();
 
@@ -182,6 +183,24 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
     if (!event) return;
     if (window.confirm('Are you sure you want to remove this checkbox?')) {
       deleteChecklistItem(event.id, taskId);
+    }
+  };
+
+  const handleDeletePayment = (payment: Payment) => {
+    const receiptLabel = payment.referenceNumber ? `Receipt: ${payment.referenceNumber}` : 'Payment';
+    const amountStr = formatCurrency(payment.amount);
+    if (
+      window.confirm(
+        `Are you sure you want to delete this payment of ${amountStr} (${receiptLabel}) added by mistake?\n\nThis will remove the payment and update the event's paid and remaining balance.`
+      )
+    ) {
+      const res = deletePayment(payment.id);
+      if (res.success) {
+        setSaveSuccessMsg(`Deleted payment of ${amountStr}. Balances updated!`);
+        setTimeout(() => setSaveSuccessMsg(null), 3000);
+      } else {
+        alert(res.error || 'Failed to delete payment.');
+      }
     }
   };
 
@@ -1428,8 +1447,18 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                         </div>
                         {p.notes && <div className="text-[11px] text-stone-400 italic mt-0.5">{p.notes}</div>}
                       </div>
-                      <div className="text-right text-[11px] text-stone-400">
-                        Recorded by {p.recordedByName}
+                      <div className="flex items-center gap-3">
+                        <div className="text-right text-[11px] text-stone-400">
+                          Recorded by {p.recordedByName}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePayment(p)}
+                          className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors"
+                          title="Delete payment added by mistake"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   );

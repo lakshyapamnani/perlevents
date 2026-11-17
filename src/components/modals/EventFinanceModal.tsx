@@ -16,9 +16,10 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { formatCurrency, formatDate, generateWhatsAppUrl } from '../../utils/formatters';
-import { PaymentMethod } from '../../types';
+import { Payment, PaymentMethod } from '../../types';
 import {
   downloadEventInvoicePDF,
   downloadPaymentReceiptPDF,
@@ -41,7 +42,7 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
   onOpenInvoice,
   onInspectEvent,
 }) => {
-  const { events, payments, banquets, clients, recordPayment, invoices, settings } = useData();
+  const { events, payments, banquets, clients, recordPayment, deletePayment, invoices, settings } = useData();
   const { currentUser } = useAuth();
 
   const event = events.find((e) => e.id === eventId);
@@ -162,6 +163,24 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
     }
     const url = generateWhatsAppUrl(whatsappNumber, getWhatsAppMessage());
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDeletePayment = (p: Payment) => {
+    const receiptLabel = p.referenceNumber ? `Receipt: ${p.referenceNumber}` : 'payment entry';
+    const amountStr = formatCurrency(p.amount);
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this payment of ${amountStr} (${receiptLabel}) added by mistake?\n\nThis will permanently remove the payment and recalculate the event's paid and remaining balances.`
+    );
+    if (!confirmed) return;
+
+    setFormError(null);
+    const res = deletePayment(p.id);
+    if (res.success) {
+      setSuccessMsg(`Deleted payment of ${amountStr} (${receiptLabel}). Balances updated.`);
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } else {
+      setFormError(res.error || 'Failed to delete payment.');
+    }
   };
 
   return (
@@ -503,6 +522,16 @@ export const EventFinanceModal: React.FC<EventFinanceModalProps> = ({
                             title="Print Document"
                           >
                             <Printer className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(p)}
+                            className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors"
+                            title="Delete this payment added by mistake"
+                            aria-label="Delete Payment"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
