@@ -233,17 +233,16 @@ export const LiveLocationsModule: React.FC = () => {
       const uid = profile.uid;
 
       // Only display markers for salespersons that have shared valid coordinates
-      const hasCoords =
+      if (
         location &&
         typeof location.latitude === 'number' &&
         typeof location.longitude === 'number' &&
         location.latitude !== 0 &&
         location.longitude !== 0 &&
-        (status === 'sharing' || status === 'stale');
-
-      if (hasCoords && location) {
-        const lat = location.latitude;
-        const lng = location.longitude;
+        (status === 'sharing' || status === 'stale')
+      ) {
+        const lat: number = location.latitude;
+        const lng: number = location.longitude;
         activeCoords.push([lat, lng]);
 
         const isSelected = selectedUserId === uid;
@@ -345,7 +344,13 @@ export const LiveLocationsModule: React.FC = () => {
     const marker = markersRef.current[uid];
     const data = salespersonLocationData.find((d) => d.profile.uid === uid);
 
-    if (map && marker && data?.location) {
+    if (
+      map &&
+      marker &&
+      data?.location &&
+      typeof data.location.latitude === 'number' &&
+      typeof data.location.longitude === 'number'
+    ) {
       const lat = data.location.latitude;
       const lng = data.location.longitude;
       map.flyTo([lat, lng], 16, { duration: 1.2 });
@@ -426,7 +431,7 @@ export const LiveLocationsModule: React.FC = () => {
             <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
               {summary.stale}
             </div>
-            <span className="text-[11px] text-amber-600/70">&gt;2 mins without update</span>
+            <span className="text-[11px] text-amber-600/70">&gt;4 mins without update</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
             <Clock className="w-5 h-5" />
@@ -624,10 +629,13 @@ export const LiveLocationsModule: React.FC = () => {
                         </div>
 
                         {/* Location Availability & Coordinates */}
-                        {hasLocation ? (
+                        {hasLocation &&
+                        location &&
+                        typeof location.latitude === 'number' &&
+                        typeof location.longitude === 'number' ? (
                           <div className="mt-2 flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800/80">
                             <span className="text-[10px] text-stone-400 font-mono">
-                              {location?.latitude.toFixed(4)}, {location?.longitude.toFixed(4)}
+                              {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
                             </span>
                             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 hover:underline">
                               <span>Focus on Map</span>
@@ -696,7 +704,7 @@ export const LiveLocationsModule: React.FC = () => {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  <span>Stale (&gt;2 mins)</span>
+                  <span>Stale (&gt;4 mins)</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-stone-400"></span>

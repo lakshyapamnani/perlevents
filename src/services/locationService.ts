@@ -1,6 +1,7 @@
 /**
  * Location Tracking Service for Pearl Experiences ERP
- * Handles salesperson GPS tracking and Firebase Realtime Database sync.
+ * Optimized for minimal bandwidth consumption, reduced hosting storage,
+ * and smart battery-friendly adaptive GPS updates.
  */
 import { ref, onValue, off, set, get } from 'firebase/database';
 import { database, isFirebaseConfigured } from './firebase';
@@ -8,9 +9,9 @@ import { database, isFirebaseConfigured } from './firebase';
 export interface LiveLocationRecord {
   userId: string;
   fullName: string;
-  latitude: number;
-  longitude: number;
-  accuracy: number;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
   isSharing: boolean;
   lastUpdated: number;
   error?: string | null;
@@ -18,9 +19,29 @@ export interface LiveLocationRecord {
 
 export type SalespersonLocationStatus = 'sharing' | 'stale' | 'stopped' | 'denied';
 
-export const STALE_LOCATION_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
-const THROTTLE_MIN_INTERVAL_MS = 30 * 1000; // 30 seconds
-const MIN_DISTANCE_METERS = 15; // 15 meters for early update
+// Optimization Constants:
+// 1. Staleness threshold: 4 minutes
+export const STALE_LOCATION_THRESHOLD_MS = 4 * 60 * 1000;
+
+// 2. Stationary Heartbeat: If salesperson hasn't moved (>25m), only ping once every 3 minutes
+const STATIONARY_HEARTBEAT_INTERVAL_MS = 3 * 60 * 1000;
+
+// 3. Moving Interval: When actively moving, limit updates to once every 45 seconds
+const MOVING_MIN_INTERVAL_MS = 45 * 1000;
+
+// 4. Movement Threshold: Ignore jitter/drift under 25 meters
+const MIN_MOVEMENT_DISTANCE_METERS = 25;
+
+// 5. Auto-Stop Safety Limit: 8 hours maximum continuous session to prevent overnight data burn
+const MAX_CONTINUOUS_TRACKING_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Rounds coordinate to 5 decimal places (~1.1 meter accuracy)
+ * Eliminates redundant 10+ digits of float string overhead in JSON storage and network packets
+ */
+function roundCoord(val: number): number {
+  return Math.round(val * 100000) / 100000;
+}
 
 /**
  * Calculates distance between two coordinates in meters using Haversine formula
@@ -48,11 +69,18 @@ class LocationTracker {
   private watchId: number | null = null;
   private currentUserId: string | null = null;
   private currentUserFullName: string = '';
+  private sessionStartTime: number = 0;
   private lastSentTime: number = 0;
   private lastSentLat: number | null = null;
   private lastSentLng: number | null = null;
   private isCurrentlySharing: boolean = false;
+  private unloadBound: boolean = false;
+  private autoStopTimer: any = null;
   private listeners: Set<(status: { isSharing: boolean; lastUpdated?: number; accuracy?: number; error?: string | null }) => void> = new Set();
+
+  constructor() {
+    this.handleBeforeUnload = this.handleBeforeUnload.bind(this);
+  }
 
   public subscribeStatus(listener: (status: { isSharing: boolean; lastUpdated?: number; accuracy?: number; error?: string | null }) => void) {
     this.listeners.add(listener);
@@ -69,6 +97,13 @@ class LocationTracker {
     return this.isCurrentlySharing;
   }
 
+  private handleBeforeUnload() {
+    if (this.isCurrentlySharing && this.currentUserId) {
+      // Best-effort stop on page close to avoid orphaned "sharing" state
+      this.stopSharing();
+    }
+  }
+
   /**
    * Starts tracking and sharing position to Firebase RTDB
    */
@@ -81,34 +116,58 @@ class LocationTracker {
 
     this.currentUserId = userId;
     this.currentUserFullName = fullName;
+    this.sessionStartTime = Date.now();
 
-    // Check existing watch
+    // Attach unload listener once
+    if (!this.unloadBound && typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', this.handleBeforeUnload);
+      this.unloadBound = true;
+    }
+
+    // Clear existing watch if any
     if (this.watchId !== null) {
       navigator.geolocation.clearWatch(this.watchId);
       this.watchId = null;
     }
 
+    if (this.autoStopTimer) {
+      clearTimeout(this.autoStopTimer);
+    }
+
+    // Safety auto-stop after 8 hours (prevents battery drain & data waste if forgotten)
+    this.autoStopTimer = setTimeout(() => {
+      if (this.isCurrentlySharing) {
+        this.stopSharing();
+        this.notifyListeners({
+          isSharing: false,
+          error: 'Location sharing auto-stopped after 8 hours to conserve battery & bandwidth.',
+        });
+      }
+    }, MAX_CONTINUOUS_TRACKING_MS);
+
     return new Promise((resolve) => {
-      // First obtain current position immediately to verify permission
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           this.isCurrentlySharing = true;
           const { latitude, longitude, accuracy } = position.coords;
           const now = Date.now();
 
+          const roundedLat = roundCoord(latitude);
+          const roundedLng = roundCoord(longitude);
+
           await this.writeLocationToFirebase({
             userId,
             fullName,
-            latitude,
-            longitude,
+            latitude: roundedLat,
+            longitude: roundedLng,
             accuracy: Math.round(accuracy),
             isSharing: true,
             lastUpdated: now,
           });
 
           this.lastSentTime = now;
-          this.lastSentLat = latitude;
-          this.lastSentLng = longitude;
+          this.lastSentLat = roundedLat;
+          this.lastSentLng = roundedLng;
 
           this.notifyListeners({
             isSharing: true,
@@ -117,7 +176,6 @@ class LocationTracker {
             error: null,
           });
 
-          // Start watchPosition for continuous updates
           this.startWatchPosition();
           resolve({ success: true });
         },
@@ -126,13 +184,9 @@ class LocationTracker {
           let errorMessage = 'Failed to get location';
           if (error.code === error.PERMISSION_DENIED) {
             errorMessage = 'Location permission was denied. Please allow location access in your browser settings.';
-            // Record permission denied in Firebase so Admin sees it
             await this.writeLocationToFirebase({
               userId,
               fullName,
-              latitude: 0,
-              longitude: 0,
-              accuracy: 0,
               isSharing: false,
               lastUpdated: Date.now(),
               error: 'PERMISSION_DENIED',
@@ -158,6 +212,9 @@ class LocationTracker {
     });
   }
 
+  /**
+   * Continuous Watch with Adaptive Bandwidth-Saving Logic
+   */
   private startWatchPosition() {
     if (!navigator.geolocation || !this.currentUserId) return;
 
@@ -169,35 +226,46 @@ class LocationTracker {
         const now = Date.now();
         const timeSinceLastSent = now - this.lastSentTime;
 
-        let shouldUpdate = false;
+        const roundedLat = roundCoord(latitude);
+        const roundedLng = roundCoord(longitude);
 
-        // Force update if interval exceeds 30-60 seconds
-        if (timeSinceLastSent >= THROTTLE_MIN_INTERVAL_MS) {
-          shouldUpdate = true;
-        } else if (
-          this.lastSentLat !== null &&
-          this.lastSentLng !== null &&
-          getDistanceFromLatLonInMeters(this.lastSentLat, this.lastSentLng, latitude, longitude) >= MIN_DISTANCE_METERS &&
-          timeSinceLastSent >= 10000
-        ) {
-          // Meaningful movement of >= 15 meters and at least 10s elapsed
-          shouldUpdate = true;
+        let distanceMoved = 0;
+        if (this.lastSentLat !== null && this.lastSentLng !== null) {
+          distanceMoved = getDistanceFromLatLonInMeters(
+            this.lastSentLat,
+            this.lastSentLng,
+            roundedLat,
+            roundedLng
+          );
         }
 
-        if (shouldUpdate) {
+        const isSignificantMove = distanceMoved >= MIN_MOVEMENT_DISTANCE_METERS;
+
+        let shouldWrite = false;
+
+        // Case 1: Significant movement (>= 25m) and at least 45 seconds elapsed
+        if (isSignificantMove && timeSinceLastSent >= MOVING_MIN_INTERVAL_MS) {
+          shouldWrite = true;
+        }
+        // Case 2: Stationary (< 25m), send low-frequency heartbeat every 3 minutes to keep connection alive
+        else if (!isSignificantMove && timeSinceLastSent >= STATIONARY_HEARTBEAT_INTERVAL_MS) {
+          shouldWrite = true;
+        }
+
+        if (shouldWrite) {
           await this.writeLocationToFirebase({
             userId: this.currentUserId,
             fullName: this.currentUserFullName,
-            latitude,
-            longitude,
+            latitude: roundedLat,
+            longitude: roundedLng,
             accuracy: Math.round(accuracy),
             isSharing: true,
             lastUpdated: now,
           });
 
           this.lastSentTime = now;
-          this.lastSentLat = latitude;
-          this.lastSentLng = longitude;
+          this.lastSentLat = roundedLat;
+          this.lastSentLng = roundedLng;
 
           this.notifyListeners({
             isSharing: true,
@@ -208,12 +276,12 @@ class LocationTracker {
         }
       },
       (error) => {
-        console.warn('Geolocation watchPosition error:', error.message);
+        console.warn('Geolocation watchPosition notification:', error.message);
         if (error.code === error.PERMISSION_DENIED) {
           this.stopSharing();
           this.notifyListeners({
             isSharing: false,
-            error: 'Location permission denied by browser.',
+            error: 'Location permission was revoked.',
           });
         }
       },
@@ -226,7 +294,7 @@ class LocationTracker {
   }
 
   /**
-   * Stops sharing location and marks status in Firebase
+   * Stops sharing location and strips unnecessary coordinate payload from storage
    */
   public async stopSharing(): Promise<void> {
     if (this.watchId !== null) {
@@ -234,21 +302,24 @@ class LocationTracker {
       this.watchId = null;
     }
 
+    if (this.autoStopTimer) {
+      clearTimeout(this.autoStopTimer);
+      this.autoStopTimer = null;
+    }
+
     this.isCurrentlySharing = false;
 
     if (this.currentUserId) {
       try {
+        // Bandwidth & Storage saving: omit coordinates when stopped
         await this.writeLocationToFirebase({
           userId: this.currentUserId,
           fullName: this.currentUserFullName,
-          latitude: this.lastSentLat || 0,
-          longitude: this.lastSentLng || 0,
-          accuracy: 0,
           isSharing: false,
           lastUpdated: Date.now(),
         });
       } catch (err) {
-        console.warn('Error marking location stopped in Firebase:', err);
+        console.warn('Error updating stopped location status:', err);
       }
     }
 
@@ -259,20 +330,32 @@ class LocationTracker {
     });
   }
 
+  /**
+   * Minimal Payload Writer: Only saves defined non-null fields to Firebase RTDB
+   */
   private async writeLocationToFirebase(data: LiveLocationRecord): Promise<boolean> {
     if (!database || !isFirebaseConfigured() || !data.userId) return false;
     try {
       const nodeRef = ref(database, `liveLocations/${data.userId}`);
-      await set(nodeRef, {
+      
+      const payload: Record<string, any> = {
         userId: data.userId,
         fullName: data.fullName,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        accuracy: data.accuracy,
         isSharing: data.isSharing,
         lastUpdated: data.lastUpdated,
-        error: data.error || null,
-      });
+      };
+
+      if (data.isSharing && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        payload.latitude = data.latitude;
+        payload.longitude = data.longitude;
+        payload.accuracy = data.accuracy || 15;
+      }
+
+      if (data.error) {
+        payload.error = data.error;
+      }
+
+      await set(nodeRef, payload);
       return true;
     } catch (err) {
       console.warn('Failed to write location to Firebase RTDB:', err);
