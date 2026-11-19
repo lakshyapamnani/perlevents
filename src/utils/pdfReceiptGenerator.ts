@@ -37,6 +37,9 @@ export function formatInrSymbol(amount: number): string {
  * Extracts and calculates itemized booking allocations for an event
  */
 export function getAllocatedItemsForEvent(event: EventRecord, invoice?: Invoice | null) {
+  if (event.items && event.items.length > 0) {
+    return event.items;
+  }
   if (invoice?.items && invoice.items.length > 0) {
     return invoice.items;
   }

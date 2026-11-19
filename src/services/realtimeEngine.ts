@@ -14,6 +14,7 @@ import {
   Client,
   EventRecord,
   Invoice,
+  InvoiceItem,
   Lead,
   LeadFollowUp,
   OrganizationSettings,
@@ -1143,6 +1144,7 @@ class RealtimeDatabaseEngine {
         quotedAmount?: number;
       }>;
       customChecklists?: Array<{ title: string; category?: string; description?: string }>;
+      items?: InvoiceItem[];
       createInvoice?: boolean;
       convertedFromLeadId?: string;
     }
@@ -1305,6 +1307,7 @@ class RealtimeDatabaseEngine {
       paymentTerms: data.financials?.paymentTerms || 'Standard terms apply.',
       referencePhotos: data.event.referencePhotos || [],
       vendorAssignments: assignments,
+      items: data.items && data.items.length > 0 ? data.items : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: currentUser.uid,
@@ -1422,15 +1425,17 @@ class RealtimeDatabaseEngine {
         banquetName: banquet.name,
         eventDate: newEvent.date,
         eventTime: `${newEvent.startTime} - ${newEvent.endTime}`,
-        items: [
-          {
-            id: `it_${Date.now()}_1`,
-            description: `${banquet.name} Venue Booking & Facilities (${newEvent.guestCount} Pax)`,
-            quantity: 1,
-            unitPrice: quoted || finalAmount || 1,
-            total: quoted || finalAmount || 1,
-          },
-        ],
+        items: (data.items && data.items.length > 0)
+          ? data.items
+          : [
+              {
+                id: `it_${Date.now()}_1`,
+                description: `${banquet.name} Venue Booking & Facilities (${newEvent.guestCount} Pax)`,
+                quantity: 1,
+                unitPrice: quoted || finalAmount || 1,
+                total: quoted || finalAmount || 1,
+              },
+            ],
         subtotal: quoted || finalAmount || 1,
         discount: disc,
         taxAmount: 0,
@@ -1675,6 +1680,7 @@ class RealtimeDatabaseEngine {
       remainingBalance?: number;
       paymentTerms?: string;
       referencePhotos?: Attachment[];
+      items?: InvoiceItem[];
     }
   ): { success: boolean; event?: EventRecord; error?: string } {
     const event = this.state.events[eventId];
@@ -1869,6 +1875,14 @@ class RealtimeDatabaseEngine {
 
     if (data.referencePhotos !== undefined) {
       event.referencePhotos = data.referencePhotos;
+    }
+
+    if (data.items !== undefined) {
+      event.items = data.items;
+      const linkedInvoiceObj = Object.values(this.state.invoices).find((i) => i.eventId === eventId);
+      if (linkedInvoiceObj && data.items.length > 0) {
+        linkedInvoiceObj.items = data.items;
+      }
     }
 
     event.updatedAt = new Date().toISOString();
