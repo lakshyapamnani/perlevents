@@ -8,6 +8,7 @@ import {
   Client,
   EventRecord,
   Invoice,
+  InvoiceItem,
   Lead,
   LeadFollowUp,
   OrganizationSettings,
@@ -112,6 +113,7 @@ interface DataContextType {
       quotedAmount?: number;
     }>;
     customChecklists?: Array<{ title: string; category?: string; description?: string }>;
+    items?: InvoiceItem[];
     createInvoice?: boolean;
     convertedFromLeadId?: string;
   }) => { success: boolean; event?: EventRecord; invoice?: Invoice; error?: string };
@@ -157,6 +159,7 @@ interface DataContextType {
       remainingBalance?: number;
       paymentTerms?: string;
       referencePhotos?: Attachment[];
+      items?: InvoiceItem[];
     }
   ) => { success: boolean; event?: EventRecord; error?: string };
 
@@ -602,6 +605,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       remainingBalance?: number;
       paymentTerms?: string;
       referencePhotos?: Attachment[];
+      items?: InvoiceItem[];
     }
   ) => {
     if (!currentUser) return { success: false, error: 'Not authenticated' };

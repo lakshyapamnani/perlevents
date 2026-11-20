@@ -254,6 +254,7 @@ export interface EventRecord {
   paymentTerms: string;
   referencePhotos: Attachment[];
   vendorAssignments: VendorAssignment[];
+  items?: InvoiceItem[];
   createdAt: string;
   updatedAt: string;
   createdBy: string;

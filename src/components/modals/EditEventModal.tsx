@@ -17,8 +17,13 @@ import {
   Phone,
   MessageCircle,
   Sparkles,
+  Utensils,
+  Music,
+  ShoppingBag,
+  Plus,
+  Trash2,
 } from 'lucide-react';
-import { Attachment, EventRecord, BookingStatus, UserProfile } from '../../types';
+import { Attachment, EventRecord, BookingStatus, UserProfile, InvoiceItem } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { ImageUploadArea } from '../common/ImageUploadArea';
 
@@ -84,6 +89,9 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
   const [advanceReceived, setAdvanceReceived] = useState<number | ''>('');
   const [paymentTerms, setPaymentTerms] = useState('');
 
+  // Billable Items State
+  const [bookingItems, setBookingItems] = useState<InvoiceItem[]>([]);
+
   // Decoration & Setup Photos
   const [referencePhotos, setReferencePhotos] = useState<Attachment[]>([]);
 
@@ -119,12 +127,77 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
       setAdvanceReceived(event.advanceReceived !== undefined ? event.advanceReceived : '');
       setPaymentTerms(event.paymentTerms || 'Standard payment terms apply.');
 
+      setBookingItems(
+        Array.isArray(event.items) && event.items.length > 0
+          ? event.items.map((it) => ({ ...it }))
+          : []
+      );
+
       setReferencePhotos(Array.isArray(event.referencePhotos) ? [...event.referencePhotos] : []);
 
       setError(null);
       setSuccessMsg(null);
     }
   }, [event, isOpen, currentUser]);
+
+  const handleItemChange = (
+    id: string,
+    field: 'description' | 'quantity' | 'unitPrice',
+    val: any
+  ) => {
+    setBookingItems((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id === id) {
+          const newItem = { ...item, [field]: val };
+          const qty = Number(newItem.quantity) || 0;
+          const rate = Number(newItem.unitPrice) || 0;
+          newItem.total = Math.round(qty * rate);
+          return newItem;
+        }
+        return item;
+      });
+      const sum = updated.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+      if (sum > 0) {
+        setQuotedAmount(sum);
+      }
+      return updated;
+    });
+  };
+
+  const handleAddItem = (preset?: { description: string; quantity?: number; unitPrice?: number }) => {
+    const selectedB = banquets.find((b) => b.id === banquetId);
+    let desc = preset?.description || '';
+    let qty = preset?.quantity !== undefined ? preset.quantity : 1;
+    let rate = preset?.unitPrice !== undefined ? preset.unitPrice : 0;
+
+    const newItem: InvoiceItem = {
+      id: `it_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      description: desc,
+      quantity: qty,
+      unitPrice: rate,
+      total: Math.round(qty * rate),
+    };
+
+    setBookingItems((prev) => {
+      const updated = [...prev, newItem];
+      const sum = updated.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+      if (sum > 0) {
+        setQuotedAmount(sum);
+      }
+      return updated;
+    });
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setBookingItems((prev) => {
+      const updated = prev.filter((it) => it.id !== id);
+      const sum = updated.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+      if (sum > 0) {
+        setQuotedAmount(sum);
+      }
+      return updated;
+    });
+  };
 
   if (!isOpen || !event) return null;
 
@@ -164,6 +237,16 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
 
     setIsSubmitting(true);
 
+    const validBookingItems = bookingItems
+      .filter((it) => it.description.trim().length > 0)
+      .map((it) => ({
+        ...it,
+        description: it.description.trim(),
+        quantity: Math.max(1, Number(it.quantity) || 1),
+        unitPrice: Math.max(0, Number(it.unitPrice) || 0),
+        total: Math.round((Math.max(1, Number(it.quantity) || 1)) * (Math.max(0, Number(it.unitPrice) || 0))),
+      }));
+
     try {
       const res = updateEventDetails(event.id, {
         name: name.trim(),
@@ -189,6 +272,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
         remainingBalance,
         paymentTerms,
         referencePhotos,
+        items: validBookingItems,
       });
 
       if (res.success) {
@@ -554,12 +638,289 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             />
           </div>
 
-          {/* SECTION E: FINANCIALS & TARIFF */}
+          {/* SECTION E: BILLABLE ITEMS & PACKAGES (FOOD, VENUE, DECORATION, ETC.) */}
+          <div className="space-y-3.5 border-b border-stone-200 dark:border-stone-800 pb-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <ShoppingBag className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <span>Section E: Billable Items & Packages</span>
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    Invoice & Receipt Breakdown
+                  </span>
+                </h3>
+                <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                  Update itemized services (Food / Catering per pax, Banquet hall hire, Decor, DJ). Quantity × Rate automatically calculates line totals and updates the invoice and payment receipts.
+                </p>
+              </div>
+              {bookingItems.length > 0 && (
+                <div className="text-right">
+                  <div className="text-[10px] text-stone-400 uppercase font-medium">Items Subtotal</div>
+                  <div className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                    {formatCurrency(bookingItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Add Preset Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mr-1">
+                Quick Presets:
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  handleAddItem({
+                    description: `Food & Catering Package (${guestCount || 100} Pax)`,
+                    quantity: Number(guestCount) || 100,
+                    unitPrice: 0,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 transition-colors shadow-2xs"
+              >
+                <Utensils className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                <span>+ Food & Catering</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const bObj = banquets.find((b) => b.id === banquetId);
+                  handleAddItem({
+                    description: `${bObj?.name || 'Banquet'} Venue Hire & Facility Access`,
+                    quantity: 1,
+                    unitPrice: bObj?.basePrice || 0,
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 border border-sky-200 dark:border-sky-800/60 hover:bg-sky-100 transition-colors shadow-2xs"
+              >
+                <Building2 className="w-3.5 h-3.5 text-sky-700 dark:text-sky-400" />
+                <span>+ Banquet Hall Hire</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleAddItem({
+                    description: 'Stage Setup & Theme Floral Decoration',
+                    quantity: 1,
+                    unitPrice: 0,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-pink-50 dark:bg-pink-950/40 text-pink-900 dark:text-pink-200 border border-pink-200 dark:border-pink-800/60 hover:bg-pink-100 transition-colors shadow-2xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-pink-700 dark:text-pink-400" />
+                <span>+ Decoration</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleAddItem({
+                    description: 'Sound System & Professional DJ Setup',
+                    quantity: 1,
+                    unitPrice: 0,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-100 transition-colors shadow-2xs"
+              >
+                <Music className="w-3.5 h-3.5 text-purple-700 dark:text-purple-400" />
+                <span>+ DJ & Sound</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddItem()}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                <span>+ Add Custom Item</span>
+              </button>
+            </div>
+
+            {/* Items List - DESKTOP VIEW (TABLE) */}
+            <div className="hidden md:block">
+              <div className="border border-stone-200 dark:border-stone-700/80 rounded-xl overflow-hidden shadow-2xs">
+                <div className="grid grid-cols-12 gap-2 bg-stone-100/90 dark:bg-stone-800/80 px-3.5 py-2 text-[11px] font-bold text-stone-600 dark:text-stone-300 uppercase tracking-wider">
+                  <div className="col-span-1 text-center">#</div>
+                  <div className="col-span-5">Item / Service Description *</div>
+                  <div className="col-span-2 text-center">Quantity / Pax *</div>
+                  <div className="col-span-2 text-right">Rate / Unit Price (₹) *</div>
+                  <div className="col-span-2 text-right pr-2">Total Amount (₹)</div>
+                </div>
+
+                <div className="divide-y divide-stone-200 dark:divide-stone-800 bg-white dark:bg-stone-900">
+                  {bookingItems.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-stone-400">
+                      No custom billable items configured yet. Click presets above to add food, venue hire, or decor.
+                    </div>
+                  ) : (
+                    bookingItems.map((item, idx) => (
+                      <div key={item.id} className="grid grid-cols-12 gap-2 p-2.5 items-center hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors">
+                        <div className="col-span-1 text-center text-xs font-bold text-stone-400">
+                          {idx + 1}
+                        </div>
+                        <div className="col-span-5">
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                            placeholder="e.g. Food & Catering Package (300 Pax)"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 focus:border-emerald-600 outline-none"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity === 0 ? '' : item.quantity}
+                            onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                            placeholder="1"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 text-center font-semibold tabular-nums focus:border-emerald-600 outline-none"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 text-xs font-semibold">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.unitPrice === 0 ? '' : item.unitPrice}
+                              onChange={(e) => handleItemChange(item.id, 'unitPrice', e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))}
+                              placeholder="0"
+                              className="w-full pl-6 pr-2.5 py-1.5 text-xs rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 text-right font-semibold tabular-nums focus:border-emerald-600 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex items-center justify-between pl-1">
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                            {formatCurrency(item.total)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg transition-colors"
+                            title="Delete item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Items List - MOBILE UI (STACKED CARDS FOR PHONES) */}
+            <div className="block md:hidden space-y-3">
+              {bookingItems.length === 0 ? (
+                <div className="p-4 text-center text-xs text-stone-400 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-dashed border-stone-200 dark:border-stone-700">
+                  No items configured. Tap a preset button above to add Food, Venue, or Decor.
+                </div>
+              ) : (
+                bookingItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-2xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-700">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 flex items-center justify-center text-xs font-bold">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-stone-800 dark:text-stone-200">
+                          Billable Item #{idx + 1}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg bg-red-50 dark:bg-red-950/40"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
+                        Item / Package Description *
+                      </label>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                        placeholder="e.g. Food & Catering Package (300 Pax)"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-900 text-stone-900 dark:text-stone-100 focus:border-emerald-600 outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
+                          Quantity / Pax *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity === 0 ? '' : item.quantity}
+                          onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                          placeholder="1"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-semibold tabular-nums focus:border-emerald-600 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
+                          Rate / Unit Price (₹) *
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs font-semibold">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.unitPrice === 0 ? '' : item.unitPrice}
+                            onChange={(e) => handleItemChange(item.id, 'unitPrice', e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))}
+                            placeholder="0"
+                            className="w-full pl-6 pr-3 py-2 text-xs rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-semibold tabular-nums text-right focus:border-emerald-600 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50 dark:bg-stone-900/60 p-2.5 rounded-xl">
+                      <span className="text-[11px] font-semibold text-stone-500">
+                        Line Total ({item.quantity || 0} × ₹{(item.unitPrice || 0).toLocaleString('en-IN')})
+                      </span>
+                      <span className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                        {formatCurrency(item.total)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Bottom Add Action & Auto-Sync Notification */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => handleAddItem()}
+                className="w-full sm:w-auto px-4 py-2 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold rounded-xl border border-stone-300 dark:border-stone-700 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Billable Item</span>
+              </button>
+
+              <div className="text-[11px] text-stone-500 dark:text-stone-400 text-right">
+                💡 Sum of billable items auto-updates the Total Quoted Tariff below.
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION F: FINANCIALS & TARIFF */}
           <div className="space-y-3 pb-2">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
                 <DollarSign className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                <span>Section E: Financials, Pricing & Payment Terms</span>
+                <span>Section F: Financials, Pricing & Payment Terms</span>
               </h3>
               <span className="text-[11px] text-stone-500 font-medium">
                 Syncs with sales and invoices
