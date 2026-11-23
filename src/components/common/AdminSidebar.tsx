@@ -23,11 +23,15 @@ import {
   Target,
   Handshake,
   MapPin,
+  Landmark,
+  UserCog,
 } from 'lucide-react';
 
 export type AdminTab =
   | 'calendar'
   | 'dashboard'
+  | 'accounting'
+  | 'accountants'
   | 'targets'
   | 'banquets'
   | 'availability'
@@ -92,6 +96,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   }> = [
     { id: 'calendar', label: 'Calendar (Occupied)', icon: <Calendar className="w-4 h-4" /> },
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'accounting', label: 'Accounting', icon: <Landmark className="w-4 h-4" />, category: 'Finance & Accounts' },
+    { id: 'accountants', label: 'Accountants', icon: <UserCog className="w-4 h-4" /> },
     { id: 'banquets', label: 'Banquets', icon: <Building2 className="w-4 h-4" />, category: 'Operations' },
     { id: 'availability', label: 'Availability', icon: <CalendarDays className="w-4 h-4" /> },
     { id: 'events', label: 'Events', icon: <CalendarCheck2 className="w-4 h-4" /> },

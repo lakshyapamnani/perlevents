@@ -7,6 +7,7 @@ import {
   signOutFromFirebase,
   isFirebaseConfigured,
   createEmployeeInFirebaseAuth,
+  sendFirebasePasswordReset,
 } from '../services/firebase';
 
 interface AuthContextType {
@@ -18,13 +19,19 @@ interface AuthContextType {
   loginAs: (uid: string) => void;
   switchRole: (role: UserRole) => void;
   logout: () => void;
+  resetPasswordForUser: (email: string) => Promise<{ success: boolean; error?: string }>;
   provisionEmployee: (data: {
     fullName: string;
     email: string;
     phone?: string;
-    role: 'salesperson' | 'manager' | 'partner';
+    role: 'salesperson' | 'manager' | 'partner' | 'accountant';
     initialPassword?: string;
     assignedBanquetIds?: string[];
+    employeeId?: string;
+    designation?: string;
+    joiningDate?: string;
+    assignedPermissions?: string[];
+    notes?: string;
   }) => Promise<{ success: boolean; user?: UserProfile; error?: string }>;
   updateEmployee: (
     uid: string,
@@ -32,9 +39,14 @@ interface AuthContextType {
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager' | 'partner';
+      role?: 'salesperson' | 'manager' | 'partner' | 'accountant';
       assignedBanquetIds?: string[];
       password?: string;
+      employeeId?: string;
+      designation?: string;
+      joiningDate?: string;
+      assignedPermissions?: string[];
+      notes?: string;
     }
   ) => { success: boolean; user?: UserProfile; error?: string };
   toggleUserStatus: (uid: string) => { success: boolean; error?: string };
@@ -99,6 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cleanEmail = 'manager@perlexperiences.com';
     } else if (cleanEmail === 'admin') {
       cleanEmail = 'admin@perlexperiences.com';
+    } else if (cleanEmail === 'accountant' || cleanEmail === 'accounts') {
+      cleanEmail = 'accountant@perlexperiences.com';
     } else if (cleanEmail === 'rohan') {
       cleanEmail = 'jeswani_rohan@yahoo.com';
     }
@@ -115,6 +129,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (matchedUser) {
             if (!matchedUser.isActive) {
               return { success: false, error: 'Your Pearlexperiences account is deactivated. Contact Administrator.' };
+            }
+            matchedUser.lastLogin = new Date().toISOString();
+            if (currentUser && currentUser.role === 'admin') {
+              realtimeEngine.updateEmployeeAccount(currentUser, matchedUser.uid, { notes: matchedUser.notes });
             }
             setCurrentUid(matchedUser.uid);
             if (typeof window !== 'undefined') {
@@ -164,7 +182,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ? 'sales123'
               : userInDb.role === 'manager'
                 ? 'manager123'
-                : 'partner123';
+                : userInDb.role === 'accountant'
+                  ? 'account123'
+                  : 'partner123';
       if (cleanPassword === expectedPwd) {
         matchedUser = userInDb;
       }
@@ -184,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
+    matchedUser.lastLogin = new Date().toISOString();
     setCurrentUid(matchedUser.uid);
     if (typeof window !== 'undefined') {
       localStorage.setItem('pearlexperiences_active_uid', matchedUser.uid);
@@ -223,13 +244,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPasswordForUser = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only an Administrator can trigger password resets.' };
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const user = allUsersList.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      return { success: false, error: 'User with this email was not found.' };
+    }
+
+    if (isFirebaseConfigured()) {
+      try {
+        const res = await sendFirebasePasswordReset(cleanEmail);
+        if (res.success) {
+          return { success: true };
+        }
+      } catch (e: any) {
+        console.warn('Firebase reset password note:', e);
+      }
+    }
+
+    // Set new temporary password
+    const newTemp = `PE@${Math.random().toString(36).substring(2, 8)}!2026`;
+    realtimeEngine.updateEmployeeAccount(currentUser, user.uid, { password: newTemp });
+    return {
+      success: true,
+      error: `Password reset successfully. Temporary credentials: ${newTemp}`,
+    };
+  };
+
   const provisionEmployee = async (data: {
     fullName: string;
     email: string;
     phone?: string;
-    role: 'salesperson' | 'manager' | 'partner';
+    role: 'salesperson' | 'manager' | 'partner' | 'accountant';
     initialPassword?: string;
     assignedBanquetIds?: string[];
+    employeeId?: string;
+    designation?: string;
+    joiningDate?: string;
+    assignedPermissions?: string[];
+    notes?: string;
   }) => {
     if (!currentUser || currentUser.role !== 'admin') {
       return { success: false, error: 'Unauthorized: Only an Administrator can create accounts.' };
@@ -240,7 +296,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? 'sales123'
         : data.role === 'manager'
           ? 'manager123'
-          : 'partner123';
+          : data.role === 'accountant'
+            ? 'account123'
+            : 'partner123';
     const passwordToUse = data.initialPassword || defaultPwd;
 
     // Create user in live Firebase Auth
@@ -271,9 +329,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager' | 'partner';
+      role?: 'salesperson' | 'manager' | 'partner' | 'accountant';
       assignedBanquetIds?: string[];
       password?: string;
+      employeeId?: string;
+      designation?: string;
+      joiningDate?: string;
+      assignedPermissions?: string[];
+      notes?: string;
     }
   ) => {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -307,6 +370,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginAs,
         switchRole,
         logout,
+        resetPasswordForUser,
         provisionEmployee,
         updateEmployee,
         toggleUserStatus,

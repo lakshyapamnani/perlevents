@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'salesperson' | 'manager' | 'partner';
+export type UserRole = 'admin' | 'salesperson' | 'manager' | 'partner' | 'accountant';
 
 export interface UserProfile {
   uid: string;
@@ -14,7 +14,15 @@ export interface UserProfile {
   assignedBanquetIds?: string[];
   initialPassword?: string;
   password?: string;
+  employeeId?: string;
+  designation?: string;
+  joiningDate?: string;
+  assignedPermissions?: string[];
+  notes?: string;
+  lastLogin?: string;
 }
+
+export * from './accounting';
 
 export interface OrganizationSettings {
   id: string;

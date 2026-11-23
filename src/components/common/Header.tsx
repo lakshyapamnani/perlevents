@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  Landmark,
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -62,6 +63,12 @@ export const Header: React.FC<HeaderProps> = ({
       bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800',
       text: 'text-purple-800 dark:text-purple-300',
       icon: <Handshake className="w-3.5 h-3.5" />,
+    },
+    accountant: {
+      label: 'Accountant',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800',
+      text: 'text-emerald-800 dark:text-emerald-300',
+      icon: <Landmark className="w-3.5 h-3.5" />,
     },
   };
 

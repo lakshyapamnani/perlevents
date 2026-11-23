@@ -30,6 +30,8 @@ import { LeadFollowUpModal } from './components/modals/LeadFollowUpModal';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { InvoiceModal } from './components/modals/InvoiceModal';
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
+import { AccountingModule } from './pages/AccountingModule';
+import { AccountantsModule } from './pages/AccountantsModule';
 import { Invoice, Lead } from './types';
 
 const MainLayout: React.FC = () => {
@@ -151,107 +153,118 @@ const MainLayout: React.FC = () => {
         {/* ADMIN ROLE VIEW */}
         {currentRole === 'admin' && (
           <>
-            <AdminSidebar
-              activeTab={adminTab}
-              setActiveTab={setAdminTab}
-              isOpen={mobileMenuOpen}
-              onClose={() => setMobileMenuOpen(false)}
-              isCollapsed={isSidebarCollapsed}
-              setIsCollapsed={setIsSidebarCollapsed}
-            />
-
-            <main className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-8 py-6">
-              {selectedEventId ? (
-                <EventDetailPage
-                  eventId={selectedEventId}
-                  onBack={() => setSelectedEventId(null)}
-                  onOpenRecordPayment={handleOpenPayment}
-                  onOpenCreateInvoice={(evtId?: string) => {
-                    setSelectedInvoiceToView(null);
-                    setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
-                    setIsInvoiceModalOpen(true);
-                  }}
+            {adminTab === 'accounting' ? (
+              <AccountingModule
+                onBack={() => setAdminTab('dashboard')}
+                isMobileNavOpen={mobileMenuOpen}
+                setIsMobileNavOpen={setMobileMenuOpen}
+              />
+            ) : (
+              <>
+                <AdminSidebar
+                  activeTab={adminTab}
+                  setActiveTab={setAdminTab}
+                  isOpen={mobileMenuOpen}
+                  onClose={() => setMobileMenuOpen(false)}
+                  isCollapsed={isSidebarCollapsed}
+                  setIsCollapsed={setIsSidebarCollapsed}
                 />
-              ) : (
-                <>
-                  {adminTab === 'dashboard' && (
-                    <AdminDashboard
-                      setActiveTab={setAdminTab}
-                      onOpenDirectSale={() => setIsDirectSaleOpen(true)}
-                      onOpenAddLead={() => setIsLeadModalOpen(true)}
-                      onSelectEvent={(id) => setSelectedEventId(id)}
-                    />
-                  )}
-                  {adminTab === 'banquets' && (
-                    <BanquetsModule
-                      onCheckAvailability={() => {
-                        setAdminTab('availability');
-                      }}
-                    />
-                  )}
-                  {adminTab === 'availability' && (
-                    <AvailabilityModule
-                      onOpenDirectSaleWithSlot={handleOpenDirectSaleWithSlot}
-                      onSelectEvent={(id) => setSelectedEventId(id)}
-                    />
-                  )}
-                  {adminTab === 'events' && (
-                    <EventsModule
-                      onOpenDirectSale={() => setIsDirectSaleOpen(true)}
-                      onSelectEvent={(id) => setSelectedEventId(id)}
-                      onOpenInvoice={handleOpenEventInvoice}
-                    />
-                  )}
-                  {adminTab === 'calendar' && (
-                    <CalendarModule onSelectEvent={(id) => setSelectedEventId(id)} />
-                  )}
-                  {adminTab === 'targets' && <TargetsModule />}
-                  {adminTab === 'leads' && (
-                    <LeadsModule
-                      onOpenAddLead={() => setIsLeadModalOpen(true)}
-                      onOpenFollowUp={(lead) => setSelectedLeadForFollowUp(lead)}
-                      onConvertToSale={handleConvertLeadToSale}
-                    />
-                  )}
-                  {adminTab === 'clients' && (
-                    <ClientsModule onSelectEvent={(id) => setSelectedEventId(id)} />
-                  )}
-                  {adminTab === 'sales' && (
-                    <SalesModule
-                      onOpenDirectSale={() => setIsDirectSaleOpen(true)}
-                      onOpenCreateInvoice={() => {
-                        setSelectedInvoiceToView(null);
-                        setIsInvoiceModalOpen(true);
-                      }}
-                      onSelectEvent={(id) => setSelectedEventId(id)}
+
+                <main className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-8 py-6">
+                  {selectedEventId ? (
+                    <EventDetailPage
+                      eventId={selectedEventId}
+                      onBack={() => setSelectedEventId(null)}
                       onOpenRecordPayment={handleOpenPayment}
-                    />
-                  )}
-                  {adminTab === 'invoices' && (
-                    <InvoicesModule
-                      onOpenCreateInvoice={() => {
+                      onOpenCreateInvoice={(evtId?: string) => {
                         setSelectedInvoiceToView(null);
+                        setSelectedInvoiceEventId(evtId || selectedEventId || undefined);
                         setIsInvoiceModalOpen(true);
                       }}
-                      onViewInvoice={(inv) => {
-                        setSelectedInvoiceToView(inv);
-                        setIsInvoiceModalOpen(true);
-                      }}
-                      onOpenRecordPayment={handleOpenPayment}
                     />
+                  ) : (
+                    <>
+                      {adminTab === 'dashboard' && (
+                        <AdminDashboard
+                          setActiveTab={setAdminTab}
+                          onOpenDirectSale={() => setIsDirectSaleOpen(true)}
+                          onOpenAddLead={() => setIsLeadModalOpen(true)}
+                          onSelectEvent={(id) => setSelectedEventId(id)}
+                        />
+                      )}
+                      {adminTab === 'banquets' && (
+                        <BanquetsModule
+                          onCheckAvailability={() => {
+                            setAdminTab('availability');
+                          }}
+                        />
+                      )}
+                      {adminTab === 'availability' && (
+                        <AvailabilityModule
+                          onOpenDirectSaleWithSlot={handleOpenDirectSaleWithSlot}
+                          onSelectEvent={(id) => setSelectedEventId(id)}
+                        />
+                      )}
+                      {adminTab === 'events' && (
+                        <EventsModule
+                          onOpenDirectSale={() => setIsDirectSaleOpen(true)}
+                          onSelectEvent={(id) => setSelectedEventId(id)}
+                          onOpenInvoice={handleOpenEventInvoice}
+                        />
+                      )}
+                      {adminTab === 'calendar' && (
+                        <CalendarModule onSelectEvent={(id) => setSelectedEventId(id)} />
+                      )}
+                      {adminTab === 'targets' && <TargetsModule />}
+                      {adminTab === 'leads' && (
+                        <LeadsModule
+                          onOpenAddLead={() => setIsLeadModalOpen(true)}
+                          onOpenFollowUp={(lead) => setSelectedLeadForFollowUp(lead)}
+                          onConvertToSale={handleConvertLeadToSale}
+                        />
+                      )}
+                      {adminTab === 'clients' && (
+                        <ClientsModule onSelectEvent={(id) => setSelectedEventId(id)} />
+                      )}
+                      {adminTab === 'sales' && (
+                        <SalesModule
+                          onOpenDirectSale={() => setIsDirectSaleOpen(true)}
+                          onOpenCreateInvoice={() => {
+                            setSelectedInvoiceToView(null);
+                            setIsInvoiceModalOpen(true);
+                          }}
+                          onSelectEvent={(id) => setSelectedEventId(id)}
+                          onOpenRecordPayment={handleOpenPayment}
+                        />
+                      )}
+                      {adminTab === 'invoices' && (
+                        <InvoicesModule
+                          onOpenCreateInvoice={() => {
+                            setSelectedInvoiceToView(null);
+                            setIsInvoiceModalOpen(true);
+                          }}
+                          onViewInvoice={(inv) => {
+                            setSelectedInvoiceToView(inv);
+                            setIsInvoiceModalOpen(true);
+                          }}
+                          onOpenRecordPayment={handleOpenPayment}
+                        />
+                      )}
+                      {adminTab === 'sales-reports' && <SalesReportsDashboard />}
+                      {adminTab === 'salespersons' && <UsersModule filterRole="salesperson" />}
+                      {adminTab === 'live-locations' && <LiveLocationsModule />}
+                      {adminTab === 'managers' && <UsersModule filterRole="manager" />}
+                      {adminTab === 'partners' && (
+                        <PartnersModule onSelectEvent={(id) => setSelectedEventId(id)} />
+                      )}
+                      {adminTab === 'vendors' && <VendorsModule />}
+                      {adminTab === 'settings' && <SettingsModule />}
+                      {adminTab === 'accountants' && <AccountantsModule />}
+                    </>
                   )}
-                  {adminTab === 'sales-reports' && <SalesReportsDashboard />}
-                  {adminTab === 'salespersons' && <UsersModule filterRole="salesperson" />}
-                  {adminTab === 'live-locations' && <LiveLocationsModule />}
-                  {adminTab === 'managers' && <UsersModule filterRole="manager" />}
-                  {adminTab === 'partners' && (
-                    <PartnersModule onSelectEvent={(id) => setSelectedEventId(id)} />
-                  )}
-                  {adminTab === 'vendors' && <VendorsModule />}
-                  {adminTab === 'settings' && <SettingsModule />}
-                </>
-              )}
-            </main>
+                </main>
+              </>
+            )}
           </>
         )}
 
@@ -410,6 +423,14 @@ const MainLayout: React.FC = () => {
               />
             )}
           </main>
+        )}
+
+        {/* ACCOUNTANT ROLE VIEW */}
+        {currentRole === 'accountant' && (
+          <AccountingModule
+            isMobileNavOpen={mobileMenuOpen}
+            setIsMobileNavOpen={setMobileMenuOpen}
+          />
         )}
       </div>
 

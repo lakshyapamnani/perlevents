@@ -47,8 +47,29 @@ import {
   initialUsers,
   initialVendors,
   initialTargets,
+  initialChartOfAccounts,
+  initialBankAccounts,
+  initialDefaultWorkbook,
   DEFAULT_USER_CREDENTIALS,
 } from './seedData';
+import {
+  ChartOfAccount,
+  BankAccount,
+  SpreadsheetWorkbook,
+  IncomeRecord,
+  ExpenseRecord,
+  VendorBill,
+  VendorPaymentRecord,
+  AccountingPartner,
+  BanquetPartnerMapping,
+  PartnerSettlement,
+  CustomerLedgerEntry,
+  VendorLedgerEntry,
+  JournalEntry,
+  BankReconciliationRecord,
+  FinancialAuditLog,
+  ApprovalThresholdConfig,
+} from '../types/accounting';
 
 export const DEFAULT_VENDOR_CATEGORIES: string[] = [
   'Decoration',
@@ -101,6 +122,25 @@ export interface DatabaseState {
   payments: Record<string, Payment>;
   activityLogs: ActivityLog[];
   targets: Record<string, SalesTarget>;
+
+  // Accounting Module State
+  accountants?: Record<string, UserProfile>;
+  chartOfAccounts?: Record<string, ChartOfAccount>;
+  bankAccounts?: Record<string, BankAccount>;
+  spreadsheets?: Record<string, SpreadsheetWorkbook>;
+  incomeRecords?: Record<string, IncomeRecord>;
+  expenseRecords?: Record<string, ExpenseRecord>;
+  vendorBills?: Record<string, VendorBill>;
+  vendorPaymentRecords?: Record<string, VendorPaymentRecord>;
+  accountingPartners?: Record<string, AccountingPartner>;
+  banquetPartnerMappings?: Record<string, BanquetPartnerMapping>;
+  partnerSettlements?: Record<string, PartnerSettlement>;
+  customerLedgerEntries?: Record<string, CustomerLedgerEntry>;
+  vendorLedgerEntries?: Record<string, VendorLedgerEntry>;
+  journalEntries?: Record<string, JournalEntry>;
+  bankReconciliations?: Record<string, BankReconciliationRecord>;
+  financialAuditLogs?: FinancialAuditLog[];
+  approvalThresholds?: ApprovalThresholdConfig;
 }
 
 type Listener = () => void;
@@ -446,6 +486,51 @@ class RealtimeDatabaseEngine {
         ? remoteState.activityLogs
         : this.state.activityLogs,
       targets: mergedTargets,
+      chartOfAccounts: remoteState.chartOfAccounts && typeof remoteState.chartOfAccounts === 'object'
+        ? { ...this.state.chartOfAccounts, ...remoteState.chartOfAccounts }
+        : this.state.chartOfAccounts,
+      bankAccounts: remoteState.bankAccounts && typeof remoteState.bankAccounts === 'object'
+        ? { ...this.state.bankAccounts, ...remoteState.bankAccounts }
+        : this.state.bankAccounts,
+      spreadsheets: remoteState.spreadsheets && typeof remoteState.spreadsheets === 'object'
+        ? { ...this.state.spreadsheets, ...remoteState.spreadsheets }
+        : this.state.spreadsheets,
+      incomeRecords: remoteState.incomeRecords && typeof remoteState.incomeRecords === 'object'
+        ? { ...this.state.incomeRecords, ...remoteState.incomeRecords }
+        : this.state.incomeRecords,
+      expenseRecords: remoteState.expenseRecords && typeof remoteState.expenseRecords === 'object'
+        ? { ...this.state.expenseRecords, ...remoteState.expenseRecords }
+        : this.state.expenseRecords,
+      vendorBills: remoteState.vendorBills && typeof remoteState.vendorBills === 'object'
+        ? { ...this.state.vendorBills, ...remoteState.vendorBills }
+        : this.state.vendorBills,
+      vendorPaymentRecords: remoteState.vendorPaymentRecords && typeof remoteState.vendorPaymentRecords === 'object'
+        ? { ...this.state.vendorPaymentRecords, ...remoteState.vendorPaymentRecords }
+        : this.state.vendorPaymentRecords,
+      accountingPartners: remoteState.accountingPartners && typeof remoteState.accountingPartners === 'object'
+        ? { ...this.state.accountingPartners, ...remoteState.accountingPartners }
+        : this.state.accountingPartners,
+      banquetPartnerMappings: remoteState.banquetPartnerMappings && typeof remoteState.banquetPartnerMappings === 'object'
+        ? { ...this.state.banquetPartnerMappings, ...remoteState.banquetPartnerMappings }
+        : this.state.banquetPartnerMappings,
+      partnerSettlements: remoteState.partnerSettlements && typeof remoteState.partnerSettlements === 'object'
+        ? { ...this.state.partnerSettlements, ...remoteState.partnerSettlements }
+        : this.state.partnerSettlements,
+      customerLedgerEntries: remoteState.customerLedgerEntries && typeof remoteState.customerLedgerEntries === 'object'
+        ? { ...this.state.customerLedgerEntries, ...remoteState.customerLedgerEntries }
+        : this.state.customerLedgerEntries,
+      vendorLedgerEntries: remoteState.vendorLedgerEntries && typeof remoteState.vendorLedgerEntries === 'object'
+        ? { ...this.state.vendorLedgerEntries, ...remoteState.vendorLedgerEntries }
+        : this.state.vendorLedgerEntries,
+      journalEntries: remoteState.journalEntries && typeof remoteState.journalEntries === 'object'
+        ? { ...this.state.journalEntries, ...remoteState.journalEntries }
+        : this.state.journalEntries,
+      financialAuditLogs: Array.isArray(remoteState.financialAuditLogs) && remoteState.financialAuditLogs.length > 0
+        ? remoteState.financialAuditLogs
+        : this.state.financialAuditLogs,
+      approvalThresholds: remoteState.approvalThresholds && typeof remoteState.approvalThresholds === 'object'
+        ? { ...this.state.approvalThresholds, ...remoteState.approvalThresholds }
+        : this.state.approvalThresholds,
     };
 
     if (this.state.events) {
@@ -592,6 +677,42 @@ class RealtimeDatabaseEngine {
           parsed.settings.authorizedSignatoryName = 'Authorized Signatory';
         }
 
+        // Initialize accounting collections if not present
+        if (!parsed.chartOfAccounts || Object.keys(parsed.chartOfAccounts).length === 0) {
+          parsed.chartOfAccounts = initialChartOfAccounts.reduce((acc, c) => ({ ...acc, [c.id]: c }), {});
+        }
+        if (parsed.bankAccounts) {
+          const legacyDummyIds = ['bank_cash_01', 'bank_hdfc_01', 'bank_icici_01', 'bank_upi_01'];
+          legacyDummyIds.forEach((id) => {
+            delete (parsed.bankAccounts as Record<string, BankAccount>)[id];
+          });
+        } else {
+          parsed.bankAccounts = {};
+        }
+        if (!parsed.spreadsheets || Object.keys(parsed.spreadsheets).length === 0) {
+          parsed.spreadsheets = { [initialDefaultWorkbook.id]: initialDefaultWorkbook };
+        }
+        if (!parsed.incomeRecords) parsed.incomeRecords = {};
+        if (!parsed.expenseRecords) parsed.expenseRecords = {};
+        if (!parsed.vendorBills) parsed.vendorBills = {};
+        if (!parsed.vendorPaymentRecords) parsed.vendorPaymentRecords = {};
+        if (!parsed.accountingPartners) parsed.accountingPartners = {};
+        if (!parsed.banquetPartnerMappings) parsed.banquetPartnerMappings = {};
+        if (!parsed.partnerSettlements) parsed.partnerSettlements = {};
+        if (!parsed.customerLedgerEntries) parsed.customerLedgerEntries = {};
+        if (!parsed.vendorLedgerEntries) parsed.vendorLedgerEntries = {};
+        if (!parsed.journalEntries) parsed.journalEntries = {};
+        if (!parsed.bankReconciliations) parsed.bankReconciliations = {};
+        if (!parsed.financialAuditLogs) parsed.financialAuditLogs = [];
+        if (!parsed.approvalThresholds) {
+          parsed.approvalThresholds = {
+            autoApproveExpenseBelow: 25000,
+            requireAdminForVendorPaymentsAbove: 50000,
+            requireAdminForPartnerSettlements: true,
+            requireAdminForJournalEntries: true,
+          };
+        }
+
         return parsed;
       }
     } catch (e) {
@@ -618,6 +739,29 @@ class RealtimeDatabaseEngine {
       payments: initialPayments.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}),
       activityLogs: initialActivityLogs,
       targets: initialTargets.reduce((acc, t) => ({ ...acc, [t.id]: t }), {}),
+
+      // Accounting defaults
+      chartOfAccounts: initialChartOfAccounts.reduce((acc, c) => ({ ...acc, [c.id]: c }), {}),
+      bankAccounts: initialBankAccounts.reduce((acc, b) => ({ ...acc, [b.id]: b }), {}),
+      spreadsheets: { [initialDefaultWorkbook.id]: initialDefaultWorkbook },
+      incomeRecords: {},
+      expenseRecords: {},
+      vendorBills: {},
+      vendorPaymentRecords: {},
+      accountingPartners: {},
+      banquetPartnerMappings: {},
+      partnerSettlements: {},
+      customerLedgerEntries: {},
+      vendorLedgerEntries: {},
+      journalEntries: {},
+      bankReconciliations: {},
+      financialAuditLogs: [],
+      approvalThresholds: {
+        autoApproveExpenseBelow: 25000,
+        requireAdminForVendorPaymentsAbove: 50000,
+        requireAdminForPartnerSettlements: true,
+        requireAdminForJournalEntries: true,
+      },
     };
 
     try {
@@ -646,10 +790,32 @@ class RealtimeDatabaseEngine {
       payments: {},
       activityLogs: [],
       targets: {},
+
+      chartOfAccounts: {},
+      bankAccounts: {},
+      spreadsheets: {},
+      incomeRecords: {},
+      expenseRecords: {},
+      vendorBills: {},
+      vendorPaymentRecords: {},
+      accountingPartners: {},
+      banquetPartnerMappings: {},
+      partnerSettlements: {},
+      customerLedgerEntries: {},
+      vendorLedgerEntries: {},
+      journalEntries: {},
+      bankReconciliations: {},
+      financialAuditLogs: [],
+      approvalThresholds: {
+        autoApproveExpenseBelow: 25000,
+        requireAdminForVendorPaymentsAbove: 50000,
+        requireAdminForPartnerSettlements: true,
+        requireAdminForJournalEntries: true,
+      },
     };
   }
 
-  private saveState(state: DatabaseState) {
+  public saveState(state: DatabaseState) {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}state`, JSON.stringify(state));
@@ -669,7 +835,7 @@ class RealtimeDatabaseEngine {
     return () => this.listeners.delete(listener);
   }
 
-  private notify() {
+  public notify() {
     this.listeners.forEach((l) => l());
   }
 
@@ -718,10 +884,15 @@ class RealtimeDatabaseEngine {
       fullName: string;
       email: string;
       phone?: string;
-      role: 'salesperson' | 'manager' | 'partner';
+      role: 'salesperson' | 'manager' | 'partner' | 'accountant';
       initialPassword?: string;
       customUid?: string;
       assignedBanquetIds?: string[];
+      employeeId?: string;
+      designation?: string;
+      joiningDate?: string;
+      assignedPermissions?: string[];
+      notes?: string;
     }
   ): { success: boolean; user?: UserProfile; error?: string } {
     if (adminUser.role !== 'admin') {
@@ -749,9 +920,37 @@ class RealtimeDatabaseEngine {
       createdBy: adminUser.uid,
       updatedAt: new Date().toISOString(),
       assignedBanquetIds: data.assignedBanquetIds || [],
+      employeeId: data.employeeId || (data.role === 'accountant' ? `PE-ACC-${String(Date.now()).slice(-4)}` : undefined),
+      designation: data.designation || (data.role === 'accountant' ? 'Financial Accountant' : undefined),
+      joiningDate: data.joiningDate || new Date().toISOString().split('T')[0],
+      assignedPermissions: data.assignedPermissions || (data.role === 'accountant' ? [
+        'dashboard',
+        'sales',
+        'banquets',
+        'income',
+        'expenses',
+        'vendor_payments',
+        'partner_financials',
+        'ledgers',
+        'reports',
+        'spreadsheet',
+        'calculator',
+        'double_entry',
+        'cash_bank',
+      ] : undefined),
+      notes: data.notes || '',
+      initialPassword: data.initialPassword || (data.role === 'accountant' ? 'account123' : undefined),
+      password: data.initialPassword || (data.role === 'accountant' ? 'account123' : undefined),
     };
 
     this.state.users[newUid] = newUser;
+    if (data.role === 'accountant') {
+      if (!this.state.accountants) this.state.accountants = {};
+      this.state.accountants[newUid] = newUser;
+      if (isFirebaseConfigured()) {
+        writeRealtimeNode(`accountants/${newUid}`, newUser).catch(() => {});
+      }
+    }
 
     // Sync banquets assignedSalespersonId
     if (data.role === 'salesperson' && Array.isArray(data.assignedBanquetIds)) {
@@ -786,9 +985,14 @@ class RealtimeDatabaseEngine {
       fullName?: string;
       email?: string;
       phone?: string;
-      role?: 'salesperson' | 'manager' | 'partner';
+      role?: 'salesperson' | 'manager' | 'partner' | 'accountant';
       assignedBanquetIds?: string[];
       password?: string;
+      employeeId?: string;
+      designation?: string;
+      joiningDate?: string;
+      assignedPermissions?: string[];
+      notes?: string;
     }
   ): { success: boolean; user?: UserProfile; error?: string } {
     if (adminUser.role !== 'admin') {
@@ -824,6 +1028,11 @@ class RealtimeDatabaseEngine {
     if (data.fullName) user.fullName = data.fullName.trim();
     if (data.phone !== undefined) user.phone = data.phone.trim();
     if (data.role) user.role = data.role;
+    if (data.employeeId !== undefined) user.employeeId = data.employeeId;
+    if (data.designation !== undefined) user.designation = data.designation;
+    if (data.joiningDate !== undefined) user.joiningDate = data.joiningDate;
+    if (data.assignedPermissions !== undefined) user.assignedPermissions = data.assignedPermissions;
+    if (data.notes !== undefined) user.notes = data.notes;
     if (data.assignedBanquetIds !== undefined) {
       user.assignedBanquetIds = [...data.assignedBanquetIds];
       const newBIds = new Set(data.assignedBanquetIds);

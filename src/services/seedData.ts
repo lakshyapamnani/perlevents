@@ -9,12 +9,23 @@ import {
   Payment,
   Sale,
   UserProfile,
+  UserRole,
   Vendor,
   ChecklistItem,
   ChecklistTemplate,
   ActivityLog,
   BookingSlot,
   SalesTarget,
+  ChartOfAccount,
+  BankAccount,
+  AccountingPartner,
+  BanquetPartnerMapping,
+  SpreadsheetWorkbook,
+  IncomeRecord,
+  ExpenseRecord,
+  VendorBill,
+  VendorPaymentRecord,
+  JournalEntry,
 } from '../types';
 
 export const initialSettings: OrganizationSettings = {
@@ -45,7 +56,7 @@ export const initialSettings: OrganizationSettings = {
 
 export const DEFAULT_USER_CREDENTIALS: Record<
   string,
-  { email: string; password: string; role: 'admin' | 'salesperson' | 'manager'; uid: string; name: string }
+  { email: string; password: string; role: UserRole; uid: string; name: string }
 > = {
   // Admin credentials
   'admin@perlexperiences.com': {
@@ -140,6 +151,35 @@ export const DEFAULT_USER_CREDENTIALS: Record<
     role: 'manager',
     uid: 'usr_manager_03',
     name: 'Sneha Kapoor',
+  },
+  // Accountant credentials
+  'accountant@perlexperiences.com': {
+    email: 'accountant@perlexperiences.com',
+    password: 'account123',
+    role: 'accountant',
+    uid: 'usr_accountant_01',
+    name: 'Senior Accountant',
+  },
+  'accountant@pearlexperiences.com': {
+    email: 'accountant@pearlexperiences.com',
+    password: 'account123',
+    role: 'accountant',
+    uid: 'usr_accountant_01',
+    name: 'Senior Accountant',
+  },
+  'neha.accounts@perlexperiences.com': {
+    email: 'neha.accounts@perlexperiences.com',
+    password: 'account123',
+    role: 'accountant',
+    uid: 'usr_accountant_02',
+    name: 'Neha Gupta (CA)',
+  },
+  'rahul.accounts@perlexperiences.com': {
+    email: 'rahul.accounts@perlexperiences.com',
+    password: 'account123',
+    role: 'accountant',
+    uid: 'usr_accountant_03',
+    name: 'Rahul Verma',
   },
 };
 
@@ -264,6 +304,94 @@ export const initialUsers: UserProfile[] = [
     createdBy: 'system_root',
     updatedAt: '2026-10-15T10:00:00Z',
   },
+  {
+    uid: 'usr_accountant_01',
+    fullName: 'Senior Accountant',
+    email: 'accountant@perlexperiences.com',
+    phone: '+91 98444 11122',
+    role: 'accountant',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    employeeId: 'PE-ACC-001',
+    designation: 'Senior Financial Controller',
+    joiningDate: '2026-01-01',
+    assignedPermissions: [
+      'dashboard',
+      'sales',
+      'banquets',
+      'income',
+      'expenses',
+      'vendor_payments',
+      'partner_financials',
+      'ledgers',
+      'reports',
+      'spreadsheet',
+      'calculator',
+      'double_entry',
+      'cash_bank',
+    ],
+    notes: 'Primary financial manager for Pearl Experiences ERP suite.',
+    createdAt: '2026-01-05T09:00:00Z',
+    createdBy: 'system_root',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
+  {
+    uid: 'usr_accountant_02',
+    fullName: 'Neha Gupta (CA)',
+    email: 'neha.accounts@perlexperiences.com',
+    phone: '+91 98444 22233',
+    role: 'accountant',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    employeeId: 'PE-ACC-002',
+    designation: 'Chartered Accountant & Auditor',
+    joiningDate: '2026-02-15',
+    assignedPermissions: [
+      'dashboard',
+      'sales',
+      'banquets',
+      'income',
+      'expenses',
+      'vendor_payments',
+      'partner_financials',
+      'ledgers',
+      'reports',
+      'spreadsheet',
+      'calculator',
+      'double_entry',
+      'cash_bank',
+    ],
+    notes: 'Handles statutory audits, GST reporting, and double-entry reconciliations.',
+    createdAt: '2026-02-15T09:00:00Z',
+    createdBy: 'usr_admin_01',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
+  {
+    uid: 'usr_accountant_03',
+    fullName: 'Rahul Verma',
+    email: 'rahul.accounts@perlexperiences.com',
+    phone: '+91 98444 33344',
+    role: 'accountant',
+    organizationId: 'org_pearlexperiences',
+    isActive: true,
+    employeeId: 'PE-ACC-003',
+    designation: 'Billing & Ledger Accountant',
+    joiningDate: '2026-03-01',
+    assignedPermissions: [
+      'dashboard',
+      'income',
+      'expenses',
+      'vendor_payments',
+      'ledgers',
+      'reports',
+      'spreadsheet',
+      'calculator',
+    ],
+    notes: 'Manages vendor bills, customer receipts, and daily vouchers.',
+    createdAt: '2026-03-01T09:00:00Z',
+    createdBy: 'usr_admin_01',
+    updatedAt: '2026-10-15T10:00:00Z',
+  },
 ];
 
 // Clean state - All dummy records removed
@@ -283,3 +411,177 @@ export const initialSales: Sale[] = [];
 export const initialInvoices: Invoice[] = [];
 export const initialPayments: Payment[] = [];
 export const initialActivityLogs: ActivityLog[] = [];
+
+export const initialChartOfAccounts: ChartOfAccount[] = [
+  // ASSETS
+  { id: 'acc_1010', code: '1010', name: 'Cash in Hand', group: 'Assets', subGroup: 'Cash & Cash Equivalents', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1020', code: '1020', name: 'HDFC Bank Current Account', group: 'Assets', subGroup: 'Bank Accounts', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1030', code: '1030', name: 'ICICI Bank Operating Account', group: 'Assets', subGroup: 'Bank Accounts', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1040', code: '1040', name: 'Business UPI Account', group: 'Assets', subGroup: 'Bank Accounts', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1050', code: '1050', name: 'Accounts Receivable (Customers)', group: 'Assets', subGroup: 'Receivables', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1060', code: '1060', name: 'Advance Paid to Vendors', group: 'Assets', subGroup: 'Current Assets', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_1070', code: '1070', name: 'Security Deposits & Prepaid Expenses', group: 'Assets', subGroup: 'Current Assets', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+
+  // LIABILITIES
+  { id: 'acc_2010', code: '2010', name: 'Accounts Payable (Vendors)', group: 'Liabilities', subGroup: 'Current Liabilities', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_2020', code: '2020', name: 'Customer Advances Received', group: 'Liabilities', subGroup: 'Customer Advances', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_2030', code: '2030', name: 'Partner Payables', group: 'Liabilities', subGroup: 'Partner Balances', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_2040', code: '2040', name: 'GST Output Liability (18%)', group: 'Liabilities', subGroup: 'Statutory Dues', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_2050', code: '2050', name: 'TDS Payable', group: 'Liabilities', subGroup: 'Statutory Dues', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+
+  // EQUITY
+  { id: 'acc_3010', code: '3010', name: 'Partner Capital Account', group: 'Equity', subGroup: 'Capital', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_3020', code: '3020', name: 'Retained Earnings', group: 'Equity', subGroup: 'Reserves', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+
+  // INCOME
+  { id: 'acc_4010', code: '4010', name: 'Event Booking Revenue', group: 'Income', subGroup: 'Operating Revenue', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_4020', code: '4020', name: 'Banquet Rental Income', group: 'Income', subGroup: 'Operating Revenue', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_4030', code: '4030', name: 'Additional Services Income', group: 'Income', subGroup: 'Operating Revenue', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_4040', code: '4040', name: 'Cancellation Charges Received', group: 'Income', subGroup: 'Other Income', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_4050', code: '4050', name: 'Other Miscellaneous Income', group: 'Income', subGroup: 'Other Income', openingBalance: 0, currentBalance: 0, normalBalance: 'Credit', isActive: true, createdAt: '2026-01-01' },
+
+  // EXPENSES
+  { id: 'acc_5010', code: '5010', name: 'Vendor Direct Expenses (Decor, Food, Sound)', group: 'Expenses', subGroup: 'Direct Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5020', code: '5020', name: 'Staff Salary & Compensation', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5030', code: '5030', name: 'Marketing & Digital Promotion', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5040', code: '5040', name: 'Banquet Rent & Property Lease', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5050', code: '5050', name: 'Electricity & Utility Bills', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5060', code: '5060', name: 'Venue Maintenance & Repairs', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5070', code: '5070', name: 'Office & Administrative Expenses', group: 'Expenses', subGroup: 'Administrative Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5080', code: '5080', name: 'Cleaning & Housekeeping', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+  { id: 'acc_5090', code: '5090', name: 'Security Services', group: 'Expenses', subGroup: 'Operating Expenses', openingBalance: 0, currentBalance: 0, normalBalance: 'Debit', isActive: true, createdAt: '2026-01-01' },
+];
+
+export const initialBankAccounts: BankAccount[] = [];
+
+export const initialDefaultWorkbook: SpreadsheetWorkbook = {
+  id: 'wb_primary_01',
+  title: 'Pearl Experiences Finance Master 2026-27',
+  activeSheetId: 'sheet_overview',
+  updatedAt: new Date().toISOString(),
+  updatedBy: 'system',
+  sheets: [
+    {
+      id: 'sheet_overview',
+      name: 'Overview',
+      rowCount: 40,
+      colCount: 15,
+      cells: {
+        A1: { value: 'PEARL EXPERIENCES – EXECUTIVE FINANCIAL SUMMARY', bold: true, bg: '#064e3b', color: '#ffffff' },
+        A3: { value: 'Financial Metric', bold: true, bg: '#f1f5f9' },
+        B3: { value: 'Amount (INR)', bold: true, align: 'right', bg: '#f1f5f9' },
+        A4: { value: 'Total Business Revenue' },
+        B4: { value: '=SUM(Income_Register!C2:C100)', formula: '=SUM(Income_Register!C2:C100)', computed: 0, type: 'currency', align: 'right' },
+        A5: { value: 'Total Direct Expenses' },
+        B5: { value: '=SUM(Expense_Register!D2:D100)', formula: '=SUM(Expense_Register!D2:D100)', computed: 0, type: 'currency', align: 'right' },
+        A6: { value: 'Gross Operating Profit' },
+        B6: { value: '=B4-B5', formula: '=B4-B5', computed: 0, bold: true, type: 'currency', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_income',
+      name: 'Income Register',
+      rowCount: 50,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Date', bold: true, bg: '#065f46', color: '#ffffff' },
+        B1: { value: 'Category', bold: true, bg: '#065f46', color: '#ffffff' },
+        C1: { value: 'Amount', bold: true, bg: '#065f46', color: '#ffffff', align: 'right' },
+        D1: { value: 'Banquet', bold: true, bg: '#065f46', color: '#ffffff' },
+        E1: { value: 'Payment Mode', bold: true, bg: '#065f46', color: '#ffffff' },
+        F1: { value: 'Status', bold: true, bg: '#065f46', color: '#ffffff' },
+      },
+    },
+    {
+      id: 'sheet_expense',
+      name: 'Expense Register',
+      rowCount: 50,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Date', bold: true, bg: '#991b1b', color: '#ffffff' },
+        B1: { value: 'Category', bold: true, bg: '#991b1b', color: '#ffffff' },
+        C1: { value: 'Vendor', bold: true, bg: '#991b1b', color: '#ffffff' },
+        D1: { value: 'Amount', bold: true, bg: '#991b1b', color: '#ffffff', align: 'right' },
+        E1: { value: 'Banquet', bold: true, bg: '#991b1b', color: '#ffffff' },
+        F1: { value: 'Payment Status', bold: true, bg: '#991b1b', color: '#ffffff' },
+      },
+    },
+    {
+      id: 'sheet_vendor_pay',
+      name: 'Vendor Payments',
+      rowCount: 40,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Vendor Name', bold: true, bg: '#1e293b', color: '#ffffff' },
+        B1: { value: 'Service Category', bold: true, bg: '#1e293b', color: '#ffffff' },
+        C1: { value: 'Total Agreed', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+        D1: { value: 'Total Paid', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+        E1: { value: 'Balance Due', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_customer_pay',
+      name: 'Customer Payments',
+      rowCount: 40,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Customer Name', bold: true, bg: '#1e293b', color: '#ffffff' },
+        B1: { value: 'Event Date', bold: true, bg: '#1e293b', color: '#ffffff' },
+        C1: { value: 'Booking Total', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+        D1: { value: 'Received Amount', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+        E1: { value: 'Receivable Due', bold: true, bg: '#1e293b', color: '#ffffff', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_partner_settle',
+      name: 'Partner Settlements',
+      rowCount: 40,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Partner Name', bold: true, bg: '#4c1d95', color: '#ffffff' },
+        B1: { value: 'Banquet', bold: true, bg: '#4c1d95', color: '#ffffff' },
+        C1: { value: 'Profit Share %', bold: true, bg: '#4c1d95', color: '#ffffff', align: 'right' },
+        D1: { value: 'Net Profit Due', bold: true, bg: '#4c1d95', color: '#ffffff', align: 'right' },
+        E1: { value: 'Paid to Date', bold: true, bg: '#4c1d95', color: '#ffffff', align: 'right' },
+        F1: { value: 'Outstanding Share', bold: true, bg: '#4c1d95', color: '#ffffff', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_banquet_acc',
+      name: 'Banquet Accounts',
+      rowCount: 40,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Banquet Name', bold: true, bg: '#047857', color: '#ffffff' },
+        B1: { value: 'Total Bookings', bold: true, bg: '#047857', color: '#ffffff', align: 'right' },
+        C1: { value: 'Total Revenue', bold: true, bg: '#047857', color: '#ffffff', align: 'right' },
+        D1: { value: 'Total Expenses', bold: true, bg: '#047857', color: '#ffffff', align: 'right' },
+        E1: { value: 'Net Banquet Profit', bold: true, bg: '#047857', color: '#ffffff', align: 'right' },
+        F1: { value: 'Profit Margin %', bold: true, bg: '#047857', color: '#ffffff', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_monthly_sum',
+      name: 'Monthly Summary',
+      rowCount: 40,
+      colCount: 10,
+      cells: {
+        A1: { value: 'Month', bold: true, bg: '#0f172a', color: '#ffffff' },
+        B1: { value: 'Revenue', bold: true, bg: '#0f172a', color: '#ffffff', align: 'right' },
+        C1: { value: 'Direct Expenses', bold: true, bg: '#0f172a', color: '#ffffff', align: 'right' },
+        D1: { value: 'Operating Expenses', bold: true, bg: '#0f172a', color: '#ffffff', align: 'right' },
+        E1: { value: 'Net Profit', bold: true, bg: '#0f172a', color: '#ffffff', align: 'right' },
+      },
+    },
+    {
+      id: 'sheet_custom',
+      name: 'Custom Sheet',
+      rowCount: 50,
+      colCount: 15,
+      cells: {
+        A1: { value: 'Custom Financial Working Sheet', bold: true, bg: '#f8fafc' },
+      },
+    },
+  ],
+};
+
