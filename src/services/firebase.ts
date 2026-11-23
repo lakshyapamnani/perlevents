@@ -174,6 +174,23 @@ export async function createEmployeeInFirebaseAuth(
 }
 
 /**
+ * Sends a secure password reset email through Firebase Authentication
+ */
+export async function sendFirebasePasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+  if (!isFirebaseConfigured() || !auth) {
+    return { success: false, error: 'Firebase Auth is not connected.' };
+  }
+  try {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+    return { success: true };
+  } catch (err: any) {
+    console.warn('Password reset notice:', err?.code, err?.message);
+    return { success: false, error: err?.message || 'Failed to dispatch password reset email.' };
+  }
+}
+
+/**
  * Pushes data node to Firebase Realtime Database if connected.
  * Sanitizes state through JSON serialization to eliminate any undefined values,
  * which are rejected with a fatal error by the Firebase Realtime Database SDK.

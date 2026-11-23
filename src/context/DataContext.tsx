@@ -21,8 +21,25 @@ import {
   Attachment,
   SalesTarget,
   TargetPeriodType,
+  ChartOfAccount,
+  BankAccount,
+  SpreadsheetWorkbook,
+  IncomeRecord,
+  ExpenseRecord,
+  VendorBill,
+  VendorPaymentRecord,
+  AccountingPartner,
+  BanquetPartnerMapping,
+  PartnerSettlement,
+  CustomerLedgerEntry,
+  VendorLedgerEntry,
+  JournalEntry,
+  BankReconciliationRecord,
+  FinancialAuditLog,
+  ApprovalThresholdConfig,
 } from '../types';
 import { realtimeEngine } from '../services/realtimeEngine';
+import { accountingEngine } from '../services/accountingEngine';
 import { useAuth } from './AuthContext';
 
 interface MetricsSummary {
@@ -227,6 +244,36 @@ interface DataContextType {
   }) => { success: boolean; target?: SalesTarget; error?: string };
   deleteTarget: (targetId: string) => { success: boolean; error?: string };
   resetDatabase: () => void;
+
+  // Accounting Module Data
+  incomeRecords: IncomeRecord[];
+  expenseRecords: ExpenseRecord[];
+  vendorBills: VendorBill[];
+  vendorPayments: VendorPaymentRecord[];
+  accountingPartners: AccountingPartner[];
+  banquetPartnerMappings: BanquetPartnerMapping[];
+  partnerSettlements: PartnerSettlement[];
+  chartOfAccounts: ChartOfAccount[];
+  journalEntries: JournalEntry[];
+  bankAccounts: BankAccount[];
+  spreadsheets: Record<string, SpreadsheetWorkbook>;
+  financialAuditLogs: FinancialAuditLog[];
+  approvalThresholds: ApprovalThresholdConfig;
+
+  // Accounting Actions
+  recordIncome: (data: Parameters<typeof accountingEngine.recordIncome>[1]) => ReturnType<typeof accountingEngine.recordIncome>;
+  recordExpense: (data: Parameters<typeof accountingEngine.recordExpense>[1]) => ReturnType<typeof accountingEngine.recordExpense>;
+  recordVendorBill: (data: Parameters<typeof accountingEngine.recordVendorBill>[1]) => ReturnType<typeof accountingEngine.recordVendorBill>;
+  recordVendorPayment: (data: Parameters<typeof accountingEngine.recordVendorPayment>[1]) => ReturnType<typeof accountingEngine.recordVendorPayment>;
+  saveAccountingPartner: (data: Parameters<typeof accountingEngine.savePartner>[1]) => ReturnType<typeof accountingEngine.savePartner>;
+  saveBanquetPartnerMapping: (data: Parameters<typeof accountingEngine.saveBanquetPartnerMapping>[1]) => ReturnType<typeof accountingEngine.saveBanquetPartnerMapping>;
+  recordPartnerSettlement: (data: Parameters<typeof accountingEngine.recordPartnerSettlement>[1]) => ReturnType<typeof accountingEngine.recordPartnerSettlement>;
+  recordJournalEntry: (data: Parameters<typeof accountingEngine.recordJournalEntry>[1]) => ReturnType<typeof accountingEngine.recordJournalEntry>;
+  reverseTransaction: (type: 'income' | 'expense' | 'vendor_payment' | 'journal_entry', id: string, reason: string) => ReturnType<typeof accountingEngine.reverseTransaction>;
+  saveBankAccount: (account: BankAccount) => { success: boolean };
+  deleteBankAccount: (id: string) => { success: boolean };
+  saveSpreadsheetWorkbook: (workbook: SpreadsheetWorkbook) => { success: boolean };
+  updateApprovalThresholds: (thresholds: ApprovalThresholdConfig) => { success: boolean };
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -469,6 +516,115 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return [];
   }, [dbState.activityLogs]);
+
+  // Accounting Module Memos
+  const incomeRecords = useMemo(() => {
+    return Object.values(dbState.incomeRecords || {}).filter(
+      (i): i is IncomeRecord => Boolean(i && typeof i === 'object' && i.id)
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [dbState.incomeRecords]);
+
+  const expenseRecords = useMemo(() => {
+    return Object.values(dbState.expenseRecords || {}).filter(
+      (e): e is ExpenseRecord => Boolean(e && typeof e === 'object' && e.id)
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [dbState.expenseRecords]);
+
+  const vendorBills = useMemo(() => {
+    return Object.values(dbState.vendorBills || {}).filter(
+      (b): b is VendorBill => Boolean(b && typeof b === 'object' && b.id)
+    ).sort((a, b) => new Date(b.billDate).getTime() - new Date(a.billDate).getTime());
+  }, [dbState.vendorBills]);
+
+  const vendorPayments = useMemo(() => {
+    return Object.values(dbState.vendorPaymentRecords || {}).filter(
+      (p): p is VendorPaymentRecord => Boolean(p && typeof p === 'object' && p.id)
+    ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+  }, [dbState.vendorPaymentRecords]);
+
+  const accountingPartners = useMemo(() => {
+    const list = Object.values(dbState.accountingPartners || {}).filter(
+      (p): p is AccountingPartner => Boolean(p && typeof p === 'object' && p.id)
+    );
+    const existingIds = new Set(list.map((p) => p.id));
+    const existingEmails = new Set(list.map((p) => (p.email || '').toLowerCase()));
+
+    // Automatically fetch partner accounts from users
+    Object.values(dbState.users || {}).forEach((u: any) => {
+      if (
+        u &&
+        u.role === 'partner' &&
+        !existingIds.has(u.uid) &&
+        !existingEmails.has((u.email || '').toLowerCase())
+      ) {
+        list.push({
+          id: u.uid,
+          partnerName: u.fullName || 'Partner',
+          phone: u.phone || '',
+          email: u.email || '',
+          partnerType: 'Managing Partner',
+          associatedBanquetIds: u.assignedBanquetIds || [],
+          ownershipPercentage: 50,
+          profitSharingPercentage: 50,
+          paymentTerms: 'Standard profit distribution agreement',
+          status: u.isActive ? 'Active' : 'Inactive',
+          createdAt: u.createdAt || new Date().toISOString(),
+          updatedAt: u.updatedAt || new Date().toISOString(),
+        });
+      }
+    });
+
+    return list;
+  }, [dbState.accountingPartners, dbState.users]);
+
+  const banquetPartnerMappings = useMemo(() => {
+    return Object.values(dbState.banquetPartnerMappings || {}).filter(
+      (m): m is BanquetPartnerMapping => Boolean(m && typeof m === 'object' && m.id)
+    );
+  }, [dbState.banquetPartnerMappings]);
+
+  const partnerSettlements = useMemo(() => {
+    return Object.values(dbState.partnerSettlements || {}).filter(
+      (s): s is PartnerSettlement => Boolean(s && typeof s === 'object' && s.id)
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [dbState.partnerSettlements]);
+
+  const chartOfAccounts = useMemo(() => {
+    return Object.values(dbState.chartOfAccounts || {}).filter(
+      (c): c is ChartOfAccount => Boolean(c && typeof c === 'object' && c.id)
+    ).sort((a, b) => a.code.localeCompare(b.code));
+  }, [dbState.chartOfAccounts]);
+
+  const journalEntries = useMemo(() => {
+    return Object.values(dbState.journalEntries || {}).filter(
+      (j): j is JournalEntry => Boolean(j && typeof j === 'object' && j.id)
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [dbState.journalEntries]);
+
+  const bankAccounts = useMemo(() => {
+    return Object.values(dbState.bankAccounts || {}).filter(
+      (b): b is BankAccount => Boolean(b && typeof b === 'object' && b.id)
+    );
+  }, [dbState.bankAccounts]);
+
+  const spreadsheets = useMemo(() => {
+    return dbState.spreadsheets || {};
+  }, [dbState.spreadsheets]);
+
+  const financialAuditLogs = useMemo(() => {
+    return (dbState.financialAuditLogs || []).filter(
+      (l): l is FinancialAuditLog => Boolean(l && typeof l === 'object' && l.id)
+    );
+  }, [dbState.financialAuditLogs]);
+
+  const approvalThresholds: ApprovalThresholdConfig = useMemo(() => {
+    return dbState.approvalThresholds || {
+      autoApproveExpenseBelow: 25000,
+      requireAdminForVendorPaymentsAbove: 50000,
+      requireAdminForPartnerSettlements: true,
+      requireAdminForJournalEntries: true,
+    };
+  }, [dbState.approvalThresholds]);
 
   // Real database-backed summary calculation
   const metrics: MetricsSummary = useMemo(() => {
@@ -739,6 +895,88 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return realtimeEngine.deleteTarget(currentUser, targetId);
   };
 
+  // Accounting Module Methods
+  const recordIncome = (data: Parameters<typeof accountingEngine.recordIncome>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordIncome(currentUser, data);
+  };
+
+  const recordExpense = (data: Parameters<typeof accountingEngine.recordExpense>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordExpense(currentUser, data);
+  };
+
+  const recordVendorBill = (data: Parameters<typeof accountingEngine.recordVendorBill>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordVendorBill(currentUser, data);
+  };
+
+  const recordVendorPayment = (data: Parameters<typeof accountingEngine.recordVendorPayment>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordVendorPayment(currentUser, data);
+  };
+
+  const saveAccountingPartner = (data: Parameters<typeof accountingEngine.savePartner>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.savePartner(currentUser, data);
+  };
+
+  const saveBanquetPartnerMapping = (data: Parameters<typeof accountingEngine.saveBanquetPartnerMapping>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.saveBanquetPartnerMapping(currentUser, data);
+  };
+
+  const recordPartnerSettlement = (data: Parameters<typeof accountingEngine.recordPartnerSettlement>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordPartnerSettlement(currentUser, data);
+  };
+
+  const recordJournalEntry = (data: Parameters<typeof accountingEngine.recordJournalEntry>[1]) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.recordJournalEntry(currentUser, data);
+  };
+
+  const reverseTransaction = (type: 'income' | 'expense' | 'vendor_payment' | 'journal_entry', id: string, reason: string) => {
+    if (!currentUser) return { success: false, error: 'User must be authenticated.' };
+    return accountingEngine.reverseTransaction(currentUser, type, id, reason);
+  };
+
+  const saveBankAccount = (account: BankAccount) => {
+    const state = realtimeEngine.getState();
+    if (!state.bankAccounts) state.bankAccounts = {};
+    state.bankAccounts[account.id] = account;
+    realtimeEngine.saveState(state);
+    realtimeEngine.notify();
+    return { success: true };
+  };
+
+  const deleteBankAccount = (id: string) => {
+    const state = realtimeEngine.getState();
+    if (state.bankAccounts && state.bankAccounts[id]) {
+      delete state.bankAccounts[id];
+      realtimeEngine.saveState(state);
+      realtimeEngine.notify();
+    }
+    return { success: true };
+  };
+
+  const saveSpreadsheetWorkbook = (workbook: SpreadsheetWorkbook) => {
+    const state = realtimeEngine.getState();
+    if (!state.spreadsheets) state.spreadsheets = {};
+    state.spreadsheets[workbook.id] = workbook;
+    realtimeEngine.saveState(state);
+    realtimeEngine.notify();
+    return { success: true };
+  };
+
+  const updateApprovalThresholds = (thresholds: ApprovalThresholdConfig) => {
+    const state = realtimeEngine.getState();
+    state.approvalThresholds = thresholds;
+    realtimeEngine.saveState(state);
+    realtimeEngine.notify();
+    return { success: true };
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -789,6 +1027,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveTarget,
         deleteTarget,
         resetDatabase,
+
+        // Accounting Module
+        incomeRecords,
+        expenseRecords,
+        vendorBills,
+        vendorPayments,
+        accountingPartners,
+        banquetPartnerMappings,
+        partnerSettlements,
+        chartOfAccounts,
+        journalEntries,
+        bankAccounts,
+        spreadsheets,
+        financialAuditLogs,
+        approvalThresholds,
+        recordIncome,
+        recordExpense,
+        recordVendorBill,
+        recordVendorPayment,
+        saveAccountingPartner,
+        saveBanquetPartnerMapping,
+        recordPartnerSettlement,
+        recordJournalEntry,
+        reverseTransaction,
+        saveBankAccount,
+        deleteBankAccount,
+        saveSpreadsheetWorkbook,
+        updateApprovalThresholds,
       }}
     >
       {children}

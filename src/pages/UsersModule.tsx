@@ -39,6 +39,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ filterRole }) => {
     salesperson: { label: 'Salesperson', bg: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300', text: '' },
     manager: { label: 'Operations Manager', bg: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300', text: '' },
     partner: { label: 'Banquet Partner', bg: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300', text: '' },
+    accountant: { label: 'Accountant', bg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300', text: '' },
   };
 
   const handleToggle = (uid: string) => {

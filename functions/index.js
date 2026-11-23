@@ -39,8 +39,8 @@ exports.provisionEmployeeAccount = functions.https.onCall(async (data, context) 
     throw new functions.https.HttpsError('permission-denied', 'Only active Admins can create employee accounts.');
   }
 
-  const { fullName, email, role, phone, assignedBanquetIds } = data;
-  if (!fullName || !email || !role || !['salesperson', 'manager'].includes(role)) {
+  const { fullName, email, role, phone, assignedBanquetIds, employeeId, designation, joiningDate, assignedPermissions, notes } = data;
+  if (!fullName || !email || !role || !['salesperson', 'manager', 'partner', 'accountant'].includes(role)) {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid employee parameters.');
   }
 
@@ -71,9 +71,17 @@ exports.provisionEmployeeAccount = functions.https.onCall(async (data, context) 
     createdBy: callerUid,
     updatedAt: new Date().toISOString(),
     assignedBanquetIds: assignedBanquetIds || [],
+    employeeId: employeeId || '',
+    designation: designation || (role === 'accountant' ? 'Financial Accountant' : ''),
+    joiningDate: joiningDate || new Date().toISOString().split('T')[0],
+    assignedPermissions: assignedPermissions || ['dashboard', 'sales', 'banquets', 'income', 'expenses', 'vendor_payments', 'partner_financials', 'ledgers', 'reports', 'spreadsheet', 'calculator'],
+    notes: notes || '',
   };
 
   await db.ref(`users/${userRecord.uid}`).set(newProfile);
+  if (role === 'accountant') {
+    await db.ref(`accountants/${userRecord.uid}`).set(newProfile);
+  }
 
   // 4. Record Audit Log
   await db.ref('activityLogs').push({
